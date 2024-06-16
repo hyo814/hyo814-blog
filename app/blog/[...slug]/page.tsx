@@ -46,7 +46,7 @@ export async function generateMetadata({
   }
   const ogImages = imageList.map((img) => {
     return {
-      url: img.includes('http') ? img : siteMetadata.siteUrl + img,
+      url: img?.includes('http') ? img : siteMetadata.siteUrl + img,
     }
   })
 
@@ -64,13 +64,7 @@ export async function generateMetadata({
       url: './',
       images: ogImages,
       authors: authors.length > 0 ? authors : [siteMetadata.author],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.title,
-      description: post.summary,
-      images: imageList,
-    },
+    }
   }
 }
 
