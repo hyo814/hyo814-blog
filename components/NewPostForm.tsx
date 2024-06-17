@@ -32,6 +32,7 @@ export default function NewPostForm() {
       alert('Failed to save post.')
     }
   }
+  
   if (typeof window === 'undefined') {
     return null
   }
