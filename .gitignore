@@ -45,3 +45,5 @@ yarn-error.log*
 
 # Contentlayer
 .contentlayer
+/.idea/hyo814-blog-new.iml
+/.idea/.gitignore

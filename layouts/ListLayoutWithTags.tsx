@@ -6,7 +6,7 @@ import { slug } from 'github-slugger'
 import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
-import Link from '@/components/Link'
+import Link from 'next/link'
 import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import tagData from 'app/tag-data.json'
@@ -27,7 +27,6 @@ function Pagination({ totalPages, currentPage }: PaginationProps) {
   const basePath = pathname.split('/')[1]
   const prevPage = currentPage - 1 > 0
   const nextPage = currentPage + 1 <= totalPages
-
   return (
     <div className="space-y-2 pb-8 pt-6 md:space-y-5">
       <nav className="flex justify-between">
@@ -117,6 +116,14 @@ export default function ListLayoutWithTags({
                   )
                 })}
               </ul>
+            </div>
+            <div className="px-6 py-4">
+              <Link
+                href={`/new-post`}
+                className="block w-full rounded bg-primary-500 px-4 py-2 text-center text-white hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-700"
+              >
+                Write a New Post
+              </Link>
             </div>
           </div>
           <div>
