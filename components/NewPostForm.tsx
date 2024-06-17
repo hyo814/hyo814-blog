@@ -9,7 +9,6 @@ export default function NewPostForm() {
   const [summary, setSummary] = useState<string>('')
   const [content, setContent] = useState<string>('')
   const router = useRouter()
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const post = {
@@ -32,6 +31,9 @@ export default function NewPostForm() {
     } else {
       alert('Failed to save post.')
     }
+  }
+  if (typeof window === 'undefined') {
+    return null
   }
   return (
     <div className="flex min-h-screen items-center justify-center">
