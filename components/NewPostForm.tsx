@@ -32,9 +32,6 @@ export default function NewPostForm() {
       alert('Failed to save post.')
     }
   }
-  if (typeof window === 'undefined') {
-    return null
-  }
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-4xl rounded-lg bg-white p-4 shadow-lg">

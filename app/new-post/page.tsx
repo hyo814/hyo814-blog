@@ -1,4 +1,7 @@
-import NewPostForm from '@/components/NewPostForm'
+import dynamic from 'next/dynamic'
+
+const NewPostForm = dynamic(() => import('@/components/NewPostForm'), { ssr: false })
+
 export default function NewPostPage() {
   return (
     <>
