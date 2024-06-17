@@ -2,7 +2,7 @@
 const siteMetadata = {
   title: 'Hyo814`s Blog',
   author: 'Hyo814',
-  headerTitle: 'HYO814Blog',
+  headerTitle: 'HYO814`s Blog',
   description: 'A blog created with HYO',
   language: 'ko',
   theme: 'system', // system, dark or light
@@ -11,7 +11,7 @@ const siteMetadata = {
   siteLogo: '/static/images/logo.png',
   socialBanner: '/static/images/twitter-card.png',
   mastodon: 'https://mastodon.social/@mastodonuser',
-  email: 'address@yoursite.com',
+  email: 'ggamjge8888@naver.com',
   github: 'https://github.com',
   x: 'https://twitter.com/x',
   // twitter: 'https://twitter.com/Twitter',
