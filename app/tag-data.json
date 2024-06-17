@@ -1,1 +1,16 @@
-{"multi-author":1,"next-js":1,"feature":1}
+{"feature":0,
+  "html": 0,
+  "css": 0,
+  "javascript": 0,
+  "typescript": 0,
+  "react": 0,
+  "vue": 0,
+  "angular": 0,
+  "svelte": 0,
+  "ember": 0,
+  "jquery": 0,
+  "bootstrap": 0,
+  "tailwind-css": 0,
+  "sass": 0,
+  "less": 0
+}
