@@ -47,3 +47,4 @@ yarn-error.log*
 .contentlayer
 /.idea/hyo814-blog-new.iml
 /.idea/.gitignore
+/.idea/hyo814-blog.iml
