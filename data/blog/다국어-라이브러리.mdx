@@ -1,0 +1,241 @@
+---
+title: 다국어 라이브러리
+date: '2024-01-03'
+tags: [다국어]
+draft: false
+summary: '다국어 라이브러리'
+---
+
+
+# 다국어 번역 라이브러리 비교: i18next, react-intl, polyglot.js
+
+웹 애플리케이션을 다국어로 지원하기 위해 다양한 번역 라이브러리를 사용할 수 있습니다. 아래에서는 i18next, react-intl, polyglot.js 세 가지 라이브러리를 비교합니다.
+
+## 1. i18next
+
+### 개요
+i18next는 강력하고 유연한 다국어 지원 라이브러리입니다. 다양한 플러그인과 확장을 지원하며, 백엔드 번역 저장소와의 통합도 용이합니다.
+
+### 주요 기능
+- 다양한 백엔드 지원 (XHR, 파일 시스템 등)
+- 플러그인 기반 아키텍처
+- 다국어 처리 및 플러럴라이제이션 지원
+- 사용이 간편한 React 바인딩 (react-i18next)
+
+### 설치 및 사용 예제
+
+```bash
+npm install i18next react-i18next
+```
+
+```javascript
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+import i18n from 'i18next';
+import { I18nextProvider } from 'react-i18next';
+import { initReactI18next } from 'react-i18next';
+
+i18n
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: {
+        translation: {
+          "welcome": "Welcome to React and react-i18next"
+        }
+      },
+      ko: {
+        translation: {
+          "welcome": "React와 react-i18next에 오신 것을 환영합니다"
+        }
+      }
+    },
+    lng: "en",
+    fallbackLng: "en",
+    interpolation: {
+      escapeValue: false
+    }
+  });
+
+ReactDOM.render(
+  <I18nextProvider i18n={i18n}>
+    <App />
+  </I18nextProvider>,
+  document.getElementById('root')
+);
+```
+
+```javascript
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+
+const App = () => {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h1>{t('welcome')}</h1>
+    </div>
+  );
+};
+
+export default App;
+```
+
+### 장점
+- 다양한 기능과 플러그인 지원
+- 유연한 설정
+- 강력한 플러럴라이제이션 기능
+
+### 단점
+- 설정이 복잡할 수 있음
+- 상대적으로 큰 번들 크기
+
+### 공식 문서
+[i18next 공식 문서](https://www.i18next.com/)
+
+## 2. react-intl
+
+### 개요
+react-intl은 국제화 표준을 준수하는 React용 라이브러리입니다. FormatJS 프로젝트의 일부로, ICU 메시지 형식을 지원하여 다양한 언어와 문화권에 맞춘 포맷팅을 제공합니다.
+
+### 주요 기능
+- ICU 메시지 형식 지원
+- 날짜, 시간, 숫자, 통화 포맷팅
+- 컴포넌트 기반의 간단한 사용법
+
+### 설치 및 사용 예제
+
+```bash
+npm install react-intl
+```
+
+```javascript
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { IntlProvider } from 'react-intl';
+import App from './App';
+
+const messages = {
+  en: { "welcome": "Welcome to React and react-intl" },
+  ko: { "welcome": "React와 react-intl에 오신 것을 환영합니다" }
+};
+
+const language = navigator.language.split(/[-_]/)[0];
+
+ReactDOM.render(
+  <IntlProvider locale={language} messages={messages[language]}>
+    <App />
+  </IntlProvider>,
+  document.getElementById('root')
+);
+```
+
+```javascript
+import React from 'react';
+import { useIntl } from 'react-intl';
+
+const App = () => {
+  const intl = useIntl();
+
+  return (
+    <div>
+      <h1>{intl.formatMessage({ id: 'welcome' })}</h1>
+    </div>
+  );
+};
+
+export default App;
+```
+
+### 장점
+- 표준화된 국제화 지원
+- 강력한 포맷팅 기능
+- 비교적 간단한 설정
+
+### 단점
+- ICU 메시지 형식 학습 필요
+- 상대적으로 적은 커뮤니티 지원
+
+### 공식 문서
+[react-intl 공식 문서](https://formatjs.io/docs/react-intl)
+
+## 3. polyglot.js
+
+### 개요
+polyglot.js는 간단한 번역 라이브러리로, 주로 작은 프로젝트나 기본적인 다국어 지원이 필요한 경우에 적합합니다.
+
+### 주요 기능
+- 간단한 사용법
+- 작은 번들 크기
+- 기본적인 플러럴라이제이션 지원
+
+### 설치 및 사용 예제
+
+```bash
+npm install node-polyglot
+```
+
+```javascript
+import React from 'react';
+import ReactDOM from 'react-dom';
+import Polyglot from 'node-polyglot';
+import App from './App';
+
+const polyglot = new Polyglot({
+  phrases: {
+    "en": { "welcome": "Welcome to React and polyglot" },
+    "ko": { "welcome": "React와 polyglot에 오신 것을 환영합니다" }
+  },
+  locale: "en"
+});
+
+ReactDOM.render(
+  <App polyglot={polyglot} />,
+  document.getElementById('root')
+);
+```
+
+```javascript
+import React from 'react';
+
+const App = ({ polyglot }) => {
+  return (
+    <div>
+      <h1>{polyglot.t('welcome')}</h1>
+    </div>
+  );
+};
+
+export default App;
+```
+
+### 장점
+- 매우 간단하고 가벼움
+- 설정이 쉬움
+
+### 단점
+- 제한된 기능
+- 대규모 프로젝트에 부적합
+
+### 공식 문서
+[polyglot.js 공식 문서](https://airbnb.io/polyglot.js/)
+
+## 결론
+- **i18next**: 다양한 기능과 확장성을 제공하며, 대규모 프로젝트에 적합합니다.
+- **react-intl**: 표준화된 국제화 지원을 필요로 하는 경우에 유용하며, 포맷팅 기능이 뛰어납니다.
+- **polyglot.js**: 간단한 다국어 지원이 필요한 소규모 프로젝트에 적합합니다.
+
+## i18n (internationalization) 및 i10n (localization)
+
+### i18n (Internationalization)
+국제화는 소프트웨어가 다양한 언어와 문화권을 지원할 수 있도록 설계하는 과정을 의미합니다. 여기에는 텍스트 문자열을 외부 파일로 추출하고, 다국어 번역을 지원하며, 다양한 시간대, 통화, 날짜 형식을 처리하는 기능이 포함됩니다.
+
+### i10n (Localization)
+현지화는 국제화된 소프트웨어를 특정 언어와 문화권에 맞추는 과정을 의미합니다. 여기에는 텍스트 번역, 지역 특화된 콘텐츠 추가, 지역 규범에 맞춘 포맷팅 조정이 포함됩니다.
+
+### 주요 차이점
+- **국제화 (i18n)**: 소프트웨어가 다국어와 다양한 문화권을 지원할 수 있도록 준비하는 과정
+- **현지화 (i10n)**: 국제화된 소프트웨어를 특정 언어와 문화권에 맞추는 과정
+
