@@ -1,9 +1,13 @@
 ---
-title: redux와 패턴들
-date: '2024-07-03'
+title: redux 과 패턴들
+date: '2023-06-25'
 tags: [redux]
 draft: false
-summary: 'redux'
+summary: '1. mvc 패턴 , mvvm 패턴
+2. flux 패턴
+3. redux 와 flux 패턴의 차이점
+4. redux와 context Api의 차이점
+5. 4번의 주요 사용 활용 방법'
 ---
 
 
@@ -54,88 +58,4 @@ summary: 'redux'
 - **공식 문서 URL**:
   - [Redux](https://redux.js.org/)
   - [Context API](https://reactjs.org/docs/context.html)
-
-
-
-# 개발 패턴 및 기술에 대한 가이드
-
-## Redux와 Context API 활용 시나리오 및 코드 예제
-
-### Redux 활용 시나리오
-- **상황**: 대규모 애플리케이션에서 여러 컴포넌트 간에 복잡한 상태 공유가 필요할 때.
-- **예제**:
-```javascript
-import { createStore } from 'redux';
-
-// Action Type
-const INCREMENT = 'INCREMENT';
-
-// Action Creator
-function increment() {
-  return { type: INCREMENT };
-}
-
-// Reducer
-function counter(state = 0, action) {
-  switch (action.type) {
-    case INCREMENT:
-      return state + 1;
-    default:
-      return state;
-  }
-}
-
-// Store 생성
-const store = createStore(counter);
-
-// Store 구독
-store.subscribe(() => console.log('Current state:', store.getState()));
-
-// Action dispatch
-store.dispatch(increment());
-```
-
-### Context API 활용 시나리오
-- **상황**: 중소규모 애플리케이션에서 간단한 상태 공유가 필요할 때, 특히 상위에서 하위 컴포넌트로의 데이터 전달이 주된 목적일 때.
-- **예제**:
-```javascript
-import React, { createContext, useContext, useState } from 'react';
-
-// Context 생성
-const CountContext = createContext();
-
-// Provider Component
-function CountProvider({ children }) {
-  const [count, setCount] = useState(0);
-
-  const value = { count, setCount };
-
-  return (
-    <CountContext.Provider value={value}>
-      {children}
-    </CountContext.Provider>
-  );
-}
-
-// Consumer Component
-function Counter() {
-  const { count, setCount } = useContext(CountContext);
-
-  return (
-    <div>
-      <p>Count: {count}</p>
-      <button onClick={() => setCount(count + 1)}>Increment</button>
-    </div>
-  );
-}
-
-// App Component
-function App() {
-  return (
-    <CountProvider>
-      <Counter />
-    </CountProvider>
-  );
-}
-```
 
