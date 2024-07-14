@@ -1,6 +1,6 @@
 ---
 title: JWT (JSON Web Tokens)
-date: '2024-07-13'
+date: '2024-03-13'
 tags: [JWT]
 draft: false
 summary: 'JWT (JSON Web Tokens)'
@@ -48,11 +48,11 @@ Access 토큰이 만료되었을 때, Refresh 토큰을 사용하여 새로운 A
 
 - **URL**: POST /auth/token
 - **HTTP Body**:
-  ```json
-  {
-      "grant_type": "refresh_token",
-      "refresh_token": "your_refresh_token_here"
-  }
+```json
+{
+    "grant_type": "refresh_token",
+    "refresh_token": "your_refresh_token_here"
+}
     ```
 
 ## 3. 새로운 Access 토큰으로 재요청
@@ -67,11 +67,11 @@ Access 토큰이 만료되었을 때, Refresh 토큰을 사용하여 새로운 A
 
 - **HTTP Status Code**: 403
 - **HTTP Body**:
-  ```json
-  {
-      "error": "insufficient_scope",
-      "error_description": "The token does not have the necessary permissions."
-  }
+```json
+{
+    "error": "insufficient_scope",
+    "error_description": "The token does not have the necessary permissions."
+}
     ```
 
 ## Refresh 토큰 프론트 저장 장소
