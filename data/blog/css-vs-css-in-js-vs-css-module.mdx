@@ -1,39 +1,9 @@
 ---
-title: CSS 리팩토링
-date: '2024-02-21'
-tags: [CSS 리팩토링]
+title: CSS vs CSS-IN-JS VS CSS MODULE
+date: '2024-06-04'
+tags: [CSS, CSS-IN-JS, CSS MODULE]
 draft: false
-summary: '- CSS
-- CSS-IN-JS
-    - STYLED COMPONENT
-    - EMOTION
-- CSS 전처리기
-- CSS 후처리기
-- 디자인 시스템
-- 디자인 시스템 라이브러리'
----
-
-# [3]TIL_CSS 리팩토링
-
-**목차**
-
----
-
-# ✍학습 키워드
-
-리팩토링을 하게 된 경험을 공유 할 수 있도록 한다.
-
-## 키워드
-
-- CSS
-- CSS-IN-JS
-    - STYLED COMPONENT
-    - EMOTION
-- CSS 전처리기
-- CSS 후처리기
-- 디자인 시스템
-- 디자인 시스템 라이브러리
-
+summary: 'CSS vs CSS-IN-JS VS CSS MODULE'
 ---
 
 # 📝새로 배운 개념
@@ -91,9 +61,9 @@ CSS 상속은 특정 CSS 속성이 부모 요소에서 자식 요소로 자동�
 
 - **중요도(Importance)**: !important 규칙은 모든 다른 선언보다 높은 우선순위를 가집니다.
 - **특이성(Specificity)**: 특이성이 높은 선택자는 특이성이 낮은 선택자보다 우선합니다. 예를 들어, ID 선택자는 클래스 선택자보다 특이성이 높고, 클래스 선택자는 태그 선택자보다 특이성이 높습니다.
-    - ID 선택자 (#id): 0,1,0
-    - 클래스 선택자 (.class), 속성 선택자 ([type="text"]), 가상 클래스 (:hover): 0,0,1
-    - 태그 선택자 (div, h1), 가상 요소 (::before): 0,0,0,1
+  - ID 선택자 (#id): 0,1,0
+  - 클래스 선택자 (.class), 속성 선택자 ([type="text"]), 가상 클래스 (:hover): 0,0,1
+  - 태그 선택자 (div, h1), 가상 요소 (::before): 0,0,0,1
 - **소스 순서(Source Order)**: HTML 문서에 나타나는 순서대로 스타일이 적용됩니다. 같은 중요도와 특이성을 가진 규칙이라면, 나중에 선언된 스타일이 우선 적용됩니다.
 
 ### **CSS 모듈(CSS Modules)**
@@ -252,6 +222,44 @@ CSS 후처리기는 작성된 CSS 코드에 후처리를 적용하여 코드의 
 
 일관성 / 충돌을 피하기 위해서 만들었지만 한번 더 생각을 해 볼 수 있었 던 것 같다.
 
+#### 예시
+
+##### Styled Components
+```javascript
+import styled from 'styled-components';
+
+const Button = styled.button`
+  background: blue;
+  color: white;
+  padding: 10px;
+`;
+
+function App() {
+  return <Button>Click Me</Button>;
+}
+```
+
+##### Emotion
+```javascript
+/** @jsxImportSource @emotion/react */
+import { css } from '@emotion/react';
+import styled from '@emotion/styled';
+
+const buttonStyle = css`
+  background: blue;
+  color: white;
+  padding: 10px;
+`;
+
+const Button = styled.button`
+  ${buttonStyle}
+`;
+
+function App() {
+  return <Button>Click Me</Button>;
+}
+```
+
 ---
 
 # 🔗레퍼런스
@@ -269,15 +277,15 @@ CSS 후처리기는 작성된 CSS 코드에 후처리를 적용하여 코드의 
 - [**https://developer.mozilla.org/ko/docs/Learn/CSS**](https://developer.mozilla.org/ko/docs/Learn/CSS)
 
 1. **CSS 전처리기 (Preprocessors)**:
-    - **Sass**: [Sass 공식 문서](https://sass-lang.com/documentation/)
-    - **Less**: [Less 공식 문서](https://lesscss.org/)
+ - **Sass**: [Sass 공식 문서](https://sass-lang.com/documentation/)
+ - **Less**: [Less 공식 문서](https://lesscss.org/)
 2. **CSS 후처리기 (Postprocessors)**:
-    - **PostCSS**: [PostCSS 공식 문서](https://postcss.org/)
+ - **PostCSS**: [PostCSS 공식 문서](https://postcss.org/)
 3. **Styled Components**:
-    - [Styled Components 공식 문서](https://styled-components.com/docs)
+ - [Styled Components 공식 문서](https://styled-components.com/docs)
 4. **Emotion**:
-    - [Emotion 공식 문서](https://emotion.sh/docs/introduction)
+ - [Emotion 공식 문서](https://emotion.sh/docs/introduction)
 5. **Ant Design**:
-    - [Ant Design 공식 문서](https://ant.design/docs/react/introduce)
+ - [Ant Design 공식 문서](https://ant.design/docs/react/introduce)
 6. **Material-UI**:
-    - [Material-UI 공식 문서](https://mui.com/getting-started/installation/)
+ - [Material-UI 공식 문서](https://mui.com/getting-started/installation/)
