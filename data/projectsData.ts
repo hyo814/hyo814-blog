@@ -30,6 +30,18 @@ const projectsData: Project[] = [
     imgSrc: '',
     href: 'https://github.com/schoolproject2020',
   },
+  {
+    title: '극도로 한정된 세계',
+    description: `[공모전] 극도로 한정된 세계`,
+    imgSrc: '',
+    href: 'https://blog.naver.com/ggamjige8888/222042363999',
+  },
+  {
+    title: '실제 현업 WEB 개발자와 함께 SW 포트폴리오 제작까지! (6.10 19시 시작)',
+    description: `코멘토 프로그램 - 실제 현업 WEB 개발자와 함께 SW 포트폴리오 제작까지! (6.10 19시 시작)`,
+    imgSrc: '',
+    href: 'https://blog.naver.com/ggamjige8888/221967865954',
+  },
 ]
 
 export default projectsData
