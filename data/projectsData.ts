@@ -27,7 +27,7 @@ const projectsData: Project[] = [
   {
     title: '동아리 사이트 프로젝트',
     description: `동아리 사이트 프로젝트 - 프론트엔드`,
-    imgSrc: '',
+    imgSrc: '/static/images/fancuk.png',
     href: 'https://github.com/fancuk',
   },
   {
