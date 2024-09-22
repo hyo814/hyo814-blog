@@ -1,8 +1,8 @@
 interface Project {
-  title: string,
-  description: string,
-  href?: string,
-  imgSrc?: string,
+  title: string
+  description: string
+  href?: string
+  imgSrc?: string
 }
 
 const projectsData: Project[] = [
@@ -22,13 +22,13 @@ const projectsData: Project[] = [
     title: '히투지투 프로젝트',
     description: `2022 캡스톤, 운동 헬스케어 프로그램 - 프론트엔드`,
     imgSrc: '/static/images/h2g2.png',
-    href: 'https://github.com/schoolproject2020',
+    href: 'https://blog.naver.com/ggamjige8888/222159992255',
   },
   {
     title: '동아리 사이트 프로젝트',
     description: `동아리 사이트 프로젝트 - 프론트엔드`,
     imgSrc: '/static/images/fancuk.png',
-    href: 'https://github.com/fancuk',
+    href: 'https://blog.naver.com/ggamjige8888/222160011102',
   },
   {
     title: '공모전 참여',
