@@ -1,0 +1,140 @@
+---
+title: ES6(ECMAScript 2015)
+date: '2024-06-08'
+tags: [ES6]
+draft: false
+summary: 'ES6(ECMAScript 2015) 주요 문법'
+---
+
+# ES6(ECMAScript 2015)
+
+1. **let과 const**
+   - **let**: 블록 스코프를 갖는 변수 선언 키워드입니다. 재할당이 가능하며, 기존의 `var`와 달리 호이스팅 이슈가 없습니다.
+   - **const**: 블록 스코프를 갖는 상수 선언 키워드입니다. 선언 시 반드시 초기화해야 하며, 재할당이 불가능합니다.
+2. **화살표 함수**
+   - 함수 표현식을 간결하게 작성할 수 있는 문법입니다.
+   - 기존 함수와 달리 자신의 `this` 바인딩을 가지지 않고, 상위 스코프의 `this`를 사용합니다.
+3. **템플릿 리터럴**
+   - 백틱(``` ` ``)을 사용하여 문자열을 작성합니다.
+   - `${expression}`을 통해 문자열 내에 변수나 표현식을 삽입할 수 있으며, 여러 줄에 걸친 문자열도 지원합니다.
+4. **디스트럭처링 할당**
+
+   - 배열이나 객체의 값을 개별 변수로 분해하여 할당할 수 있습니다.
+   - 예시:
+
+     ```jsx
+     const [a, b] = [1, 2]
+     const { x, y } = { x: 10, y: 20 }
+     ```
+
+5. **기본 매개변수**
+
+   - 함수의 매개변수에 기본값을 설정할 수 있습니다.
+   - 예시:
+
+     ```jsx
+     function greet(name = '익명') {
+       console.log(`안녕하세요, ${name}님`)
+     }
+     ```
+
+6. **스프레드 연산자와 레스트 파라미터**
+
+   - **스프레드 연산자 (`...`)**: 배열이나 객체를 펼쳐서 요소나 프로퍼티를 나열합니다.
+
+     ```jsx
+     const arr = [1, 2, 3]
+     const newArr = [...arr, 4, 5]
+     ```
+
+   - **레스트 파라미터**: 함수의 매개변수에서 남은 인자들을 배열로 모읍니다.
+
+     ```jsx
+     function sum(...numbers) {
+       return numbers.reduce((acc, curr) => acc + curr, 0)
+     }
+     ```
+
+7. **모듈 시스템**
+
+   - `import`와 `export` 키워드를 사용하여 모듈을 가져오거나 내보낼 수 있습니다.
+   - 예시:
+
+     ```jsx
+     // 내보내기 (module.js)
+     export const name = '모듈'
+     // 가져오기 (main.js)
+     import { name } from './module.js'
+     ```
+
+8. **프로미스 (Promise)**
+
+   - 비동기 작업을 처리하기 위한 객체로, 콜백 지옥을 피하고 코드의 가독성을 높입니다.
+   - 예시:
+
+     ```jsx
+     new Promise((resolve, reject) => {
+       // 비동기 작업 수행
+     })
+       .then((result) => {
+         // 성공 처리
+       })
+       .catch((error) => {
+         // 에러 처리
+       })
+     ```
+
+9. **클래스**
+
+   - 객체 지향 프로그래밍을 지원하기 위한 `class` 문법이 도입되었습니다.
+   - 예시:
+
+     ```jsx
+     class Person {
+       constructor(name) {
+         this.name = name
+       }
+       greet() {
+         console.log(`안녕하세요, ${this.name}입니다.`)
+       }
+     }
+     ```
+
+10. **Map과 Set 자료구조**
+
+    - **Map**: 키-값 쌍을 저장하는 컬렉션이며, 키로 모든 타입의 값을 사용할 수 있습니다.
+    - **Set**: 중복되지 않는 유일한 값들의 집합입니다.
+    - 예시:
+
+      ```jsx
+      const map = new Map()
+      map.set('key', 'value')
+
+      const set = new Set([1, 2, 3, 3])
+      ```
+
+11. **이터레이터와 제너레이터**
+
+    - **이터레이터**: 컬렉션을 순회하기 위한 프로토콜을 정의합니다.
+    - **제너레이터**: `function*` 키워드를 사용하여 이터레이터를 쉽게 생성할 수 있는 함수입니다.
+    - 예시:
+
+      ```jsx
+      function* generatorFunction() {
+        yield 1
+        yield 2
+        yield 3
+      }
+      ```
+
+12. **Symbol 타입**
+
+    - 고유하고 변경 불가능한 원시 타입으로, 객체의 프로퍼티 키로 사용하여 충돌을 방지할 수 있습니다.
+    - 예시:
+
+      ```jsx
+      const uniqueKey = Symbol('키')
+      const obj = {
+        [uniqueKey]: '값',
+      }
+      ```
