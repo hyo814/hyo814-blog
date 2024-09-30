@@ -6,29 +6,34 @@ draft: false
 summary: 'JWT (JSON Web Tokens)'
 ---
 
-
 # JSON Web Tokens (JWT)
 
 ## 기본 설명
+
 JSON Web Token (JWT)은 웹 표준으로서, 두 시스템 사이에서 안전하게 정보를 JSON 객체 형태로 전송하기 위해 사용됩니다. JWT는 정보를 안전하게 전송할 수 있도록 디지털 서명이 되어 있으며, 일반적으로 HMAC 알고리즘을 사용하거나 RSA나 ECDSA와 같은 공개 키/개인 키 쌍을 이용하여 서명됩니다.
 
 ## 구조
+
 JWT는 세 부분으로 구성됩니다: 헤더(Header), 페이로드(Payload), 서명(Signature).
+
 - **헤더**: 토큰의 유형과 사용된 해시 알고리즘을 설명합니다.
 - **페이로드**: 토큰에 담을 클레임(claim) 정보가 포함됩니다. 클레임은 사용자의 식별 정보나 토큰의 유효 기간 등이 될 수 있습니다.
 - **서명**: 헤더와 페이로드를 해싱하고 비밀 키로 서명하여 생성된 부분입니다.
 
 ## 예시
+
 JWT 예시:
+
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
 ```
+
 이 예시는 HMAC SHA256 알고리즘을 사용하여 서명된 토큰입니다.
 
 ## 활용 방법
+
 - **인증**: 서버는 클라이언트가 로그인할 때 JWT를 생성하고 클라이언트는 이후 요청에서 이 JWT를 사용하여 자신을 인증할 수 있습니다.
 - **정보 교환**: JWT는 두 당사자 사이에서 안전하게 정보를 교환하기 위해 사용할 수 있습니다. 정보가 JWT에 서명되어 있기 때문에 정보가 조작되었는지 확인할 수 있습니다.
-
 
 # Access 토큰 만료 시 request 처리 방법
 
@@ -48,7 +53,8 @@ Access 토큰이 만료되었을 때, Refresh 토큰을 사용하여 새로운 A
 
 - **URL**: POST /auth/token
 - **HTTP Body**:
-```json
+
+````json
 {
     "grant_type": "refresh_token",
     "refresh_token": "your_refresh_token_here"
@@ -83,7 +89,7 @@ Refresh 토큰은 보안상 중요한 정보이기 때문에 안전하게 저장
 HttpOnly 속성을 가진 쿠키는 JavaScript에서 접근할 수 없어 XSS 공격을 방지할 수 있습니다. 쿠키 설정 예시는 다음과 같습니다:
 ```javascript
 document.cookie = "refresh_token=your_refresh_token_here; HttpOnly; Secure; SameSite=Strict";
-```
+````
 
 ## 로그인 안한 상태에서 요청 할 때
 
@@ -93,9 +99,9 @@ document.cookie = "refresh_token=your_refresh_token_here; HttpOnly; Secure; Same
 
 ```json
 {
-    "status": 401,
-    "error": "Unauthorized",
-    "message": "Authentication required."
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Authentication required."
 }
 ```
 
@@ -107,9 +113,9 @@ document.cookie = "refresh_token=your_refresh_token_here; HttpOnly; Secure; Same
 
 ```json
 {
-    "status": 401,
-    "error": "Unauthorized",
-    "message": "Refresh token has expired."
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Refresh token has expired."
 }
 ```
 
@@ -121,14 +127,14 @@ document.cookie = "refresh_token=your_refresh_token_here; HttpOnly; Secure; Same
 
 ```json
 {
-    "status": 403,
-    "error": "Forbidden",
-    "message": "Invalid refresh token."
+  "status": 403,
+  "error": "Forbidden",
+  "message": "Invalid refresh token."
 }
 ```
 
 따라서, 상태 코드는 다음과 같이 구분됩니다:
+
 - **로그인 안한 상태에서 요청할 때**: 401 Unauthorized
 - **Refresh Token 만료 됐을 때**: 401 Unauthorized
 - **Refresh Token이 DB에 저장된 것과 다를 때**: 403 Forbidden
-
