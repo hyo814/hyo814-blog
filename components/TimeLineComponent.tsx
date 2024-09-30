@@ -71,7 +71,7 @@ const TimeLineComponent = () => {
       tags: ['사이드프로젝트'],
     },
     {
-      company: '동아리 FAN',
+      company: 'FAN',
       startDate: '2020-04-01',
       endDate: '2020-12-31',
       description: '웹 사이트 제작 및 프로젝트 진행 경험.',
@@ -83,6 +83,13 @@ const TimeLineComponent = () => {
       endDate: '2020-12-31',
       description: '프론트엔드 스터디 참여 및 실습 경험.',
       tags: ['스터디'],
+    },
+    {
+      company: '코멘토 > 실제 현업 WEB 개발자와 함께 SW 포트폴리오 제작까지!',
+      startDate: '2020-06-10',
+      endDate: '2020-07-08',
+      description: '실제 현업 WEB 개발자와 함께 SW 포트폴리오 제작까지! : 방탈출 제작',
+      tags: ['사이드프로젝트'],
     },
     {
       company: '영화 사이트',
@@ -120,7 +127,7 @@ const TimeLineComponent = () => {
       tags: ['사이드프로젝트', '협업', '공모전'],
     },
     {
-      company: '동아리 코마',
+      company: '코마',
       startDate: '2020-08-01',
       endDate: '2020-12-31',
       description: '웹 클론 코딩 프로젝트 진행.',
@@ -183,10 +190,31 @@ const TimeLineComponent = () => {
       tags: ['사이드프로젝트'],
     },
     {
+      company: '코멘토 > SQL 입문 부터 활용까지 데이터 분석 보고서 작성과 대시보드 개발',
+      startDate: '2021-02-21',
+      endDate: '2021-03-21',
+      description: '데이터 개발 직무 부트 캠프',
+      tags: ['사이드프로젝트'],
+    },
+    {
       company: '딥노이드 : 프론트엔드 개발',
       startDate: '2021-04-12',
       endDate: '2022-08-05',
       description: '의료와 산업 AI 솔루션을 개발 및 제공하는 인공지능 전문 기업.',
+      tags: ['회사'],
+    },
+    {
+      company: '빅데이터 분석 첫걸음 시작하기',
+      startDate: '2021-11-10',
+      endDate: '2021-12-15',
+      description: '국비지원 : 빅데이터 분석 첫걸음 시작하기',
+      tags: ['사이드프로젝트'],
+    },
+    {
+      company: 'python & django로 시작하는 웹 프로그래밍',
+      startDate: '2021-11-10',
+      endDate: '2022-01-05',
+      description: '국비지원 : python & django로 시작하는 웹 프로그래밍',
       tags: ['회사'],
     },
     {
