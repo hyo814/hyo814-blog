@@ -10,10 +10,19 @@ interface TechCardProps {
 const TechCard: React.FC<TechCardProps> = ({ frontContent, backContent, imageSrc }) => {
   const [flipped, setFlipped] = useState(false)
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      setFlipped(!flipped)
+    }
+  }
+
   return (
     <div
       className="flex h-72 w-52 cursor-pointer items-center justify-center md:h-80 md:w-64"
       onClick={() => setFlipped(!flipped)}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
       style={{ perspective: '1000px' }}
     >
       <div
