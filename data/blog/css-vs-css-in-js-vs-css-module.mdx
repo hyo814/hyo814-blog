@@ -225,38 +225,40 @@ CSS 후처리기는 작성된 CSS 코드에 후처리를 적용하여 코드의 
 #### 예시
 
 ##### Styled Components
+
 ```javascript
-import styled from 'styled-components';
+import styled from 'styled-components'
 
 const Button = styled.button`
   background: blue;
   color: white;
   padding: 10px;
-`;
+`
 
 function App() {
-  return <Button>Click Me</Button>;
+  return <Button>Click Me</Button>
 }
 ```
 
 ##### Emotion
+
 ```javascript
 /** @jsxImportSource @emotion/react */
-import { css } from '@emotion/react';
-import styled from '@emotion/styled';
+import { css } from '@emotion/react'
+import styled from '@emotion/styled'
 
 const buttonStyle = css`
   background: blue;
   color: white;
   padding: 10px;
-`;
+`
 
 const Button = styled.button`
   ${buttonStyle}
-`;
+`
 
 function App() {
-  return <Button>Click Me</Button>;
+  return <Button>Click Me</Button>
 }
 ```
 
@@ -277,15 +279,26 @@ function App() {
 - [**https://developer.mozilla.org/ko/docs/Learn/CSS**](https://developer.mozilla.org/ko/docs/Learn/CSS)
 
 1. **CSS 전처리기 (Preprocessors)**:
- - **Sass**: [Sass 공식 문서](https://sass-lang.com/documentation/)
- - **Less**: [Less 공식 문서](https://lesscss.org/)
+
+- **Sass**: [Sass 공식 문서](https://sass-lang.com/documentation/)
+- **Less**: [Less 공식 문서](https://lesscss.org/)
+
 2. **CSS 후처리기 (Postprocessors)**:
- - **PostCSS**: [PostCSS 공식 문서](https://postcss.org/)
+
+- **PostCSS**: [PostCSS 공식 문서](https://postcss.org/)
+
 3. **Styled Components**:
- - [Styled Components 공식 문서](https://styled-components.com/docs)
+
+- [Styled Components 공식 문서](https://styled-components.com/docs)
+
 4. **Emotion**:
- - [Emotion 공식 문서](https://emotion.sh/docs/introduction)
+
+- [Emotion 공식 문서](https://emotion.sh/docs/introduction)
+
 5. **Ant Design**:
- - [Ant Design 공식 문서](https://ant.design/docs/react/introduce)
+
+- [Ant Design 공식 문서](https://ant.design/docs/react/introduce)
+
 6. **Material-UI**:
- - [Material-UI 공식 문서](https://mui.com/getting-started/installation/)
+
+- [Material-UI 공식 문서](https://mui.com/getting-started/installation/)
