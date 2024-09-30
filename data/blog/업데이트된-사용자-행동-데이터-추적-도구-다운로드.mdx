@@ -26,18 +26,21 @@ GA4는 웹사이트나 애플리케이션에서 사용자 활동을 추적하고
 GA4를 사용하려면 GA4 측정 ID를 얻어야 합니다.
 
 ```jsx
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App';
-import { GA4React } from 'ga-4-react';
+import React from 'react'
+import ReactDOM from 'react-dom'
+import App from './App'
+import { GA4React } from 'ga-4-react'
 
-const ga4react = new GA4React('YOUR_GA4_MEASUREMENT_ID');
+const ga4react = new GA4React('YOUR_GA4_MEASUREMENT_ID')
 
-ga4react.initialize().then(() => {
-  ReactDOM.render(<App />, document.getElementById('root'));
-}).catch((err) => {
-  console.error(err);
-});
+ga4react
+  .initialize()
+  .then(() => {
+    ReactDOM.render(<App />, document.getElementById('root'))
+  })
+  .catch((err) => {
+    console.error(err)
+  })
 ```
 
 ## **버튼 클릭, 스크롤, 동영상 재생 추적하기**
@@ -117,7 +120,7 @@ UTM(Urchin Tracking Module) 링크는 마케팅 캠페인 효율성을 추적하
 ## **페이지에 링크에 UTM 매개변수 추가하기**
 
 ```jsx
-import Link from 'next/link';
+import Link from 'next/link'
 
 export default function Home() {
   return (
@@ -127,14 +130,14 @@ export default function Home() {
         <a>About Us</a>
       </Link>
     </div>
-  );
+  )
 }
 ```
 
 ## **메타 태그에 UTM 매개변수 추가하기**
 
 ```jsx
-import Head from 'next/head';
+import Head from 'next/head'
 
 export default function Home() {
   return (
@@ -142,7 +145,10 @@ export default function Home() {
       <Head>
         <title>My Page Title</title>
         <meta name="description" content="My page description" />
-        <meta property="og:url" content="https://www.example.com?utm_source=newsletter&utm_medium=email&utm_campaign=spring_sale" />
+        <meta
+          property="og:url"
+          content="https://www.example.com?utm_source=newsletter&utm_medium=email&utm_campaign=spring_sale"
+        />
         <meta property="og:title" content="My Page Title" />
         <meta property="og:description" content="My page description" />
         <meta property="og:type" content="website" />
@@ -150,7 +156,7 @@ export default function Home() {
       <h1>Welcome to My Page</h1>
       <p>This is the content of the page.</p>
     </div>
-  );
+  )
 }
 ```
 

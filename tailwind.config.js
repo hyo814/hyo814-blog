@@ -27,6 +27,12 @@ module.exports = {
       colors: {
         primary: colors.pink,
         gray: colors.gray,
+        emerald: colors.emerald,
+        rose: colors.rose,
+        purple: colors.purple,
+        pink: colors.pink,
+        teal: colors.teal,
+        orange: colors.orange,
       },
       typography: ({ theme }) => ({
         DEFAULT: {

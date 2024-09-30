@@ -7,7 +7,7 @@ interface Project {
 
 const projectsData: Project[] = [
   {
-    title: '직장인 건강 플랫폼, 직장건강',
+    title: '직장인 건강 플랫폼, 직짱건강',
     description: `책상에 앉아 일을 많이 하는 당신! 현재 건강 상태가 어떤지 체크해볼까요?`,
     imgSrc: '/static/images/zigzzang.png',
     href: 'https://hyo814.notion.site/3-5fd48f1439f440fdb9fffe0e2e55cac7',
@@ -29,12 +29,6 @@ const projectsData: Project[] = [
     description: `동아리 사이트 프로젝트 - 프론트엔드`,
     imgSrc: '/static/images/fancuk.png',
     href: 'https://blog.naver.com/ggamjige8888/222160011102',
-  },
-  {
-    title: '공모전 참여',
-    description: `[공모전] 극도로 한정된 세계`,
-    imgSrc: '/static/images/rhdahwjs.png',
-    href: 'https://blog.naver.com/ggamjige8888/222042363999',
   },
   {
     title: '코멘토 프로그램',
