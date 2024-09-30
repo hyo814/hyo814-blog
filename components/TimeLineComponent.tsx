@@ -2,17 +2,17 @@ import React from 'react'
 
 const TimeLineComponent = () => {
   const tagColors = {
-    '계약직': 'bg-red-100 text-red-800',
-    '편입': 'bg-yellow-100 text-yellow-800',
-    '사이드프로젝트': 'bg-purple-100 text-purple-800',
-    '동아리': 'bg-pink-100 text-pink-800',
-    '협업': 'bg-teal-100 text-teal-800',
-    '스터디': 'bg-orange-100 text-orange-800',
-    '공모전': 'bg-emerald-100 text-emerald-800',
-    '박람회': 'bg-rose-100 text-rose-800',
-    '커피챗': 'bg-orange-100 text-orange-800',
+    계약직: 'bg-red-100 text-red-800',
+    편입: 'bg-yellow-100 text-yellow-800',
+    사이드프로젝트: 'bg-purple-100 text-purple-800',
+    동아리: 'bg-pink-100 text-pink-800',
+    협업: 'bg-teal-100 text-teal-800',
+    스터디: 'bg-orange-100 text-orange-800',
+    공모전: 'bg-emerald-100 text-emerald-800',
+    박람회: 'bg-rose-100 text-rose-800',
+    커피챗: 'bg-orange-100 text-orange-800',
   }
-  
+
   const experienceData = [
     {
       company: '맥딜리버리 콜센터',
@@ -225,7 +225,7 @@ const TimeLineComponent = () => {
       tags: ['스터디', '커피챗'],
     },
   ]
-  
+
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="border-l-4 border-blue-600 pl-8">
