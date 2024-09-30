@@ -244,7 +244,7 @@ export default function Skills() {
             key={index}
             frontContent={tech.front}
             backContent={tech.back}
-            imageSrc={tech.imageSrc} // 이미지 배지 전달
+            imageSrc={tech.imageSrc}
           />
         ))}
       </div>
