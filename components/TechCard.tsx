@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import Image from "next/image";
+import Image from 'next/image'
 
 interface TechCardProps {
   frontContent: string
@@ -24,7 +24,7 @@ const TechCard: React.FC<TechCardProps> = ({ frontContent, backContent, imageSrc
           className="absolute flex h-full w-full flex-col items-center justify-center rounded-lg bg-blue-500 p-4 shadow-lg"
           style={{ backfaceVisibility: 'hidden', zIndex: flipped ? 0 : 1 }}
         >
-          <Image src={imageSrc} alt={frontContent} className="mb-4 h-16 w-16" /> {/* 이미지 배지 */}
+          <Image src={imageSrc} alt={frontContent} className="mb-4 h-16 w-16" />
           <h2 className="break-words text-center text-xl text-white">{frontContent}</h2>
         </div>
         <div
