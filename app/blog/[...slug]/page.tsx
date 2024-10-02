@@ -57,7 +57,7 @@ export async function generateMetadata({
       title: post.title,
       description: post.summary,
       siteName: siteMetadata.title,
-      locale: 'en_US',
+      locale: 'ko',
       type: 'article',
       publishedTime: publishedAt,
       modifiedTime: modifiedAt,
@@ -65,12 +65,12 @@ export async function generateMetadata({
       images: ogImages,
       authors: authors.length > 0 ? authors : [siteMetadata.author],
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.title,
-      description: post.summary,
-      images: imageList,
-    },
+    // twitter: {
+    //   card: 'summary_large_image',
+    //   title: post.title,
+    //   description: post.summary,
+    //   images: imageList,
+    // },
   }
 }
 
