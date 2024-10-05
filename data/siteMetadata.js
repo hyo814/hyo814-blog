@@ -6,10 +6,10 @@ const siteMetadata = {
   description: '효 와 함께 하는 블로그 여행',
   language: 'ko',
   theme: 'system', // system, dark or light
-  siteUrl: 'https://tailwind-nextjs-starter-blog.vercel.app',
-  siteRepo: 'https://github.com/timlrx/tailwind-nextjs-starter-blog',
+  siteUrl: 'https://hyo814-blog.vercel.app',
+  siteRepo: 'https://github.com/hyo814/hyo814-blog',
   siteLogo: '/static/images/logo.png',
-  socialBanner: '/static/images/twitter-card.png',
+  socialBanner: '/static/images/logo.png',
   mastodon: 'https://mastodon.social/@hyo814',
   email: 'ggamjge8888@naver.com',
   github: 'https://github.com/hyo814',
