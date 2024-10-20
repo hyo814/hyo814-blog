@@ -1,0 +1,235 @@
+---
+title: React에서 ‘Lifting State Up’과 ‘Prop Drilling’
+date: '2024-05-12'
+tags: [React]
+draft: false
+summary: ‘Lifting State Up’과 ‘Prop Drilling’
+---
+
+# React에서 ‘Lifting State Up’과 ‘Prop Drilling’
+
+React에서 상태(state) 관리 중 ‘lifting state up’과 ‘prop drilling’을 설명하고, 복잡한 컴포넌트 계층 구조에서 이로 인해 발생할 수 있는 문제들을 설명하세요.
+
+​
+
+질문의도 입니다!
+
+​
+
+‘lifting state up’과 ‘prop drilling’의 개념을 명확히 이해하고, 복잡한 컴포넌트 구조에서 발생할 수 있는 문제(예: 유지보수성 저하, 코드 복잡성 증가)를 해결할 수 있는 능력을 평가하려는 의도입니다.
+
+---
+
+### 모범 답안
+
+**React에서 ‘Lifting State Up’과 ‘Prop Drilling’ 개념 설명 및 문제점**
+
+React에서 상태 관리는 컴포넌트 간 데이터 흐름을 관리하는 중요한 방법입니다.
+
+### 1. Lifting State Up
+
+**Lifting state up**이란, 하위 컴포넌트에서 사용되는 공통 상태를 상위 컴포넌트로 끌어올려서 관리하는 패턴입니다. React는 단방향 데이터 흐름을 사용하기 때문에, 두 개 이상의 컴포넌트가 같은 데이터를 필요로 할 경우 데이터를 상위 컴포넌트에서 관리하고, 하위 컴포넌트로 데이터를 내려주어야 합니다.
+
+예를 들어, 여러 하위 컴포넌트가 동일한 상태를 필요로 할 때, 그 상태를 공통 조상 컴포넌트로 올려서 관리하는 것이 **lifting state up**입니다.
+
+```jsx
+function Parent() {
+  const [value, setValue] = useState(0)
+
+  return (
+    <div>
+      <ChildA value={value} />
+      <ChildB setValue={setValue} />
+    </div>
+  )
+}
+```
+
+위 코드에서 `value`와 `setValue`를 부모 컴포넌트에서 관리하고, 자식 컴포넌트들에 전달하는 방식이 `lifting state up`의 예시입니다.
+
+### 2. Prop Drilling
+
+**Prop drilling**이란, 특정 하위 컴포넌트가 필요한 데이터를 전달하기 위해 그 컴포넌트에 직접적인 부모 컴포넌트가 아닌 상위 컴포넌트에서부터 props를 거쳐 내려 보내는 과정을 말합니다. 상태나 데이터를 컴포넌트 계층을 따라 계속해서 props로 전달하는 이 과정은 계층이 깊어질수록 복잡해질 수 있습니다.
+
+```jsx
+function Grandparent() {
+  const [data, setData] = useState('Hello')
+
+  return <Parent data={data} setData={setData} />
+}
+
+function Parent({ data, setData }) {
+  return <Child data={data} setData={setData} />
+}
+
+function Child({ data, setData }) {
+  return (
+    <div>
+      <p>{data}</p>
+      <button onClick={() => setData('Hello, World!')}>Update</button>
+    </div>
+  )
+}
+```
+
+위 코드에서는 `Grandparent`에서 상태를 관리하지만, 해당 데이터를 `Child`에 전달하기 위해 `Parent`를 거쳐 props로 데이터를 전달하는 과정을 **prop drilling**이라고 합니다.
+
+### 3. 문제점
+
+복잡한 컴포넌트 계층 구조에서 **lifting state up**과 **prop drilling**은 다음과 같은 문제를 일으킬 수 있습니다.
+
+1. **유지보수성 저하**: 상태나 데이터를 여러 컴포넌트 계층을 거쳐 전달하다 보면, 컴포넌트 간의 결합도가 높아지게 됩니다. 만약 상태나 데이터 구조가 변경되면, 이를 전달하는 모든 컴포넌트를 수정해야 하기 때문에 유지보수가 어려워집니다.
+2. **코드 복잡성 증가**: 상태를 상위 컴포넌트로 올리고, 여러 컴포넌트 간 props를 전달하는 과정은 코드의 가독성을 떨어뜨리고, 복잡한 계층 구조를 만들어 코드를 이해하기 어렵게 만듭니다. 계층이 깊어질수록 코드가 장황해지고, 작은 변화가 발생해도 많은 부분에서 수정이 필요하게 됩니다.
+3. **성능 저하**: 불필요하게 많은 컴포넌트가 리렌더링될 수 있습니다. 상태가 상위 컴포넌트에 있을 경우, 그 상태를 사용하는 하위 컴포넌트뿐만 아니라, 불필요하게 상태를 전달받는 중간 컴포넌트들도 리렌더링되기 때문입니다.
+
+### 4. 해결 방안
+
+복잡한 컴포넌트 계층 구조에서 발생하는 이러한 문제를 해결하기 위해 여러 가지 상태 관리 도구와 패턴을 사용할 수 있습니다.
+
+1. **Context API**: React의 Context API를 사용하면, props를 직접 전달하지 않고도 컴포넌트 트리 전체에 상태나 데이터를 공유할 수 있습니다. 이를 통해 prop drilling을 피할 수 있습니다.
+
+```jsx
+const DataContext = React.createContext()
+
+function Grandparent() {
+  const [data, setData] = useState('Hello')
+
+  return (
+    <DataContext.Provider value={{ data, setData }}>
+      <Parent />
+    </DataContext.Provider>
+  )
+}
+
+function Child() {
+  const { data, setData } = useContext(DataContext)
+  return (
+    <div>
+      <p>{data}</p>
+      <button onClick={() => setData('Hello, World!')}>Update</button>
+    </div>
+  )
+}
+```
+
+1. **상태 관리 라이브러리**: `Redux`, `MobX`, `Recoil`과 같은 상태 관리 라이브러리를 사용하면, 전역적으로 상태를 관리하고 컴포넌트 계층을 통해 props를 전달할 필요 없이 특정 컴포넌트가 필요할 때만 상태를 구독하고 사용할 수 있습니다. 이를 통해 복잡한 컴포넌트 구조에서도 상태 관리를 간결하게 할 수 있습니다.
+
+### React에서 ‘Lifting State Up’과 ‘Prop Drilling’: 상태 관리 문제와 해결 방안
+
+React에서 컴포넌트 간 상태 관리는 애플리케이션 구조와 유지보수성에 큰 영향을 미치는 중요한 요소입니다. React의 기본 상태 관리 방식에서 자주 사용되는 두 가지 개념인 **‘lifting state up’**과 **‘prop drilling’**을 이해하고, 이로 인해 발생할 수 있는 문제점과 해결 방안을 살펴보겠습니다.
+
+---
+
+### 1. Lifting State Up: 상태를 상위 컴포넌트로 끌어올리기
+
+**Lifting state up**은 두 개 이상의 자식 컴포넌트가 동일한 데이터를 필요로 할 때, 그 상태를 공통 조상 컴포넌트로 끌어올려서 관리하는 패턴입니다. React의 단방향 데이터 흐름 특성 때문에, 동일한 상태를 공유하는 컴포넌트들이 많아지면 상위 컴포넌트가 그 상태를 관리하고 자식 컴포넌트에 props로 전달하게 됩니다.
+
+### Lifting State Up 예시:
+
+```jsx
+function Parent() {
+  const [value, setValue] = useState(0)
+
+  return (
+    <div>
+      <ChildA value={value} />
+      <ChildB setValue={setValue} />
+    </div>
+  )
+}
+```
+
+위 예시에서는 `Parent` 컴포넌트가 `value`라는 상태를 관리하고, `ChildA`와 `ChildB`에 각각 상태와 상태를 변경할 수 있는 함수인 `setValue`를 전달합니다. 이런 방식으로 상태를 끌어올려 상태를 공유하게 됩니다.
+
+### Lifting State Up의 문제점
+
+Lifting state up은 상태를 일관성 있게 관리할 수 있는 방법이지만, 컴포넌트 계층이 깊어질수록 상태를 끌어올리는 구조가 복잡해질 수 있습니다. 이는 다음과 같은 문제를 야기합니다.
+
+1. **유지보수성 저하**: 여러 컴포넌트에서 동일한 상태를 사용하게 되면, 상위 컴포넌트에서 상태를 관리해야 하고, 이 상태에 의존하는 모든 하위 컴포넌트에서 props로 전달해야 합니다. 상태가 변경되거나 새로운 컴포넌트가 추가될 경우, 연쇄적으로 코드를 수정해야 하는 상황이 발생합니다.
+2. **복잡한 코드 구조**: 컴포넌트 간 상태 관리를 위해 많은 props를 전달하게 되면 코드가 장황해지고 복잡해집니다. 상위 컴포넌트와 하위 컴포넌트 간의 결합도가 높아지면 유지보수가 어렵고, 코드의 가독성도 떨어지게 됩니다.
+
+---
+
+### 2. Prop Drilling: 컴포넌트 계층을 거쳐 데이터를 전달하기
+
+**Prop drilling**은 컴포넌트의 계층 구조에서 특정 하위 컴포넌트로 데이터를 전달하기 위해, 부모 컴포넌트에서 props를 통해 데이터를 계속해서 전달하는 패턴입니다. 컴포넌트 계층이 깊어질수록 데이터를 전달하는 중간 컴포넌트들이 많아지며, 이로 인해 불필요한 props 전달이 발생할 수 있습니다.
+
+### Prop Drilling 예시:
+
+```jsx
+function Grandparent() {
+  const [data, setData] = useState('Hello')
+
+  return <Parent data={data} setData={setData} />
+}
+
+function Parent({ data, setData }) {
+  return <Child data={data} setData={setData} />
+}
+
+function Child({ data, setData }) {
+  return (
+    <div>
+      <p>{data}</p>
+      <button onClick={() => setData('Hello, World!')}>Update</button>
+    </div>
+  )
+}
+```
+
+위 코드에서 상태 `data`는 `Grandparent`에서 관리되지만, 그 값을 `Child`까지 전달하기 위해 `Parent`를 거쳐 props로 데이터를 내려보내는 구조가 됩니다. 이것이 바로 **prop drilling**입니다.
+
+### Prop Drilling의 문제점
+
+Prop drilling은 단순한 구조에서는 큰 문제가 되지 않지만, 계층 구조가 깊어지면 다음과 같은 문제가 발생할 수 있습니다.
+
+1. **유지보수성 저하**: 상태를 전달받기만 하는 중간 컴포넌트들도 props를 받도록 코드가 추가되며, 계층이 깊어질수록 이러한 코드가 많이 필요해집니다. 변경 사항이 있을 때, 관련된 모든 컴포넌트를 수정해야 할 수 있어 유지보수가 어렵습니다.
+2. **불필요한 렌더링**: 중간 컴포넌트가 상태를 사용하지 않더라도 props를 전달받기 때문에, 해당 상태가 변경될 때 불필요하게 리렌더링될 수 있습니다. 이는 성능 저하로 이어질 수 있습니다.
+
+---
+
+### 3. 복잡한 컴포넌트 구조에서 발생하는 문제 해결 방안
+
+이러한 문제를 해결하기 위해 React에서는 **Context API**와 같은 도구와, 외부 상태 관리 라이브러리를 사용할 수 있습니다. 이를 통해 더 효율적인 상태 관리를 구현할 수 있습니다.
+
+### 1) Context API 사용
+
+**Context API**는 컴포넌트 계층을 거치지 않고, 필요한 컴포넌트에서 직접 상태나 데이터를 구독할 수 있게 해주는 방법입니다. 이를 통해 **prop drilling**을 피할 수 있습니다.
+
+```jsx
+const DataContext = React.createContext()
+
+function Grandparent() {
+  const [data, setData] = useState('Hello')
+
+  return (
+    <DataContext.Provider value={{ data, setData }}>
+      <Parent />
+    </DataContext.Provider>
+  )
+}
+
+function Child() {
+  const { data, setData } = useContext(DataContext)
+  return (
+    <div>
+      <p>{data}</p>
+      <button onClick={() => setData('Hello, World!')}>Update</button>
+    </div>
+  )
+}
+```
+
+위 코드에서 `DataContext`를 사용하여 `Grandparent`에서 정의된 상태를 중간 컴포넌트를 거치지 않고 `Child`에서 직접 사용할 수 있게 합니다. 이를 통해 컴포넌트 간 props 전달을 최소화하고, 상태를 쉽게 공유할 수 있습니다.
+
+### 2) 상태 관리 라이브러리 사용
+
+복잡한 애플리케이션에서는 **Redux**, **MobX**, **Recoil**과 같은 상태 관리 라이브러리를 사용하여 전역 상태를 관리할 수 있습니다. 이러한 라이브러리는 상태를 중앙에서 관리하여, 각 컴포넌트에서 필요할 때만 상태를 구독하고 사용할 수 있도록 하여 props 전달 문제를 해결합니다.
+
+---
+
+### 결론
+
+**Lifting state up**과 **prop drilling**은 React에서 상태를 관리하고 데이터를 전달하는 기본적인 방법입니다. 그러나 복잡한 컴포넌트 계층 구조에서는 이러한 패턴들이 코드의 복잡성을 증가시키고, 유지보수성을 저하시킬 수 있습니다.
+
+이를 해결하기 위해 **Context API**를 사용하거나, **상태 관리 라이브러리**를 도입하여 복잡한 상태 관리를 간소화하고, 성능과 유지보수성을 개선할 수 있습니다. React 애플리케이션을 구축할 때, 상태 관리의 구조를 신중하게 설계하는 것이 매우 중요합니다.
