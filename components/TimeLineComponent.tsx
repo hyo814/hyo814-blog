@@ -152,10 +152,10 @@ const TimeLineComponent = () => {
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="border-l-4 border-blue-600 pl-8">
-        {experienceData.map((experience, index) => (
+        {[...experienceData].reverse().map((experience, index) => (
           <div key={index} className="mb-8 flex items-start">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600">
-              <span className="text-xl font-bold text-white">{index + 1}</span>
+              <span className="text-xl font-bold text-white">{experienceData.length - index}</span>
             </div>
             <div className="ml-6 w-full rounded-lg bg-gray-50 p-6 shadow-md transition-all hover:shadow-lg">
               <div className="mb-2 flex items-center justify-between">
