@@ -1,0 +1,186 @@
+---
+title: React의 Refs
+date: '2024-02-12'
+tags: [Refs]
+draft: false
+summary: 'Refs'
+---
+
+# React의 Refs
+
+9월 24일 프론트엔드 React의 Refs를 사용하여 DOM에 직접 접근하는 방법과 그 사용 시나리오를 설명하세요. 또한, Refs를 과도하게 사용하는 것이 왜 React의 선언적 방식에 어긋날 수 있는지, Refs를 안전하게 사용하는 모범 사례에 대해 설명해주세요.
+
+​
+
+질문의도 입니다!
+
+​
+
+Refs의 과도한 사용이 React의 선언적 방식과 충돌할 수 있는 이유를 이해하고, 이를 안전하게 사용하는 방법(예: DOM 조작 최소화, 필요한 경우에만 Refs 사용)을 설명할 수 있는지를 확인하려는 의도입니다.
+
+---
+
+React의 `Refs`는 DOM 요소나 React 컴포넌트에 직접 접근하고 조작할 수 있는 방법을 제공합니다. `Refs`를 사용하면 특정 DOM 요소에 직접 접근해서 값을 읽거나 변경할 수 있습니다. 하지만 `Refs`는 React의 **선언적**인 방식에 어긋날 수 있기 때문에 과도한 사용을 지양하는 것이 좋습니다.
+
+### 1. React의 Refs를 사용하여 DOM에 직접 접근하는 방법
+
+```jsx
+import React, { useRef } from 'react'
+
+function TextInput() {
+  const inputRef = useRef(null)
+
+  const focusInput = () => {
+    inputRef.current.focus() // Refs를 사용해 DOM에 직접 접근
+  }
+
+  return (
+    <div>
+      <input ref={inputRef} type="text" />
+      <button onClick={focusInput}>Focus Input</button>
+    </div>
+  )
+}
+
+export default TextInput
+```
+
+위 코드에서는 `useRef` 훅을 사용해 `input` 요소에 직접 접근하고 있습니다. 버튼을 클릭하면 `input` 요소에 포커스를 줄 수 있습니다. 이처럼 `Refs`는 DOM 조작이 필요한 경우에 유용하게 사용할 수 있습니다.
+
+### 2. Refs 사용 시나리오
+
+Refs는 다음과 같은 경우에 사용됩니다:
+
+- **DOM 요소에 직접 접근해야 하는 경우**: 텍스트 필드 포커스, 스크롤 위치 제어, 미디어 재생 제어 등.
+- **서드 파티 라이브러리 통합**: jQuery 같은 DOM 조작 라이브러리와 React를 함께 사용할 때.
+- **애니메이션**: 복잡한 애니메이션을 직접 조작해야 할 때.
+- **폼 값 제어**: 제어되지 않는 컴포넌트(uncontrolled components)에서 값을 읽거나 설정할 때.
+
+### 3. Refs의 과도한 사용이 React의 선언적 방식과 충돌하는 이유
+
+React는 **선언적(declarative)** 방식을 채택하고 있습니다. 즉, UI 상태를 기반으로 렌더링 결과를 정의하며, 상태 변경이 발생하면 React가 알아서 렌더링을 업데이트합니다. 하지만 `Refs`를 과도하게 사용하면 선언적 방식 대신 **명령형(imperative)** 방식으로 코드를 작성하게 되어 React의 본질적인 철학과 충돌할 수 있습니다.
+
+- **선언적 방식**: UI는 상태에 의해 결정되고 상태가 변경될 때 UI가 자동으로 갱신됩니다.
+- **명령형 방식**: 직접 DOM 요소를 조작하여 상태를 변경하거나 업데이트를 처리합니다.
+
+`Refs`를 과도하게 사용하면 컴포넌트의 상태와 UI 간의 일관성이 깨질 수 있고, React의 상태 관리 시스템을 무시한 직접적인 DOM 조작이 발생하게 됩니다. 이렇게 되면 유지 보수성이 떨어지고, 코드가 복잡해질 수 있습니다.
+
+### 4. Refs를 안전하게 사용하는 모범 사례
+
+Refs는 필요한 경우에만 사용해야 하며, DOM 조작을 최소화하는 것이 모범 사례입니다. 다음은 안전하게 Refs를 사용하는 방법입니다:
+
+- **최소한의 Refs 사용**: 상태 관리를 통해 DOM 업데이트가 가능하다면, Refs 사용을 피하고 상태 기반의 렌더링을 활용하는 것이 좋습니다.
+- **React의 상태를 우선 사용**: 상태와 Props를 통해 UI를 제어하고, 직접적인 DOM 조작이 반드시 필요한 경우에만 Refs를 사용하세요.
+- **외부 라이브러리 사용 시 Refs**: React 외부의 서드 파티 라이브러리(jQuery 등)를 사용할 때는 Refs를 사용할 수 있습니다.
+- **제어되지 않는 컴포넌트에만 사용**: 폼 입력 요소와 같은 제어되지 않는 컴포넌트에서 Refs를 사용하여 값을 읽는 것은 허용됩니다.
+
+```jsx
+import React, { useState, useRef } from 'react'
+
+function ControlledComponent() {
+  const [value, setValue] = useState('')
+  const inputRef = useRef(null)
+
+  const handleChange = (e) => {
+    setValue(e.target.value) // React의 상태를 사용한 선언적 방식
+  }
+
+  const clearInput = () => {
+    setValue('')
+    inputRef.current.focus() // Refs는 부가적으로만 사용
+  }
+
+  return (
+    <div>
+      <input ref={inputRef} type="text" value={value} onChange={handleChange} />
+      <button onClick={clearInput}>Clear and Focus</button>
+    </div>
+  )
+}
+
+export default ControlledComponent
+```
+
+위 예시는 `input` 값을 상태로 관리하면서, 부가적인 동작(focus 등)에만 `Refs`를 사용하는 방식입니다. 이렇게 상태 관리를 우선으로 하면서 Refs를 필요한 곳에만 사용하는 것이 React의 선언적 방식을 따르는 모범 사례입니다.
+
+### 결론
+
+- **Refs는 선언적 방식에 어긋날 수 있다**: React는 상태 기반의 UI 관리를 지향하므로, DOM을 직접 조작하는 Refs는 React의 철학과 맞지 않는 경우가 많습니다.
+- **Refs는 꼭 필요한 경우에만 사용**: DOM 조작을 최소화하고, 상태 관리를 우선시하며, 필요한 경우에만 Refs를 사용하여 React의 선언적 방식과 일관성을 유지해야 합니다.
+
+---
+
+### 1. Refs란 무엇인가?
+
+`Refs`는 React에서 DOM 요소나 클래스 컴포넌트에 직접 접근할 수 있는 방법입니다. React는 선언적 UI를 지향하기 때문에 직접 DOM을 조작하는 일이 거의 없지만, 특정한 경우에 직접 접근이 필요할 수 있습니다. 그럴 때 `Refs`를 사용합니다.
+
+### 2. Refs를 사용하는 방법
+
+간단한 `useRef` 사용 예시를 보여줍니다. 코드와 함께 설명하여 DOM에 직접 접근하는 상황을 설명합니다.
+
+```jsx
+import React, { useRef } from 'react'
+
+function TextInput() {
+  const inputRef = useRef(null)
+
+  const focusInput = () => {
+    inputRef.current.focus() // Refs를 사용해 DOM에 직접 접근
+  }
+
+  return (
+    <div>
+      <input ref={inputRef} type="text" />
+      <button onClick={focusInput}>Focus Input</button>
+    </div>
+  )
+}
+
+export default TextInput
+```
+
+### 3. Refs가 사용되는 시나리오
+
+- **텍스트 입력 필드 포커스 제어**: 폼에서 특정 조건일 때 텍스트 필드에 포커스를 줘야 할 때 유용합니다.
+- **스크롤 위치 제어**: 스크롤을 특정 위치로 이동시키거나, 스크롤 이벤트를 제어할 때.
+- **서드 파티 라이브러리 통합**: React 외부의 라이브러리와 함께 사용할 때 DOM 접근이 필요할 수 있습니다.
+
+### 4. Refs의 과도한 사용이 React의 선언적 방식에 어긋나는 이유
+
+React는 상태 변화에 따라 UI가 자동으로 갱신되는 선언적 방식을 지향합니다. 그러나 `Refs`는 명령형 방식으로 UI를 조작하기 때문에, **상태와 UI 간의 일관성**을 해칠 위험이 있습니다. 코드 유지 보수성이 떨어지고, 예측 가능한 렌더링 흐름을 방해할 수 있습니다.
+
+### 5. Refs를 안전하게 사용하는 모범 사례
+
+- **최소한의 사용**: DOM 조작이 불가피할 때만 `Refs`를 사용하고, 가급적 상태 관리 방식을 우선 사용해야 합니다.
+- **상태 기반 관리**: 가능하면 `useState`, `useEffect` 등 상태 기반으로 동작을 구현하고, Refs는 부가적인 동작을 수행할 때 사용합니다.
+
+```jsx
+import React, { useState, useRef } from 'react'
+
+function ControlledComponent() {
+  const [value, setValue] = useState('')
+  const inputRef = useRef(null)
+
+  const handleChange = (e) => {
+    setValue(e.target.value)
+  }
+
+  const clearInput = () => {
+    setValue('')
+    inputRef.current.focus()
+  }
+
+  return (
+    <div>
+      <input ref={inputRef} type="text" value={value} onChange={handleChange} />
+      <button onClick={clearInput}>Clear and Focus</button>
+    </div>
+  )
+}
+
+export default ControlledComponent
+```
+
+### 6. 마무리
+
+React의 `Refs`는 선언적 방식과 충돌할 수 있는 도구이므로, 필요한 경우에만 신중하게 사용하는 것이 중요합니다. React의 상태 관리 시스템을 최대한 활용하고, `Refs`는 부가적인 역할로 제한하는 것이 모범 사례입니다.

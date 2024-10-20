@@ -1,0 +1,172 @@
+---
+title: React에서 Suspense와 Error Boundaries로 비동기 데이터 로딩 문제 해결하기
+date: '2024-03-12'
+tags: [Suspense, Boundaries]
+draft: false
+summary: 'Suspense와 Error Boundaries'
+---
+
+# React에서 Suspense와 Error Boundaries로 비동기 데이터 로딩 문제 해결하기
+
+React에서 Suspense와 Error Boundaries를 함께 사용하여 비동기 데이터 로딩 시 발생할 수 있는 문제를 어떻게 처리할 수 있는지 설명하세요. Suspense로 데이터 로딩 상태를 관리할 때 발생할 수 있는 문제점과 해결방법을 말씀해주세요.
+
+​
+
+질문의도 입니다!
+
+​
+
+Suspense와 Error Boundaries를 사용해 비동기 데이터 로딩 중 발생할 수 있는 문제를 효과적으로 처리하는 방법에 대한 이해도를 평가합니다. Suspense가 비동기적 상태를 관리하는 방식에서 생길 수 있는 문제(예: 로딩 지연, 사용자 경험 저하)와 이를 해결하기 위한 최적화 전략(예: Fallback 컴포넌트, 사용자 친화적 로딩 경험 제공)을 설명할 수 있는지를 확인합니다.
+
+---
+
+### **모범답안**
+
+### **Suspense와 Error Boundaries의 역할**
+
+React의 `Suspense`는 비동기 데이터가 로딩 중일 때 UI를 기다리게 하거나, 로딩 상태에 대한 fallback UI를 보여주는 기능입니다. `Error Boundaries`는 렌더링 중에 발생한 JavaScript 오류를 잡아주고, 이를 적절하게 처리할 수 있도록 해줍니다. 이 두 가지를 함께 사용하면 비동기 데이터 로딩 중 발생할 수 있는 로딩 지연, 에러 처리 문제를 효과적으로 관리할 수 있습니다.
+
+### **Suspense로 데이터 로딩 상태 관리**
+
+`Suspense`는 비동기 작업이 완료되기 전까지 fallback 컴포넌트를 렌더링합니다. 이를 통해 사용자에게 로딩 중임을 알리는 컴포넌트를 제공할 수 있지만, 몇 가지 문제점이 발생할 수 있습니다.
+
+1. **긴 로딩 시간에 대한 사용자 불만**:
+   - 비동기 데이터 로딩 시간이 길어지면 사용자 경험이 저하될 수 있습니다. 예를 들어, 사용자가 너무 오랫동안 fallback UI를 보게 되면, 성능 문제가 있는 것으로 인식할 수 있습니다.
+2. **Fallback UI의 과도한 사용**:
+   - 모든 비동기 데이터를 로드할 때마다 fallback UI가 나타나면 사용자 경험이 떨어질 수 있습니다. 매번 새로운 페이지나 컴포넌트 로드 시마다 로딩 UI가 나타나기 때문에 사용자에게 불편을 줄 수 있습니다.
+
+### **Suspense 사용 시 발생할 수 있는 문제점 해결**
+
+1. **Skeleton UI 도입**:
+   - 단순한 로딩 스피너 대신에 실제 콘텐츠와 유사한 `Skeleton UI`를 사용하면 사용자에게 콘텐츠가 곧 나타날 것이라는 기대감을 심어줄 수 있습니다. 이렇게 하면 사용자가 지루함을 덜 느끼고, 더 나은 경험을 제공합니다.
+2. **초기 데이터 캐싱**:
+   - 데이터 로딩 시간을 줄이기 위해 데이터를 미리 캐싱하는 전략을 사용할 수 있습니다. `React Query`와 같은 라이브러리를 사용하여 서버 상태를 캐싱하고, Suspense와 함께 사용하는 방법도 효과적입니다.
+3. **로딩 지연 최소화**:
+   - `startTransition`을 활용해 UI 업데이트의 우선순위를 조절하면, 비동기 작업이 끝난 후 사용자에게 결과를 빠르게 반영할 수 있습니다. 이를 통해 비동기 처리 중 UI가 멈추는 문제를 방지할 수 있습니다.
+
+### **Error Boundaries로 비동기 데이터 로딩 중 에러 처리**
+
+비동기 로딩 중 에러가 발생할 수 있기 때문에, `Error Boundaries`로 UI를 보호해야 합니다. 이때, 에러가 발생하면 사용자가 적절한 에러 메시지를 보게 하거나, 재시도 기능을 제공하는 UI를 보여줄 수 있습니다.
+
+1. **에러 메시지 사용자화**:
+   - 에러가 발생했을 때, 사용자가 어떤 문제가 발생했는지 명확하게 이해할 수 있도록 사용자화된 메시지를 제공하는 것이 중요합니다. 이를 통해 사용자는 단순히 "문제가 발생했다"는 메시지가 아니라, 문제를 이해하고 해결할 방법을 찾을 수 있습니다.
+2. **재시도 로직 제공**:
+   - 데이터 로딩 중 문제가 발생한 경우, 사용자가 다시 시도할 수 있도록 버튼이나 안내를 제공해야 합니다. 이를 통해 사용자는 페이지를 새로고침하는 대신, 간단히 문제를 해결할 수 있는 방법을 얻게 됩니다.
+
+### **결론**
+
+Suspense와 Error Boundaries를 함께 사용하면 비동기 데이터 로딩 중 발생할 수 있는 문제를 효과적으로 처리할 수 있습니다. Suspense는 비동기 상태를 관리하고 로딩 중 사용자 경험을 개선할 수 있는 도구지만, 적절한 Fallback UI와 캐싱, 우선순위 조정 전략을 사용해야 사용자 경험을 향상시킬 수 있습니다. Error Boundaries를 통해 에러를 처리하고 재시도 로직을 제공함으로써 사용자 친화적인 애플리케이션을 구축할 수 있습니다.
+
+---
+
+React는 비동기 데이터 로딩을 위한 여러 도구를 제공하는데, 그 중에서도 `Suspense`와 `Error Boundaries`는 효과적인 상태 및 에러 관리를 도와줍니다. 이번 글에서는 이 두 가지 기능을 함께 사용하여 비동기 데이터 로딩 시 발생할 수 있는 문제를 어떻게 처리할 수 있는지, 그리고 사용자 경험을 향상시키는 방법을 소개하려고 합니다.
+
+## Suspense란?
+
+`Suspense`는 React에서 비동기적으로 데이터를 로드할 때 UI의 상태를 관리하는 기능입니다. 데이터가 로드될 때까지 화면에 로딩 상태를 보여주는 Fallback UI를 제공하며, 데이터를 기다리는 동안 사용자가 빈 화면을 보는 대신 로딩 중이라는 피드백을 받을 수 있습니다.
+
+### Suspense 사용법
+
+```jsx
+<Suspense fallback={<div>Loading...</div>}>
+  <MyComponent />
+</Suspense>
+```
+
+위 코드처럼 `Suspense`는 `fallback` 속성에 로딩 중일 때 표시할 컴포넌트를 넣습니다. 여기서는 `Loading...` 문구를 화면에 보여줍니다.
+
+## Suspense 사용 시 문제점과 해결 방안
+
+`Suspense`는 비동기 로딩 상태를 관리하는 데 매우 유용하지만, 사용자 경험을 고려하지 않으면 문제가 생길 수 있습니다.
+
+### 1. 로딩 시간이 길어질 때 사용자 경험 저하
+
+데이터 로딩이 오래 걸릴 경우 사용자는 답답함을 느낄 수 있습니다. 특히 로딩 스피너만 계속 보이면 "페이지가 멈췄나?"라는 의문을 가질 수 있습니다.
+
+### 해결 방안: Skeleton UI 사용
+
+`Skeleton UI`는 아직 로딩이 완료되지 않은 부분을 마치 로딩된 것처럼 미리 보여주는 기법입니다. 이를 통해 사용자는 페이지가 정상적으로 로드되고 있음을 직관적으로 느낄 수 있습니다.
+
+```jsx
+<Suspense fallback={<SkeletonComponent />}>
+  <MyComponent />
+</Suspense>
+```
+
+이처럼 스피너 대신 `Skeleton UI`를 활용하면 사용자가 더 나은 경험을 할 수 있습니다.
+
+### 2. 비동기 데이터 캐싱 부족
+
+매번 데이터를 요청할 때마다 로딩 UI가 반복적으로 나타나면 사용자에게 불편함을 줄 수 있습니다.
+
+### 해결 방안: React Query와 같은 라이브러리 사용
+
+`React Query`와 같은 라이브러리를 사용하면 데이터를 캐싱하고, 비동기 작업이 끝난 후 결과를 빠르게 가져올 수 있습니다. 이를 통해 페이지의 성능을 개선할 수 있습니다.
+
+```jsx
+const { data, isLoading } = useQuery('dataKey', fetchData)
+
+;<Suspense fallback={<LoadingSpinner />}>
+  {isLoading ? <LoadingSpinner /> : <MyComponent data={data} />}
+</Suspense>
+```
+
+## Error Boundaries로 에러 처리하기
+
+`Error Boundaries`는 JavaScript 에러로 인해 컴포넌트가 깨졌을 때, 전체 애플리케이션을 멈추지 않고 에러 상태를 관리할 수 있도록 도와줍니다.
+
+### Error Boundaries 사용법
+
+```jsx
+class ErrorBoundary extends React.Component {
+  state = { hasError: false }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <h1>Something went wrong.</h1>
+    }
+    return this.props.children
+  }
+}
+```
+
+`Error Boundaries`를 통해 비동기 로딩 중 발생하는 오류를 잡아내고, 사용자에게 에러 메시지를 보여줄 수 있습니다.
+
+### 1. 사용자화된 에러 메시지 제공
+
+사용자가 무슨 문제가 발생했는지 이해할 수 있도록 적절한 에러 메시지를 제공하는 것이 중요합니다.
+
+### 해결 방안: 에러 상태에 따른 사용자화된 메시지
+
+```jsx
+render() {
+  if (this.state.hasError) {
+    return <h1>데이터 로딩에 실패했습니다. 다시 시도해 주세요.</h1>;
+  }
+  return this.props.children;
+}
+
+```
+
+### 2. 에러 발생 시 재시도 로직 제공
+
+데이터 로딩 중 문제가 발생한 경우, 사용자가 페이지를 새로고침하지 않고도 다시 시도할 수 있도록 버튼을 제공하는 방법이 있습니다.
+
+```jsx
+if (this.state.hasError) {
+  return (
+    <div>
+      <h1>데이터 로딩에 실패했습니다.</h1>
+      <button onClick={this.handleRetry}>다시 시도하기</button>
+    </div>
+  )
+}
+```
+
+## 결론
+
+React에서 `Suspense`와 `Error Boundaries`를 함께 사용하면 비동기 데이터 로딩 중 발생할 수 있는 여러 문제를 효과적으로 처리할 수 있습니다. 적절한 로딩 UI와 에러 처리를 통해 사용자 경험을 향상시키는 것이 중요합니다. 특히 `Skeleton UI`, 데이터 캐싱, 에러 재시도 로직 등을 활용하면 사용자에게 더 나은 경험을 제공할 수 있습니다.
