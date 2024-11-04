@@ -1,0 +1,176 @@
+---
+title:달력 만들기
+date: '2019-12-25'
+tags: [개인공부]
+draft: false
+summary: '달력 만들기 기본'
+---
+
+# 달력 만들기 (2019.12.25)
+
+# 웹으로 간단한 달력 만들기
+
+이번 포스팅에서는 HTML, CSS, 그리고 jQuery를 활용해 간단한 달력을 만드는 방법을 다룹니다.
+
+---
+
+## 프로젝트 계획
+
+이 달력을 만들기 위해 아래와 같은 일정을 따랐습니다:
+
+1. **12/24** 전체적인 이미지와 레이아웃을 구상하고, 기본 코드를 작성했습니다.
+2. **12/25** 코드와 결과를 정리했습니다.
+
+---
+
+## 1단계: HTML로 달력 틀 만들기
+
+먼저, 달력의 기본 구조를 HTML로 작성해봅시다. HTML에서는 테이블을 이용해 달력의 요일과 날짜를 정렬합니다. `tr` 태그는 행(row)을, `td` 태그는 열(column)을 생성하여 달력을 구성합니다.
+
+```html
+<!doctype html>
+<html>
+<head>
+  <title>펭수 달력</title>
+</head>
+<body>
+  <div>
+    <img src="C:\\Users\\user\\Documents\\GitHub\\-\\html_project_calender\\펭수.png" width="165" height="150" alt="펭수">
+    <table>
+      <tbody>
+        <tr>
+          <td>월</td> <td>화</td> <td>수</td> <td>목</td> <td>금</td> <td>토</td> <td>일</td>
+        </tr>
+        <tr>
+          <td>1</td> <td>2</td> <td>3</td> <td>4</td> <td>5</td> <td>6</td> <td>7</td>
+        </tr>
+        <tr>
+          <td>8</td> <td>9</td> <td>10</td> <td>11</td> <td>12</td> <td>13</td> <td>14</td>
+        </tr>
+        <tr>
+          <td>15</td> <td>16</td> <td>17</td> <td>18</td> <td>19</td> <td>20</td> <td>21</td>
+        </tr>
+        <tr>
+          <td>22</td> <td>23</td> <td>24</td> <td>25</td> <td>26</td> <td>27</td> <td>28</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
+
+```
+
+위 코드는 요일을 상단에, 날짜를 아래로 나열하여 달력의 기본 틀을 만듭니다.
+
+---
+
+## 2단계: CSS로 스타일 꾸미기
+
+이제 달력을 꾸며볼 차례입니다. CSS를 이용해 `div`와 `table`, `td` 요소에 스타일을 추가하여 전체적인 디자인을 설정합니다.
+
+```html
+<style>
+  div {
+    background-color: aliceblue;
+    width: 165px;
+    height: 280px;
+    text-align: center;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  td {
+    padding: 5px;
+    border: thin solid #FF0000;
+  }
+</style>
+
+```
+
+- `div` 태그는 전체 달력의 배경이 되며, `background-color` 속성으로 배경색을 설정합니다.
+- `table`은 셀 간의 경계선을 겹치지 않게 하기 위해 `border-collapse: collapse;`를 추가했습니다.
+- `td`에는 패딩과 테두리를 추가하여 각 날짜가 구분되도록 했습니다.
+
+---
+
+## 3단계: jQuery로 동적 스타일 적용하기
+
+마지막으로 jQuery를 이용해 테이블 셀에 동적 스타일을 적용해봅시다. jQuery를 통해 각 셀의 테두리를 설정하여 간단한 인터랙티브 요소를 추가할 수 있습니다.
+
+```html
+<script src="C:\\jquery\\scripe file\\jquery-3.4.1.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $("td").css("border", "thin solid #FF0000");
+    $("table").css("border", "thin solid #FF0000");
+  });
+</script>
+
+```
+
+위 코드에서 `$(document).ready()`는 문서가 준비되면 특정 스타일을 적용하도록 설정하는 jQuery의 기본 구문입니다. 이를 통해 `td`와 `table`에 테두리 스타일을 추가했습니다.
+
+---
+
+### 최종 코드 정리
+
+위의 모든 코드를 종합하면 다음과 같이 됩니다:
+
+```html
+<!doctype html>
+<html>
+<head>
+  <title>펭수 달력</title>
+  <style>
+    div {
+      background-color: aliceblue;
+      width: 165px;
+      height: 280px;
+      text-align: center;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    td {
+      padding: 5px;
+      border: thin solid #FF0000;
+    }
+  </style>
+  <script src="C:\\jquery\\scripe file\\jquery-3.4.1.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      $("td").css("border", "thin solid #FF0000");
+      $("table").css("border", "thin solid #FF0000");
+    });
+  </script>
+</head>
+<body>
+  <div>
+    <img src="C:\\Users\\user\\Documents\\GitHub\\-\\html_project_calender\\펭수.png" width="165" height="150" alt="펭수">
+    <table>
+      <tbody>
+        <tr>
+          <td>월</td> <td>화</td> <td>수</td> <td>목</td> <td>금</td> <td>토</td> <td>일</td>
+        </tr>
+        <tr>
+          <td>1</td> <td>2</td> <td>3</td> <td>4</td> <td>5</td> <td>6</td> <td>7</td>
+        </tr>
+        <tr>
+          <td>8</td> <td>9</td> <td>10</td> <td>11</td> <td>12</td> <td>13</td> <td>14</td>
+        </tr>
+        <tr>
+          <td>15</td> <td>16</td> <td>17</td> <td>18</td> <td>19</td> <td>20</td> <td>21</td>
+        </tr>
+        <tr>
+          <td>22</td> <td>23</td> <td>24</td> <td>25</td> <td>26</td> <td>27</td> <td>28</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
+
+```

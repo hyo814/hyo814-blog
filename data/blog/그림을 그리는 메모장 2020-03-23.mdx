@@ -1,0 +1,206 @@
+---
+title:  그림을 그리는 메모장
+date: '2020-03-23'
+tags: [메모장]
+draft: false
+summary: '메모장'
+---
+
+# 그림을 그리는 메모장 (2020.03.23)
+
+이번 포스팅에서는 JavaScript를 이용해 간단한 그림 메모장을 만드는 방법을 설명합니다. 다양한 색상 선택, 그리기, 채우기 기능을 포함한 미니 페인트 앱입니다. JavaScript와 HTML5의 `<canvas>` 요소를 활용해 재미있게 그림을 그려볼 수 있습니다!
+
+---
+
+## 프로젝트 목표
+
+이 프로젝트의 목표는 `canvas` 요소와 JavaScript 이벤트를 사용하여 그림을 그릴 수 있는 메모장을 만드는 것입니다. 기본적인 색상 선택, 그림 그리기, 그림 채우기, 저장 기능 등을 포함합니다.
+
+---
+
+## 1단계: HTML 구조 만들기
+
+먼저, HTML로 기본 구조를 만듭니다. 색상 선택 버튼, 채우기 버튼, 저장 버튼과 `canvas` 요소를 추가해 메모장의 틀을 구성합니다.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>그림 메모장</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="controls">
+    <div class="jsColor" style="background-color:#2c2c2c;"></div>
+    <div class="jsColor" style="background-color:#ff3b3b;"></div>
+    <!-- 색상 추가 -->
+    <button id="jsMode">Fill</button>
+    <button id="jsSave">Save</button>
+  </div>
+  <canvas id="jsCanvas"></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
+
+```
+
+---
+
+## 2단계: CSS로 스타일링하기
+
+아래의 CSS를 이용해 캔버스와 색상 선택 버튼 등을 스타일링합니다. `canvas`의 크기와 배경색을 설정하여 그리기 편하게 구성합니다.
+
+```css
+canvas {
+  border: 1px solid black;
+  background-color: white;
+}
+.controls {
+  display: flex;
+}
+.jsColor {
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+}
+
+```
+
+---
+
+## 3단계: JavaScript로 기능 구현하기
+
+이제 JavaScript로 다양한 그림 기능을 추가해보겠습니다.
+
+1. **색상 선택 기능**
+
+    `colors` 배열에 각 색상 선택 버튼을 저장하고, 색상을 클릭하면 `handleColorClick` 함수가 실행되도록 설정합니다.
+
+    ```jsx
+    const colors = document.getElementsByClassName("jsColor");
+
+    Array.from(colors).forEach(color =>
+      color.addEventListener("click", handleColorClick)
+    );
+
+    function handleColorClick(event) {
+      const color = event.target.style.backgroundColor;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+    }
+
+    ```
+
+2. **그리기 이벤트 설정**
+
+    `canvas`에 마우스 이벤트를 추가하여 그림을 그릴 수 있도록 합니다. `onMouseMove`, `startPainting`, `stopPainting` 함수로 마우스 움직임에 따라 그림을 그립니다.
+
+    ```jsx
+    const canvas = document.getElementById("jsCanvas");
+    const ctx = canvas.getContext("2d");
+    let painting = false;
+
+    function onMouseMove(event) {
+      if (!painting) return;
+      const x = event.offsetX;
+      const y = event.offsetY;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    function startPainting() {
+      painting = true;
+    }
+
+    function stopPainting() {
+      painting = false;
+      ctx.beginPath();
+    }
+
+    if (canvas) {
+      canvas.addEventListener("mousemove", onMouseMove);
+      canvas.addEventListener("mousedown", startPainting);
+      canvas.addEventListener("mouseup", stopPainting);
+      canvas.addEventListener("mouseleave", stopPainting);
+    }
+
+    ```
+
+3. **채우기 모드 전환**
+
+    `Fill` 버튼을 클릭하면 채우기 모드로 전환하여 캔버스를 특정 색으로 채울 수 있습니다.
+
+    ```jsx
+    const mode = document.getElementById("jsMode");
+    let filling = false;
+
+    function handleModeClick() {
+      if (filling) {
+        filling = false;
+        mode.innerText = "Fill";
+      } else {
+        filling = true;
+        mode.innerText = "Paint";
+      }
+    }
+
+    mode.addEventListener("click", handleModeClick);
+
+    canvas.addEventListener("click", () => {
+      if (filling) ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+
+    ```
+
+4. **그림 저장하기**
+
+    저장 버튼을 클릭하면 현재 그린 그림을 이미지 파일로 저장할 수 있도록 설정합니다.
+
+    ```jsx
+    const saveBtn = document.getElementById("jsSave");
+
+    function handleSaveClick() {
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = "PaintJS[🎨]";
+      link.click();
+    }
+
+    saveBtn.addEventListener("click", handleSaveClick);
+
+    ```
+
+
+---
+
+## 4단계: 기능 테스트 및 개선
+
+기능 구현 후 각 버튼과 캔버스가 정상적으로 작동하는지 테스트해봅니다. 색상 선택, 그리기, 채우기, 저장 기능이 잘 작동하는지 확인해보세요. 추후에 지우기 기능 등을 추가해 다양한 옵션을 더할 수 있습니다.
+
+---
+
+### 완성된 코드 예제
+
+모든 코드를 종합하면 다음과 같습니다:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>그림 메모장</title>
+  <style>
+    /* 위에서 작성한 CSS 코드 */
+  </style>
+</head>
+<body>
+  <!-- 위에서 작성한 HTML 코드 -->
+  <script>
+    // 위에서 작성한 JavaScript 코드
+  </script>
+</body>
+</html>
+
+```

@@ -1,0 +1,200 @@
+---
+title:  계산기 게임 프로젝트
+date: '2019-12-25'
+tags: [계산기]
+draft: false
+summary: '계산기'
+---
+
+# 계산기 만들기 (19.12.25)
+
+이 글에서는 HTML, CSS, JavaScript를 이용해 간단한 계산기를 만드는 방법을 단계별로 설명합니다.
+
+## 1단계: 기본 HTML 틀 작성하기
+
+우선, 계산기의 기본 구조를 HTML로 만들어보겠습니다. 계산기의 입력 영역, 결과 영역, 그리고 숫자 및 연산자 버튼들을 배치합니다.
+
+```html
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>기본 계산기</title>
+</head>
+<body>
+  <table border="3">
+    <tr>
+      <td colspan="2">입력 <input id="display" type="text"></td>
+      <td colspan="2">결과 <input id="result" type="text"></td>
+    </tr>
+    <tr>
+      <td colspan="3" onclick="reset()">AC</td>
+      <td onclick="add('/')">/</td>
+    </tr>
+    <tr>
+      <td onclick="add(7)">7</td>
+      <td onclick="add(8)">8</td>
+      <td onclick="add(9)">9</td>
+      <td onclick="add('*')">*</td>
+    </tr>
+    <tr>
+      <td onclick="add(4)">4</td>
+      <td onclick="add(5)">5</td>
+      <td onclick="add(6)">6</td>
+      <td onclick="add('-')">-</td>
+    </tr>
+    <tr>
+      <td onclick="add(1)">1</td>
+      <td onclick="add(2)">2</td>
+      <td onclick="add(3)">3</td>
+      <td onclick="add('+')">+</td>
+    </tr>
+    <tr>
+      <td colspan="2" onclick="add(0)">0</td>
+      <td onclick="add('.')">.</td>
+      <td onclick="calculate()">=</td>
+    </tr>
+  </table>
+</body>
+</html>
+
+```
+
+이 코드로 기본적인 버튼 구성과 입력 필드를 만들 수 있습니다.
+
+---
+
+## 2단계: CSS로 스타일 꾸미기
+
+계산기의 외관을 꾸며봅시다. 아래 CSS 코드를 추가하여 버튼과 입력 필드의 스타일을 설정합니다.
+
+```css
+<style>
+  table { border-collapse: collapse; }
+  td { padding: 5px 10px; text-align: center; }
+  input { text-align: center; border: none; }
+  input:focus { outline: none; }
+</style>
+
+```
+
+이 스타일 설정을 통해 계산기가 깔끔하게 나타납니다. `border-collapse`는 테두리를 겹치지 않게 해주고, `padding`으로 버튼의 여백을 설정해 버튼이 명확히 보이도록 합니다.
+
+---
+
+## 3단계: JavaScript로 기능 추가하기
+
+이제 JavaScript를 이용해 버튼을 눌렀을 때 입력창에 숫자와 연산자가 추가되고, 계산 결과가 출력되도록 만들어봅시다.
+
+1. **숫자 및 연산자 추가 함수**
+
+    `add` 함수는 숫자나 연산자를 입력창에 추가하는 역할을 합니다.
+
+    ```jsx
+    function add(char) {
+      document.getElementById('display').value += char;
+    }
+
+    ```
+
+2. **계산 함수**
+
+    `calculate` 함수는 입력된 식을 계산하여 결과를 출력합니다. `eval()`을 사용해 입력된 식을 계산할 수 있습니다.
+
+    ```jsx
+    function calculate() {
+      const display = document.getElementById('display');
+      const result = eval(display.value);
+      document.getElementById('result').value = result;
+    }
+
+    ```
+
+3. **리셋 함수**
+
+    `reset` 함수는 입력과 결과 영역을 초기화합니다.
+
+    ```jsx
+    function reset() {
+      document.getElementById('display').value = "";
+      document.getElementById('result').value = "";
+    }
+
+    ```
+
+
+---
+
+## 4단계: 최종 테스트 및 개선
+
+코드를 모두 작성했다면 계산기를 실제로 사용해 보면서 잘 작동하는지 테스트해보세요. 추가로 필요한 경우 입력 오류나 중복된 연산자 방지와 같은 간단한 검사를 추가해볼 수 있습니다.
+
+---
+
+### 완성된 코드 예제
+
+```html
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>기본 계산기</title>
+  <style>
+    table { border-collapse: collapse; }
+    td { padding: 5px 10px; text-align: center; }
+    input { text-align: center; border: none; }
+    input:focus { outline: none; }
+  </style>
+  <script>
+    function add(char) {
+      document.getElementById('display').value += char;
+    }
+
+    function calculate() {
+      const display = document.getElementById('display');
+      const result = eval(display.value);
+      document.getElementById('result').value = result;
+    }
+
+    function reset() {
+      document.getElementById('display').value = "";
+      document.getElementById('result').value = "";
+    }
+  </script>
+</head>
+<body>
+  <table border="3">
+    <tr>
+      <td colspan="2">입력 <input id="display" type="text"></td>
+      <td colspan="2">결과 <input id="result" type="text"></td>
+    </tr>
+    <tr>
+      <td colspan="3" onclick="reset()">AC</td>
+      <td onclick="add('/')">/</td>
+    </tr>
+    <tr>
+      <td onclick="add(7)">7</td>
+      <td onclick="add(8)">8</td>
+      <td onclick="add(9)">9</td>
+      <td onclick="add('*')">*</td>
+    </tr>
+    <tr>
+      <td onclick="add(4)">4</td>
+      <td onclick="add(5)">5</td>
+      <td onclick="add(6)">6</td>
+      <td onclick="add('-')">-</td>
+    </tr>
+    <tr>
+      <td onclick="add(1)">1</td>
+      <td onclick="add(2)">2</td>
+      <td onclick="add(3)">3</td>
+      <td onclick="add('+')">+</td>
+    </tr>
+    <tr>
+      <td colspan="2" onclick="add(0)">0</td>
+      <td onclick="add('.')">.</td>
+      <td onclick="calculate()">=</td>
+    </tr>
+  </table>
+</body>
+</html>
+
+```
