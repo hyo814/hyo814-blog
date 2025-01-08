@@ -1,0 +1,212 @@
+---
+title: 코딩테스트 스택과 큐
+date: '2025-01-07'
+tags: [코딩테스트]
+draft: false
+summary: '코딩테스트 스택과 큐 프로그래머스'
+---
+
+먼저 들어간 것이 마지막에 나오는 규칙을 후입선출 또는 리포라고 합니다.
+
+이때 스택에 삽입하는 연산을 푸시, 꺼내는 연산을 팝이라고 합니다.
+
+이런 큐의 특징을 선입 선출 또는 피포이라고 합니다. 그리고 스택과 마찬가지로 큐도 삽입 하는 연산을 푸시 꺼내는 연산을 팝이라고 합니다.
+
+```jsx
+// 스택 클래스 정의
+class Stack {
+    constructor() {
+        this.items = [];
+    }
+
+    // push: 스택에 요소 추가
+    push(element) {
+        this.items.push(element);
+    }
+
+    // pop: 스택에서 요소 제거 및 반환
+    pop() {
+        if (this.isEmpty()) {
+            console.log('Stack is empty');
+            return null;
+        }
+        return this.items.pop();
+    }
+
+    // isEmpty: 스택이 비어 있는지 확인
+    isEmpty() {
+        return this.items.length === 0;
+    }
+
+    // print: 스택의 모든 요소 출력
+    print() {
+        if (this.isEmpty()) {
+            console.log('Stack is empty');
+            return;
+        }
+        console.log(this.items.join(' -> '));
+    }
+}
+
+// 예제 사용
+const stack = new Stack();
+
+// push
+stack.push(10);
+stack.push(20);
+stack.push(30);
+stack.print(); // 10 -> 20 -> 30
+
+// pop
+console.log('Popped:', stack.pop()); // 30
+stack.print(); // 10 -> 20
+
+// pop
+console.log('Popped:', stack.pop()); // 20
+stack.print(); // 10
+
+// pop
+console.log('Popped:', stack.pop()); // 10
+stack.print(); // Stack is empty
+
+// pop on empty stack
+console.log('Popped:', stack.pop()); // Stack is empty
+
+```
+
+```jsx
+// 큐 클래스 정의
+class Queue {
+    constructor() {
+        this.items = [];
+    }
+
+    // enqueue: 큐에 요소 추가
+    enqueue(element) {
+        this.items.push(element);
+    }
+
+    // dequeue: 큐에서 요소 제거 및 반환
+    dequeue() {
+        if (this.isEmpty()) {
+            console.log('Queue is empty');
+            return null;
+        }
+        return this.items.shift();
+    }
+
+    // isEmpty: 큐가 비어 있는지 확인
+    isEmpty() {
+        return this.items.length === 0;
+    }
+
+    // print: 큐의 모든 요소 출력
+    print() {
+        if (this.isEmpty()) {
+            console.log('Queue is empty');
+            return;
+        }
+        console.log(this.items.join(' -> '));
+    }
+}
+
+// 원형 큐 클래스 정의
+class CircularQueue {
+    constructor(size) {
+        this.items = new Array(size);
+        this.size = size;
+        this.front = -1;
+        this.rear = -1;
+    }
+
+    // isEmpty: 큐가 비어 있는지 확인
+    isEmpty() {
+        return this.front === -1;
+    }
+
+    // isFull: 큐가 가득 찼는지 확인
+    isFull() {
+        return (this.rear + 1) % this.size === this.front;
+    }
+
+    // enqueue: 원형 큐에 요소 추가
+    enqueue(element) {
+        if (this.isFull()) {
+            console.log('Circular Queue is full');
+            return;
+        }
+
+        if (this.isEmpty()) {
+            this.front = 0;
+        }
+
+        this.rear = (this.rear + 1) % this.size;
+        this.items[this.rear] = element;
+    }
+
+    // dequeue: 원형 큐에서 요소 제거 및 반환
+    dequeue() {
+        if (this.isEmpty()) {
+            console.log('Circular Queue is empty');
+            return null;
+        }
+
+        const dequeuedElement = this.items[this.front];
+
+        if (this.front === this.rear) {
+            this.front = this.rear = -1; // 큐가 비어 있음
+        } else {
+            this.front = (this.front + 1) % this.size;
+        }
+
+        return dequeuedElement;
+    }
+
+    // print: 원형 큐의 모든 요소 출력
+    print() {
+        if (this.isEmpty()) {
+            console.log('Circular Queue is empty');
+            return;
+        }
+
+        let result = '';
+        let i = this.front;
+
+        do {
+            result += this.items[i] + ' -> ';
+            i = (i + 1) % this.size;
+        } while (i !== (this.rear + 1) % this.size);
+
+        console.log(result.slice(0, -4)); // 마지막 화살표 제거
+    }
+}
+
+// 큐 사용 예제
+const queue = new Queue();
+queue.enqueue(10);
+queue.enqueue(20);
+queue.enqueue(30);
+queue.print(); // 10 -> 20 -> 30
+console.log('Dequeued:', queue.dequeue()); // 10
+queue.print(); // 20 -> 30
+
+// 원형 큐 사용 예제
+const circularQueue = new CircularQueue(3);
+circularQueue.enqueue(10);
+circularQueue.enqueue(20);
+circularQueue.enqueue(30);
+circularQueue.print(); // 10 -> 20 -> 30
+circularQueue.dequeue();
+circularQueue.print(); // 20 -> 30
+circularQueue.enqueue(40);
+circularQueue.print(); // 20 -> 30 -> 40
+circularQueue.enqueue(50); // Circular Queue is full
+
+// https://school.programmers.co.kr/learn/courses/30/lessons/42586
+// https://school.programmers.co.kr/learn/courses/30/lessons/42583
+
+```
+
+# 문제 확인 하기
+
+[스택과큐](https://www.notion.so/1744843169a980babde6f0e4879bc38a?pvs=21)

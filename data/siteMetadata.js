@@ -3,7 +3,7 @@ const siteMetadata = {
   title: 'Hyo814`s Blog',
   author: 'Hyo814',
   headerTitle: 'HYO814`s Blog',
-  description: '효 와 함께 하는 블로그 여행',
+  description: '',
   language: 'ko',
   theme: 'system', // system, dark or light
   siteUrl: 'https://hyo814-blog.vercel.app',

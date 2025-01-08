@@ -1,0 +1,74 @@
+---
+title: 코딩테스트 배열
+date: '2025-01-07'
+tags: [코딩테스트]
+draft: false
+summary: '프로그래머스 코딩테스트 배열'
+---
+
+배열의 인덱스는 0부터 시작합니다.
+
+배열은 차원과는 무관하게 메모리에 연속 할당 됩니다.
+
+배열은 임의 접근이라는 방법으로 배열의 모든 위치에 있는 데이터에 단 한 번에 접근 할 수 있습니다.
+
+따라서 데이터 접근하기 위한 시간 복잡도는 O(1)입니다.
+
+할당 할 수 있는 메모리 크기를 확인 해야합니다.
+
+중간에 데이터 삽입이 많은지 확인 해봐야 합니다.
+
+배열에 데이터 추가
+
+배열에서 데이터 삭제
+
+고차함수를 이용해서 데이터에 특정 연산 적용
+
+```jsx
+const numbers = [1, 2, 3, 4, 5];
+const letters = ['a', 'b', 'c'];
+
+// 1. map: 배열의 각 요소를 변환하여 새로운 배열 생성
+const doubled = numbers.map(num => num * 2);
+
+// 2. filter: 조건을 만족하는 요소로 새로운 배열 생성
+const evens = numbers.filter(num => num % 2 === 0);
+
+// 3. reduce: 배열의 모든 요소를 누적 계산하여 단일 값 생성
+const sum = numbers.reduce((acc, num) => acc + num, 0);
+
+// 4. forEach: 배열의 각 요소를 순회하며 동작 수행
+numbers.forEach(num => console.log('Number:', num));
+
+// 5. concat: 배열 또는 요소를 결합하여 새로운 배열 생성
+const combined = numbers.concat(letters);
+
+// 6. find: 조건을 만족하는 첫 번째 요소 반환
+const firstEven = numbers.find(num => num % 2 === 0);
+
+// 7. every: 모든 요소가 조건을 만족하는지 검사 (Boolean 반환)
+const allPositive = numbers.every(num => num > 0);
+
+// 8. some: 하나 이상의 요소가 조건을 만족하는지 검사 (Boolean 반환)
+const hasOdd = numbers.some(num => num % 2 !== 0);
+
+// 9. sort: 배열 정렬 (기본적으로 문자열 기준)
+const sortedNumbers = numbers.slice().sort((a, b) => b - a); // 내림차순
+
+// 10. includes: 배열에 특정 값이 포함되어 있는지 검사
+const hasThree = numbers.includes(3);
+
+console.log('Doubled:', doubled);
+console.log('Evens:', evens);
+console.log('Sum:', sum);
+console.log('Combined:', combined);
+console.log('First Even:', firstEven);
+console.log('All Positive:', allPositive);
+console.log('Has Odd:', hasOdd);
+console.log('Sorted Numbers:', sortedNumbers);
+console.log('Includes 3:', hasThree);
+```
+
+# 문제 확인 하기
+
+[Untitled](https://www.notion.so/1744843169a980828869f8a6ba79eb9f?pvs=21)
