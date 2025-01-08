@@ -11,14 +11,17 @@ summary: '
 ---
 
 1. **Hydration이란 무엇인가요?**
+
    - Hydration은 **서버 측에서 생성된 HTML을 클라이언트 측에서 React 컴포넌트로 활성화하여 상호작용이 가능하도록 만드는 과정**입니다.
    - 이 과정에서 React는 HTML을 재활용하면서 상태와 이벤트 리스너를 연결합니다.
 
 2. **Next.js에서 Hydration 과정이 중요한 이유는 무엇인가요?**
+
    - Next.js는 SSR(Server-Side Rendering)과 SSG(Static-Site Generation)를 활용하여 초기 페이지 로드 속도를 개선합니다. Hydration은 **서버에서 전달된 HTML을 클라이언트가 인식하고 상호작용을 가능하게 만드는 핵심 과정**입니다.
    - 사용자가 페이지를 빠르게 볼 수 있으면서도 React 애플리케이션으로 전환되어 동적 기능을 제공할 수 있도록 합니다.
 
 3. **"하이퍼드레이션(Hyperhydration)"이라는 개념이 있다면, 이는 무엇을 의미할까요?**
+
    - Next.js 공식 문서에서 "하이퍼드레이션"이라는 용어는 사용되지 않습니다.
      하지만 커뮤니티에서는 **Hydration 과정을 최적화하거나 확장한 패턴**을 의미할 수 있습니다:
      - **부분적 하이드레이션(Partial Hydration)**: 클라이언트에서 필요한 부분만 활성화.
@@ -40,14 +43,17 @@ summary: '
 #### **기술 노트: Next.js의 Hydration 개념**
 
 ##### **1. Hydration의 정의**
+
 - 서버 측에서 생성된 HTML을 클라이언트 측 React 애플리케이션으로 활성화하는 과정.
 - 서버와 클라이언트 간의 데이터와 이벤트 연결이 이루어짐.
 
 ##### **2. Next.js에서의 중요성**
+
 - **SSR/SSG의 핵심 과정**: 빠른 초기 렌더링과 클라이언트 상호작용 지원.
 - 사용자 경험 개선: 페이지를 더 빠르게 볼 수 있으면서 동적 기능 활용 가능.
 
 ##### **3. 최적화된 Hydration 패턴**
+
 - **Partial Hydration**:
   - 모든 요소를 Hydration하지 않고 필요한 부분만 활성화.
   - 예: 상호작용이 없는 정적 콘텐츠는 그대로 두고, 동적 콘텐츠만 Hydration.
@@ -58,11 +64,13 @@ summary: '
   - React 18의 새로운 기능으로, 데이터와 UI를 스트리밍하면서 단계적으로 Hydration.
 
 ##### **4. 실무에서의 Hydration 최적화**
+
 - **Dynamic Import**를 통해 페이지 크기와 초기 Hydration 부담 감소.
 - **React.lazy**와 **Suspense**로 비동기 렌더링 적용.
 - Hydration이 필요하지 않은 정적 요소를 `static` 처리.
 
 ##### **5. 추가 학습 키워드**
+
 - React 18의 Streaming Rendering
 - React Server Components와 Hydration의 관계
 - Next.js의 `getServerSideProps`, `getStaticProps`와 Hydration

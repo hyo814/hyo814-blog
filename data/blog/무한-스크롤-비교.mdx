@@ -5,7 +5,9 @@ tags: [기술노트]
 draft: false
 summary: '무한 스크롤 비교'
 ---
+
 #### **1. @tanstack/react-query의 `useInfiniteQuery` 사용**
+
 ```javascript
 import React, { useEffect, useRef } from 'react';
 import { useInfiniteQuery, QueryFunctionContext } from '@tanstack/react-query';
@@ -85,6 +87,7 @@ export default InfiniteScroll;
 ---
 
 #### **2. @tanstack/react-query의 `useQuery` 사용**
+
 ```javascript
 import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from 'react-query';
@@ -164,6 +167,7 @@ export default InfiniteScroll;
 ---
 
 #### **3. SWR의 `useSWR` 사용**
+
 ```javascript
 import React, { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';

@@ -10,59 +10,59 @@ useState와 useEffect를 자바스크립트로 구현하는 방법은 React의 �
 ```javascript
 // useState 구현
 function createUseState() {
-  let state; // 상태를 저장할 변수
+  let state // 상태를 저장할 변수
   const setState = (newState) => {
-    state = newState; // 상태 업데이트
-    render(); // 상태 변경 후 컴포넌트 다시 렌더링
-  };
+    state = newState // 상태 업데이트
+    render() // 상태 변경 후 컴포넌트 다시 렌더링
+  }
   const useState = (initialValue) => {
     if (state === undefined) {
-      state = initialValue; // 초기값 설정
+      state = initialValue // 초기값 설정
     }
-    return [state, setState];
-  };
-  return useState;
+    return [state, setState]
+  }
+  return useState
 }
 
 // useEffect 구현
 function createUseEffect() {
-  let dependencies; // 의존성 배열을 저장
+  let dependencies // 의존성 배열을 저장
   const useEffect = (callback, deps) => {
-    const hasChanged = !dependencies || !deps.every((dep, i) => dep === dependencies[i]);
+    const hasChanged = !dependencies || !deps.every((dep, i) => dep === dependencies[i])
     if (hasChanged) {
-      callback(); // 의존성이 변경되었으면 콜백 실행
-      dependencies = deps; // 의존성 업데이트
+      callback() // 의존성이 변경되었으면 콜백 실행
+      dependencies = deps // 의존성 업데이트
     }
-  };
-  return useEffect;
+  }
+  return useEffect
 }
 
 // 간단한 상태 관리 및 렌더링 함수
 const render = () => {
-  console.log("Rendering...");
-  App();
-};
+  console.log('Rendering...')
+  App()
+}
 
 // 사용자 정의 훅 생성
-const useState = createUseState();
-const useEffect = createUseEffect();
+const useState = createUseState()
+const useEffect = createUseEffect()
 
 // 컴포넌트 예시
 function App() {
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(0)
 
   useEffect(() => {
-    console.log(`Count updated: ${count}`);
-  }, [count]);
+    console.log(`Count updated: ${count}`)
+  }, [count])
 
-  console.log(`Count: ${count}`);
+  console.log(`Count: ${count}`)
   setTimeout(() => {
-    setCount(count + 1); // 1초 후 상태 업데이트
-  }, 1000);
+    setCount(count + 1) // 1초 후 상태 업데이트
+  }, 1000)
 }
 
 // 초기 실행
-render();
+render()
 ```
 
 ---
@@ -70,11 +70,13 @@ render();
 ### 작동 방식 설명 (한국어)
 
 1. **useState 구현**
+
    - `state` 변수는 컴포넌트의 상태를 저장합니다.
    - `setState` 함수는 새로운 상태를 할당하고, 상태 변경 후 컴포넌트를 다시 렌더링(`render()`)합니다.
    - `useState`는 상태와 `setState`를 반환합니다. 초기값은 컴포넌트가 처음 호출될 때만 설정됩니다.
 
 2. **useEffect 구현**
+
    - `dependencies` 배열은 이전 렌더링의 의존성 값을 저장합니다.
    - `deps` 배열과 이전 `dependencies`를 비교하여 변경된 경우에만 콜백 함수(`callback`)을 실행합니다.
    - 이후 `dependencies`를 업데이트합니다.

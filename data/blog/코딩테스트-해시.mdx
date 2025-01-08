@@ -16,27 +16,26 @@ summary: '해시 프로그래머스 모음'
 // 예제: 문자열에서 처음으로 반복되지 않는 문자 찾기
 
 function firstNonRepeatingChar(str) {
-    // 각 문자의 빈도를 저장할 해시맵 생성
-    const charCount = {};
+  // 각 문자의 빈도를 저장할 해시맵 생성
+  const charCount = {}
 
-    // 문자열을 순회하며 각 문자의 빈도 계산
-    for (let char of str) {
-        charCount[char] = (charCount[char] || 0) + 1;
+  // 문자열을 순회하며 각 문자의 빈도 계산
+  for (let char of str) {
+    charCount[char] = (charCount[char] || 0) + 1
+  }
+
+  // 문자열을 다시 순회하며 처음으로 반복되지 않는 문자 찾기
+  for (let char of str) {
+    if (charCount[char] === 1) {
+      return char // 처음으로 반복되지 않는 문자 반환
     }
+  }
 
-    // 문자열을 다시 순회하며 처음으로 반복되지 않는 문자 찾기
-    for (let char of str) {
-        if (charCount[char] === 1) {
-            return char; // 처음으로 반복되지 않는 문자 반환
-        }
-    }
-
-    return null; // 반복되지 않는 문자가 없는 경우 null 반환
+  return null // 반복되지 않는 문자가 없는 경우 null 반환
 }
 
 // 함수 테스트
-console.log(firstNonRepeatingChar("swiss")); // 출력: "w"
-
+console.log(firstNonRepeatingChar('swiss')) // 출력: "w"
 ```
 
 # 문제 확인 하기

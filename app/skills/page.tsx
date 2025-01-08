@@ -21,12 +21,7 @@ export default function Skills() {
     },
     {
       category: 'Tools',
-      details: [
-        'Swagger',
-        'Slack, Notion',
-        'Figma',
-        'VSC (Visual Studio Code), WebStorm',
-      ],
+      details: ['Swagger', 'Slack, Notion', 'Figma', 'VSC (Visual Studio Code), WebStorm'],
     },
     {
       category: 'Currently Learning',
@@ -41,7 +36,7 @@ export default function Skills() {
       ],
     },
   ]
-  
+
   return (
     <div className="flex min-h-screen flex-col items-center bg-gray-100 px-4 py-12 sm:px-6 lg:px-8">
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -54,26 +49,24 @@ export default function Skills() {
       <br />
       <table className="table-auto border-collapse border border-gray-300">
         <thead>
-        <tr>
-          <th className="border border-gray-300 px-4 py-2">Category</th>
-          <th className="border border-gray-300 px-4 py-2">Details</th>
-        </tr>
+          <tr>
+            <th className="border border-gray-300 px-4 py-2">Category</th>
+            <th className="border border-gray-300 px-4 py-2">Details</th>
+          </tr>
         </thead>
         <tbody>
-        {skillData.map((skill, index) => (
-          <tr key={index}>
-            <td className="border border-gray-300 px-4 py-2 font-bold">
-              {skill.category}
-            </td>
-            <td className="border border-gray-300 px-4 py-2">
-              <ul>
-                {skill.details.map((detail, idx) => (
-                  <li key={idx}>{detail}</li>
-                ))}
-              </ul>
-            </td>
-          </tr>
-        ))}
+          {skillData.map((skill, index) => (
+            <tr key={index}>
+              <td className="border border-gray-300 px-4 py-2 font-bold">{skill.category}</td>
+              <td className="border border-gray-300 px-4 py-2">
+                <ul>
+                  {skill.details.map((detail, idx) => (
+                    <li key={idx}>{detail}</li>
+                  ))}
+                </ul>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

@@ -5,18 +5,22 @@ tags: [기술노트]
 draft: false
 summary: 'Next.js에서 CSR(Client-Side Rendering)과 SSR(Server-Side Rendering) 이해해보자.'
 ---
+
 ## 1. 클라이언트 사이드 렌더링(CSR)
 
 ### CSR이란?
+
 - **페이지 로딩 후** 필요한 데이터를 브라우저에서 동적으로 가져와 화면에 렌더링.
 - SPA(Single Page Application)에서 주로 사용됨.
 
 ### 특징
+
 - **빠른 페이지 전환**: 필요한 부분만 갱신 → 전체 HTML 재로드 없음.
 - **상태 유지**: 새로고침 없이 상태(state) 유지.
 - **SEO 약점**: 클라이언트에서 데이터 로드 → 검색 엔진 크롤링 어려움.
 
 ### CSR 코드 예시
+
 ```javascript
 import Link from 'next/link'
 
@@ -39,15 +43,18 @@ export default HomePage
 ## 2. 서버 사이드 렌더링(SSR)
 
 ### SSR이란?
+
 - **페이지 요청 시마다** 서버에서 HTML 생성 후 클라이언트에 전달.
 - SEO 최적화, 실시간 데이터 제공에 적합.
 
 ### 특징
+
 - **SEO 유리**: 서버에서 렌더링된 HTML 제공 → 검색 엔진 크롤링 용이.
 - **실시간 데이터**: 요청 시 최신 데이터 제공.
 - **처리 시간**: 클라이언트보다 로딩 시간 다소 느림.
 
 ### SSR 코드 예시
+
 ```javascript
 export async function getServerSideProps(context) {
   const res = await fetch(`https://api.example.com/products/${context.params.id}`)
@@ -74,12 +81,12 @@ export default ProductPage
 
 ## 3. CSR과 SSR의 차이점
 
-| 항목          | CSR                          | SSR                              |
-|---------------|-------------------------------|----------------------------------|
-| **렌더링 시점** | 클라이언트에서 렌더링           | 서버에서 요청 시마다 렌더링         |
-| **성능**       | 페이지 전환 빠름               | 서버 요청으로 인해 느릴 수 있음      |
-| **SEO**       | 불리                          | 유리                             |
-| **사용 사례**   | SPA, 상태 유지 앱             | SEO 최적화, 실시간 데이터 필요 앱 |
+| 항목            | CSR                   | SSR                               |
+| --------------- | --------------------- | --------------------------------- |
+| **렌더링 시점** | 클라이언트에서 렌더링 | 서버에서 요청 시마다 렌더링       |
+| **성능**        | 페이지 전환 빠름      | 서버 요청으로 인해 느릴 수 있음   |
+| **SEO**         | 불리                  | 유리                              |
+| **사용 사례**   | SPA, 상태 유지 앱     | SEO 최적화, 실시간 데이터 필요 앱 |
 
 ---
 
@@ -89,6 +96,7 @@ export default ProductPage
 - SSR: 초기 로딩 SEO 최적화 및 실시간 데이터 제공
 
 ### 장점
+
 - **SEO 최적화**: 초기 로딩 시 최적화된 HTML 제공.
 - **빠른 페이지 전환**: CSR로 처리.
 - **유연성**: 페이지별 요구에 맞게 CSR과 SSR 선택.
@@ -101,6 +109,7 @@ export default ProductPage
 1. **SSR 사용**: 초기 콘텐츠를 서버에서 렌더링.
 2. **정적 사이트 생성(SSG)**: 변경되지 않는 페이지 미리 생성.
 3. **Head 태그 관리**:
+
    ```javascript
    import Head from 'next/head'
 
@@ -117,6 +126,7 @@ export default ProductPage
      )
    }
    ```
+
 4. **프리렌더링 서비스**: Prerender.io 등 활용.
 
 ---
@@ -128,6 +138,7 @@ export default ProductPage
 - **사용자 경험 개선**: 최신 데이터를 바로 제공.
 
 ### 실시간 데이터 SSR 코드 예시
+
 ```javascript
 export async function getServerSideProps() {
   const res = await fetch('<https://api.example.com/realtime-data>')
