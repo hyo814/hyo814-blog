@@ -1,0 +1,43 @@
+---
+title: 코딩테스트 해시
+date: '2025-01-07'
+tags: [코딩테스트]
+draft: false
+summary: '해시 프로그래머스 모음'
+---
+
+해시는 해시 함수를 사용해서 변환한 값을 인덱스 삼아 키와 값을 저장해서 빠른 데이터 탐구를 제공하는 자료구조 입니다.
+
+보통은 인덱스를 활용해서 탐색을 빠르게 만들지만 해시는 키를 활용해 데이터 탐색을 빠르게 합니다.
+
+키 자체가 해시 함수에 의해 값이 있는 인덱스가 되므로 값을 찾기 위한 탐색 과정이 필요 없습니다.
+
+```jsx
+// 예제: 문자열에서 처음으로 반복되지 않는 문자 찾기
+
+function firstNonRepeatingChar(str) {
+  // 각 문자의 빈도를 저장할 해시맵 생성
+  const charCount = {}
+
+  // 문자열을 순회하며 각 문자의 빈도 계산
+  for (let char of str) {
+    charCount[char] = (charCount[char] || 0) + 1
+  }
+
+  // 문자열을 다시 순회하며 처음으로 반복되지 않는 문자 찾기
+  for (let char of str) {
+    if (charCount[char] === 1) {
+      return char // 처음으로 반복되지 않는 문자 반환
+    }
+  }
+
+  return null // 반복되지 않는 문자가 없는 경우 null 반환
+}
+
+// 함수 테스트
+console.log(firstNonRepeatingChar('swiss')) // 출력: "w"
+```
+
+# 문제 확인 하기
+
+[Untitled](https://www.notion.so/1744843169a980298764f3a3f3990295?pvs=21)
