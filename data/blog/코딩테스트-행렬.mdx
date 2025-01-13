@@ -1,0 +1,155 @@
+---
+title: 코딩테스트 행렬
+date: '2024-11-19'
+tags: [기술노트]
+draft: false
+summary: '코딩테스트 행렬'
+---
+
+```jsx
+// https://school.programmers.co.kr/learn/courses/30/lessons/12949
+// 행렬의 곱셈
+
+function solution(arr1, arr2) {
+    const rows1 = arr1.length; // arr1의 행 개수
+    const cols1 = arr1[0].length; // arr1의 열 개수
+    const cols2 = arr2[0].length; // arr2의 열 개수
+
+    // 결과 행렬 초기화
+    const result = Array.from({ length: rows1 }, () => Array(cols2).fill(0));
+
+    // 행렬 곱셈 계산
+    for (let i = 0; i < rows1; i++) { // arr1의 행 순회
+        for (let j = 0; j < cols2; j++) { // arr2의 열 순회
+            for (let k = 0; k < cols1; k++) { // arr1의 열과 arr2의 행에 해당하는 원소 순회
+                result[i][j] += arr1[i][k] * arr2[k][j];
+            }
+        }
+    }
+
+    return result;
+}
+
+// 행렬 문제 정리
+// 행렬의 덧셈
+function addMatrices(arr1, arr2) {
+    return arr1.map((row, i) => row.map((val, j) => val + arr2[i][j]));
+}
+
+// 행렬의 전치
+function transposeMatrix(matrix) {
+    return matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]));
+}
+
+// 행렬 회전 (90도)
+function rotateMatrix(matrix) {
+    return matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]).reverse());
+}
+
+// 행렬의 스칼라 곱
+function scalarMultiply(matrix, scalar) {
+    return matrix.map(row => row.map(val => val * scalar));
+}
+
+// 특정 열의 합
+function columnSum(matrix) {
+    return matrix[0].map((_, colIndex) => matrix.reduce((sum, row) => sum + row[colIndex], 0));
+}
+
+// 행렬의 대각선 합
+function diagonalSum(matrix) {
+    const n = matrix.length;
+    let mainDiagonal = 0, antiDiagonal = 0;
+    for (let i = 0; i < n; i++) {
+        mainDiagonal += matrix[i][i];
+        antiDiagonal += matrix[i][n - 1 - i];
+    }
+    return { mainDiagonal, antiDiagonal };
+}
+
+// 행렬의 최댓값 찾기
+function findMaxInMatrix(matrix) {
+    return Math.max(...matrix.flat());
+}
+
+// 희소 행렬 변환
+function sparseMatrixToList(matrix) {
+    const result = [];
+    matrix.forEach((row, i) => {
+        row.forEach((val, j) => {
+            if (val !== 0) result.push([i, j, val]);
+        });
+    });
+    return result;
+}
+
+// 행렬 경로 탐색 (DFS 예제)
+function findPath(matrix, start, end) {
+    const [rows, cols] = [matrix.length, matrix[0].length];
+    const visited = Array.from({ length: rows }, () => Array(cols).fill(false));
+    const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+
+    function isValid(x, y) {
+        return x >= 0 && x < rows && y >= 0 && y < cols && !visited[x][y] && matrix[x][y] === 1;
+    }
+
+    function dfs(x, y) {
+        if ([x, y].toString() === end.toString()) return true;
+        visited[x][y] = true;
+        for (const [dx, dy] of directions) {
+            const [nx, ny] = [x + dx, y + dy];
+            if (isValid(nx, ny) && dfs(nx, ny)) return true;
+        }
+        return false;
+    }
+
+    return dfs(...start);
+}
+
+// 행렬 분해
+function divideMatrix(matrix, blockSize) {
+    const blocks = [];
+    for (let i = 0; i < matrix.length; i += blockSize) {
+        for (let j = 0; j < matrix[0].length; j += blockSize) {
+            const block = matrix.slice(i, i + blockSize).map(row => row.slice(j, j + blockSize));
+            blocks.push(block);
+        }
+    }
+    return blocks;
+}
+
+// 행렬 곱셈
+function multiplyMatrices(arr1, arr2) {
+    const rows1 = arr1.length;
+    const cols1 = arr1[0].length;
+    const cols2 = arr2[0].length;
+
+    const result = Array.from({ length: rows1 }, () => Array(cols2).fill(0));
+
+    for (let i = 0; i < rows1; i++) {
+        for (let j = 0; j < cols2; j++) {
+            for (let k = 0; k < cols1; k++) {
+                result[i][j] += arr1[i][k] * arr2[k][j];
+            }
+        }
+    }
+
+    return result;
+}
+
+// Export functions (if using in a Node.js environment)
+// module.exports = {
+//     addMatrices,
+//     transposeMatrix,
+//     rotateMatrix,
+//     scalarMultiply,
+//     columnSum,
+//     diagonalSum,
+//     findMaxInMatrix,
+//     sparseMatrixToList,
+//     findPath,
+//     divideMatrix,
+//     multiplyMatrices
+// };
+
+```

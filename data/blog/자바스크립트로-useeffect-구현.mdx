@@ -1,0 +1,78 @@
+---
+title: 자바스크립트로 useEffect 구현
+date: '2025-01-01'
+tags: [기술노트]
+draft: false
+summary: '자바스크립트로 useEffect 구현'
+---
+
+```jsx
+class Component {
+    constructor() {
+        this.effects = [];
+        this.cleanupFunctions = [];
+    }
+
+    // useEffect 구현
+    useEffect(effect, dependencies) {
+        const hasNoDeps = !dependencies; // 의존성 배열이 없는 경우
+        const prevDeps = this.effects.length
+            ? this.effects.map((e) => e.dependencies)
+            : [];
+        const hasChangedDeps = prevDeps.some(
+            (prevDep, index) => JSON.stringify(prevDep) !== JSON.stringify(dependencies[index])
+        );
+
+        if (hasNoDeps || hasChangedDeps) {
+            // 이전 클린업 함수 실행
+            if (this.cleanupFunctions.length) {
+                this.cleanupFunctions.forEach((cleanup) => cleanup());
+                this.cleanupFunctions = [];
+            }
+
+            // 새 effect 실행
+            const cleanup = effect();
+            if (typeof cleanup === "function") {
+                this.cleanupFunctions.push(cleanup);
+            }
+
+            this.effects.push({ effect, dependencies });
+        }
+    }
+
+    // 수동으로 컴포넌트 업데이트를 트리거
+    update() {
+        this.effects.forEach(({ effect, dependencies }) => {
+            const cleanup = effect();
+            if (typeof cleanup === "function") {
+                this.cleanupFunctions.push(cleanup);
+            }
+        });
+    }
+
+    // 컴포넌트 정리
+    unmount() {
+        this.cleanupFunctions.forEach((cleanup) => cleanup());
+        this.cleanupFunctions = [];
+    }
+}
+
+// 컴포넌트 사용 예제
+const MyComponent = new Component();
+
+// 첫 번째 useEffect
+MyComponent.useEffect(() => {
+    console.log("Component mounted or updated!");
+
+    return () => {
+        console.log("Cleanup on dependency change or unmount.");
+    };
+}, [1, 2]); // 의존성 배열
+
+// 업데이트 트리거
+MyComponent.update();
+
+// 컴포넌트 제거
+MyComponent.unmount();
+
+```

@@ -1,0 +1,65 @@
+---
+title: 자바스크립트 useState 구현
+date: '2025-01-03'
+tags: [기술노트]
+draft: false
+summary: '자바스크립트 useState 구현'
+---
+
+```jsx
+// 자바스크립트로 useState를 구현한 예제
+function createStateManager() {
+    let state; // 현재 상태를 저장
+    let listeners = []; // 상태 변경을 구독하는 리스너 목록
+
+    function useState(initialValue) {
+        // 초기 상태 설정
+        if (state === undefined) {
+            state = initialValue;
+        }
+
+        function setState(newValue) {
+            // 새로운 상태 설정
+            if (typeof newValue === "function") {
+                state = newValue(state); // 함수형 업데이트 처리
+            } else {
+                state = newValue;
+            }
+            listeners.forEach((listener) => listener(state)); // 모든 리스너에 상태 변경 알림
+        }
+
+        function subscribe(listener) {
+            // 상태 변경을 구독
+            listeners.push(listener);
+            return () => {
+                // 구독 취소
+                listeners = listeners.filter((l) => l !== listener);
+            };
+        }
+
+        return [state, setState, subscribe];
+    }
+
+    return { useState };
+}
+
+// 사용 예제
+const stateManager = createStateManager();
+const [count, setCount, subscribe] = stateManager.useState(0);
+
+// 상태 변경 구독
+const unsubscribe = subscribe((newCount) => {
+    console.log("상태가 업데이트됨:", newCount);
+});
+
+// 상태 업데이트
+setCount(1); // 출력: "상태가 업데이트됨: 1"
+setCount((prevCount) => prevCount + 1); // 출력: "상태가 업데이트됨: 2"
+
+// 구독 해제
+unsubscribe();
+
+// 구독 해제 이후에는 상태 변경 로그가 출력되지 않음
+setCount(5);
+
+```

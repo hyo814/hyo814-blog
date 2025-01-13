@@ -99,3 +99,112 @@ console.log('End')
 ```
 
 ---
+#### **기술 노트 4
+```jsx
+// 이벤트 예제: 이벤트, target, currentTarget, 이벤트 리스너, 이벤트 전파, 이벤트 위임
+
+// 1. 버튼 클릭 이벤트 예제
+document.querySelector('#myButton').addEventListener('click', function() {
+    console.log('Button clicked!');
+});
+
+// 2. 이벤트 타겟 (event.target) 예제
+document.querySelector('#parent').addEventListener('click', function(event) {
+    console.log('Target:', event.target); // 실제 클릭된 요소
+});
+
+// 3. 커렌트 타겟 (event.currentTarget) 예제
+document.querySelector('#parent').addEventListener('click', function(event) {
+    console.log('Current Target:', event.currentTarget); // 이벤트 핸들러가 연결된 요소
+});
+
+// 4. 이벤트 타겟과 커렌트 타겟 비교
+document.querySelector('#parent').addEventListener('click', function(event) {
+    console.log('Target:', event.target);         // 클릭된 실제 요소
+    console.log('Current Target:', event.currentTarget); // 이벤트 핸들러가 연결된 요소
+});
+
+// 5. 이벤트 위임 예제
+document.querySelector('#list').addEventListener('click', function(event) {
+    if (event.target.tagName === 'LI') {
+        console.log('Clicked item:', event.target.textContent);
+    }
+});
+
+// 6. 이벤트 전파 단계: 캡처링(Capturing)과 버블링(Bubbling)
+// 이벤트 전파 단계
+// - 캡처링 단계: 이벤트가 최상위 요소에서부터 이벤트가 발생한 요소로 내려옴
+// - 타깃 단계: 이벤트가 발생한 요소에 도달
+// - 버블링 단계: 이벤트가 다시 상위 요소로 올라감
+
+document.querySelector('#child').addEventListener('click', function(event) {
+    console.log('Child clicked - Bubbling');
+}, false); // 버블링 단계 (default)
+
+document.querySelector('#parent').addEventListener('click', function(event) {
+    console.log('Parent clicked - Capturing');
+}, true); // 캡처링 단계
+
+// 7. 이벤트 전파 중단: stopPropagation()
+document.querySelector('#child').addEventListener('click', function(event) {
+    console.log('Stopping propagation');
+    event.stopPropagation(); // 부모로 전파 중단
+});
+
+document.querySelector('#parent').addEventListener('click', function(event) {
+    console.log('Parent clicked (will not log if propagation is stopped)');
+});
+
+// 8. preventDefault() 사용 예제
+document.querySelector('#link').addEventListener('click', function(event) {
+    event.preventDefault(); // 기본 동작(예: 링크 이동)을 막음
+    console.log('Default action prevented');
+});
+
+// 이벤트 루프와 관련된 예제
+
+// 기본적인 이벤트 루프 동작 예제
+console.log("Start");
+
+setTimeout(() => {
+    console.log("Task from setTimeout");
+}, 0);
+
+Promise.resolve().then(() => {
+    console.log("Microtask from Promise");
+});
+
+console.log("End");
+
+// 실행 순서 설명:
+// 1. console.log("Start") 실행
+// 2. setTimeout의 콜백은 테스크 큐(Task Queue)로 이동
+// 3. Promise.then의 콜백은 마이크로태스크 큐(Microtask Queue)로 이동
+// 4. console.log("End") 실행
+// 5. 마이크로태스크 큐의 작업 실행 ("Microtask from Promise")
+// 6. 테스크 큐의 작업 실행 ("Task from setTimeout")
+
+// 마이크로태스크 우선 처리 예제
+console.log("Start");
+
+setTimeout(() => {
+    console.log("Task from setTimeout");
+}, 0);
+
+Promise.resolve().then(() => {
+    console.log("Microtask 1 from Promise");
+}).then(() => {
+    console.log("Microtask 2 from Promise");
+});
+
+console.log("End");
+
+// 실행 순서 설명:
+// 1. console.log("Start") 실행
+// 2. setTimeout의 콜백은 테스크 큐(Task Queue)로 이동
+// 3. 첫 번째 Promise.then의 콜백은 마이크로태스크 큐(Microtask Queue)로 이동
+// 4. console.log("End") 실행
+// 5. 마이크로태스크 큐 작업 실행 ("Microtask 1 from Promise" -> "Microtask 2 from Promise")
+// 6. 테스크 큐 작업 실행 ("Task from setTimeout")
+
+```
