@@ -1,0 +1,468 @@
+---
+title: 코딩 테스트 연결 리스트
+date: '2024-12-19'
+tags: [기술노트]
+draft: false
+summary: '코딩 테스트 연결 리스트'
+---
+
+```jsx
+// 노드 클래스 정의
+class Node {
+    constructor(value) {
+        this.value = value;
+        this.next = null;
+        this.prev = null; // 이중 연결 리스트를 위한 prev 포인터
+    }
+}
+
+// 단일 연결 리스트
+class SinglyLinkedList {
+    constructor() {
+        this.head = null;
+        this.size = 0;
+    }
+
+    isEmpty() {
+        return this.size === 0;
+    }
+
+    insertFirst(value) {
+        const newNode = new Node(value);
+        newNode.next = this.head;
+        this.head = newNode;
+        this.size++;
+    }
+
+    insertLast(value) {
+        const newNode = new Node(value);
+        if (this.isEmpty()) {
+            this.head = newNode;
+        } else {
+            let current = this.head;
+            while (current.next) {
+                current = current.next;
+            }
+            current.next = newNode;
+        }
+        this.size++;
+    }
+
+    insertAt(index, value) {
+        if (index < 0 || index > this.size) {
+            console.log('Invalid index');
+            return;
+        }
+
+        if (index === 0) {
+            this.insertFirst(value);
+            return;
+        }
+
+        const newNode = new Node(value);
+        let current = this.head;
+        let previous = null;
+        let i = 0;
+
+        while (i < index) {
+            previous = current;
+            current = current.next;
+            i++;
+        }
+
+        previous.next = newNode;
+        newNode.next = current;
+        this.size++;
+    }
+
+    removeFirst() {
+        if (this.isEmpty()) return;
+        this.head = this.head.next;
+        this.size--;
+    }
+
+    removeLast() {
+        if (this.isEmpty()) return;
+
+        if (this.size === 1) {
+            this.head = null;
+        } else {
+            let current = this.head;
+            let previous = null;
+
+            while (current.next) {
+                previous = current;
+                current = current.next;
+            }
+
+            previous.next = null;
+        }
+        this.size--;
+    }
+
+    remove(value) {
+        if (this.isEmpty()) return;
+
+        if (this.head.value === value) {
+            this.removeFirst();
+            return;
+        }
+
+        let current = this.head;
+        let previous = null;
+
+        while (current && current.value !== value) {
+            previous = current;
+            current = current.next;
+        }
+
+        if (current) {
+            previous.next = current.next;
+            this.size--;
+        }
+    }
+
+    search(value) {
+        let current = this.head;
+
+        while (current) {
+            if (current.value === value) return current;
+            current = current.next;
+        }
+
+        return null;
+    }
+
+    printList() {
+        let current = this.head;
+        const result = [];
+
+        while (current) {
+            result.push(current.value);
+            current = current.next;
+        }
+
+        console.log(result.join(' -> '));
+    }
+}
+
+// 이중 연결 리스트
+class DoublyLinkedList {
+    constructor() {
+        this.head = null;
+        this.tail = null;
+        this.size = 0;
+    }
+
+    isEmpty() {
+        return this.size === 0;
+    }
+
+    insertFirst(value) {
+        const newNode = new Node(value);
+        if (this.isEmpty()) {
+            this.head = this.tail = newNode;
+        } else {
+            newNode.next = this.head;
+            this.head.prev = newNode;
+            this.head = newNode;
+        }
+        this.size++;
+    }
+
+    insertLast(value) {
+        const newNode = new Node(value);
+        if (this.isEmpty()) {
+            this.head = this.tail = newNode;
+        } else {
+            newNode.prev = this.tail;
+            this.tail.next = newNode;
+            this.tail = newNode;
+        }
+        this.size++;
+    }
+
+    insertAt(index, value) {
+        if (index < 0 || index > this.size) {
+            console.log('Invalid index');
+            return;
+        }
+
+        if (index === 0) {
+            this.insertFirst(value);
+            return;
+        }
+
+        if (index === this.size) {
+            this.insertLast(value);
+            return;
+        }
+
+        const newNode = new Node(value);
+        let current = this.head;
+        let i = 0;
+
+        while (i < index) {
+            current = current.next;
+            i++;
+        }
+
+        newNode.prev = current.prev;
+        newNode.next = current;
+        current.prev.next = newNode;
+        current.prev = newNode;
+        this.size++;
+    }
+
+    removeFirst() {
+        if (this.isEmpty()) return;
+
+        if (this.size === 1) {
+            this.head = this.tail = null;
+        } else {
+            this.head = this.head.next;
+            this.head.prev = null;
+        }
+        this.size--;
+    }
+
+    removeLast() {
+        if (this.isEmpty()) return;
+
+        if (this.size === 1) {
+            this.head = this.tail = null;
+        } else {
+            this.tail = this.tail.prev;
+            this.tail.next = null;
+        }
+        this.size--;
+    }
+
+    remove(value) {
+        if (this.isEmpty()) return;
+
+        if (this.head.value === value) {
+            this.removeFirst();
+            return;
+        }
+
+        if (this.tail.value === value) {
+            this.removeLast();
+            return;
+        }
+
+        let current = this.head;
+
+        while (current && current.value !== value) {
+            current = current.next;
+        }
+
+        if (current) {
+            current.prev.next = current.next;
+            current.next.prev = current.prev;
+            this.size--;
+        }
+    }
+
+    search(value) {
+        let current = this.head;
+
+        while (current) {
+            if (current.value === value) return current;
+            current = current.next;
+        }
+
+        return null;
+    }
+
+    printList() {
+        let current = this.head;
+        const result = [];
+
+        while (current) {
+            result.push(current.value);
+            current = current.next;
+        }
+
+        console.log(result.join(' <-> '));
+    }
+}
+
+// 원형 연결 리스트
+class CircularLinkedList {
+    constructor() {
+        this.head = null;
+        this.size = 0;
+    }
+
+    isEmpty() {
+        return this.size === 0;
+    }
+
+    insertFirst(value) {
+        const newNode = new Node(value);
+        if (this.isEmpty()) {
+            newNode.next = newNode;
+            this.head = newNode;
+        } else {
+            let tail = this.head;
+            while (tail.next !== this.head) {
+                tail = tail.next;
+            }
+            newNode.next = this.head;
+            tail.next = newNode;
+            this.head = newNode;
+        }
+        this.size++;
+    }
+
+    insertLast(value) {
+        const newNode = new Node(value);
+        if (this.isEmpty()) {
+            newNode.next = newNode;
+            this.head = newNode;
+        } else {
+            let tail = this.head;
+            while (tail.next !== this.head) {
+                tail = tail.next;
+            }
+            tail.next = newNode;
+            newNode.next = this.head;
+        }
+        this.size++;
+    }
+
+    insertAt(index, value) {
+        if (index < 0 || index > this.size) {
+            console.log('Invalid index');
+            return;
+        }
+
+        if (index === 0) {
+            this.insertFirst(value);
+            return;
+        }
+
+        const newNode = new Node(value);
+        let current = this.head;
+        let previous = null;
+        let i = 0;
+
+        while (i < index) {
+            previous = current;
+            current = current.next;
+            i++;
+        }
+
+        newNode.next = current;
+        previous.next = newNode;
+        this.size++;
+    }
+
+    removeFirst() {
+        if (this.isEmpty()) return;
+
+        if (this.size === 1) {
+            this.head = null;
+        } else {
+            let tail = this.head;
+            while (tail.next !== this.head) {
+                tail = tail.next;
+            }
+            this.head = this.head.next;
+            tail.next = this.head;
+        }
+        this.size--;
+    }
+
+    removeLast() {
+        if (this.isEmpty()) return;
+
+        if (this.size === 1) {
+            this.head = null;
+        } else {
+            let tail = this.head;
+            let previous = null;
+            while (tail.next !== this.head) {
+                previous = tail;
+                tail = tail.next;
+            }
+            previous.next = this.head;
+        }
+        this.size--;
+    }
+
+    remove(value) {
+        if (this.isEmpty()) return;
+
+        if (this.head.value === value) {
+            this.removeFirst();
+            return;
+        }
+
+        let current = this.head;
+        let previous = null;
+
+        do {
+            previous = current;
+            current = current.next;
+        } while (current !== this.head && current.value !== value);
+
+        if (current.value === value) {
+            previous.next = current.next;
+            this.size--;
+        }
+    }
+
+    search(value) {
+        if (this.isEmpty()) return null;
+
+        let current = this.head;
+
+        do {
+            if (current.value === value) return current;
+            current = current.next;
+        } while (current !== this.head);
+
+        return null;
+    }
+
+    printList() {
+        if (this.isEmpty()) {
+            console.log('List is empty');
+            return;
+        }
+
+        let current = this.head;
+        const result = [];
+
+        do {
+            result.push(current.value);
+            current = current.next;
+        } while (current !== this.head);
+
+        console.log(result.join(' -> '));
+    }
+}
+
+// 예제 사용
+const singlyLinkedList = new SinglyLinkedList();
+singlyLinkedList.insertFirst(10);
+singlyLinkedList.insertLast(20);
+singlyLinkedList.insertAt(1, 15);
+singlyLinkedList.printList(); // 10 -> 15 -> 20
+
+const doublyLinkedList = new DoublyLinkedList();
+doublyLinkedList.insertFirst(10);
+doublyLinkedList.insertLast(20);
+doublyLinkedList.insertAt(1, 15);
+doublyLinkedList.printList(); // 10 <-> 15 <-> 20
+
+const circularLinkedList = new CircularLinkedList();
+circularLinkedList.insertFirst(10);
+circularLinkedList.insertLast(20);
+circularLinkedList.insertAt(1, 15);
+circularLinkedList.printList(); // 10 -> 15 -> 20
+```
+
+[연결리스트](https://www.notion.so/17a4843169a980e7af64f579d717d276?pvs=21)
