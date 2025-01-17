@@ -1,0 +1,111 @@
+---
+title: WebSocket 연결 문제 및 HTTP HTTPS 에러 분석
+date: '2025-01-13'
+tags: [기술노트]
+draft: false
+summary: 'WebSocket 연결 문제 및 HTTP/HTTPS 에러 분석'
+---
+
+## 1. 웹소켓 연결 시도 오류
+
+웹소켓 연결 시 서버에서 발생하는 에러를 분석하다 보면, 일정하지 않은 상황에서도 계속해서 웹소켓 연결을 시도하는 경우가 발생할 수 있습니다. 이로 인해 서버를 내리고 재시작한 직후, 연결 오류가 발생하는 경우가 있습니다.
+
+### 주요 문제점
+
+- 서버가 초기화된 직후 클라이언트가 연결을 시도하지만, 서버가 준비되지 않아 연결이 거부됨.
+- 웹소켓 연결 로직이 특정 조건에서만 실행되어야 하지만, 모든 상황에서 실행되고 있음.
+
+### 해결 방안
+
+1. **조건부 연결 로직 구현**:
+    - 특정 작업(예: 일정 만들기 등)에서만 웹소켓 연결을 시도하도록 로직 수정.
+    - 상태 확인 후 연결 시도:
+        
+        ```jsx
+        if (shouldConnectWebSocket) {
+            const socket = new WebSocket("wss://example.com/socket");
+            socket.onopen = () => console.log("WebSocket 연결 성공");
+            socket.onerror = (error) => console.error("WebSocket 연결 오류", error);
+        }
+        
+        ```
+        
+2. **서버 상태 확인**:
+    - 서버가 준비되지 않은 경우, 클라이언트가 일정 시간 후에 재시도하도록 구현.
+
+---
+
+## 2. HTTP/HTTPS 요청 에러
+
+### 2.1. 프론트엔드 오류
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/1eb37c0a-6ffd-4ad6-895c-732d3acb3944/b5922c1d-26c0-4cca-a055-9d4c07a653dc/image.png
+
+프론트엔드에서 HTTPS로 요청을 보내는 경우, 서버가 HTTP만 지원하면 다음과 같은 오류가 발생합니다:
+
+- "Mixed Content" 오류
+- CORS(Cross-Origin Resource Sharing) 관련 문제
+
+### 2.2. 백엔드 오류
+
+### 로그 분석
+
+```java
+2024-11-23T08:58:35.055Z  INFO 472964 --- [nio-8080-exec-7] o.apache.coyote.http11.Http11Processor   : Error parsing HTTP request header
+java.lang.IllegalArgumentException: Invalid character found in method name [...]. HTTP method names must be tokens
+
+```
+
+이 오류는 서버가 클라이언트의 요청을 처리하는 과정에서 발생합니다. 주요 원인은 HTTP 요청의 메서드 이름이 유효하지 않다는 점입니다.
+
+### 오류 원인
+
+1. **잘못된 HTTP 요청**:
+    - 클라이언트가 잘못된 형식으로 요청을 보냈을 가능성.
+2. **악성 트래픽**:
+    - 외부 공격자가 비정상적인 요청을 보냈을 가능성.
+3. **SSL/TLS와 HTTP 프로토콜 혼용**:
+    - `wss://` 요청을 지원하지 않는 서버에 SSL 핸드셰이크 데이터가 전달되어 발생한 문제.
+
+### 16진수 메서드 이름의 원인
+
+- 로그에서 보이는 16진수 값들(예: `0x16, 0x03, 0x01, ...`)은 SSL/TLS 핸드셰이크 데이터를 HTTP 요청으로 잘못 처리한 결과입니다.
+- 클라이언트가 `wss://` 프로토콜로 요청을 보내는 경우, 서버는 SSL 연결을 처리할 수 있어야 합니다. 하지만 HTTP만 지원하는 서버에서는 이러한 데이터를 파싱하지 못해 오류가 발생합니다.
+
+### 해결 방안
+
+1. **SSL 인증서 설정**:
+    - 서버에 SSL 인증서를 설정하여 HTTPS와 `wss://` 요청을 지원.
+    - Spring Boot 기준 설정 예시:
+        
+        ```
+        server.port=443
+        server.ssl.key-store=classpath:keystore.p12
+        server.ssl.key-store-password=yourpassword
+        server.ssl.key-store-type=PKCS12
+        server.ssl.key-alias=tomcat
+        
+        ```
+        
+2. **클라이언트 요청 수정**:
+    - 서버가 HTTP만 지원하는 경우, `ws://`로 요청.
+    - 예:
+        
+        ```jsx
+        const socket = new WebSocket("ws://example.com/socket");
+        
+        ```
+        
+3. **프록시 설정**:
+    - Nginx나 Apache와 같은 프록시 서버를 사용하여 HTTPS 요청을 처리한 후 백엔드로 전달.
+
+### 요약
+
+- 클라이언트 요청 방식(`wss://` vs `ws://`)과 서버 지원 프로토콜(HTTP vs HTTPS)을 맞추는 것이 중요합니다.
+- SSL 인증서를 설정하거나 프록시 서버를 사용하는 방식으로 문제를 해결할 수 있습니다.
+
+---
+
+### 결론
+
+이 문제는 WebSocket 프로토콜, SSL/TLS, HTTP 요청 처리 방식 간의 불일치에서 발생합니다. 적절한 인증서 설정 및 프로토콜 일치를 통해 문제를 해결할 수 있습니다. 문제가 발생했을 때는 로그를 기반으로 정확한 원인을 분석하고, 단계적으로 해결 방안을 적용하는 것이 중요합니다.
