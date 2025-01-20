@@ -16,42 +16,42 @@ summary: '제로베이스 코딩테스트 1주차 ~ 8주차'
 // 5. 최댓값 반환
 
 function solution1(friends, gifts) {
-    const len = friends.length;
-    const nameMap = new Map();
-    const giftTable = new Array(len).fill(0).map(_ => new Array(len).fill(0));
-    const rankInfo = new Array(len).fill(0);
-    const nextMonth = new Array(len).fill(0);
+  const len = friends.length
+  const nameMap = new Map()
+  const giftTable = new Array(len).fill(0).map((_) => new Array(len).fill(0))
+  const rankInfo = new Array(len).fill(0)
+  const nextMonth = new Array(len).fill(0)
 
-    friends.forEach((name, idx) => {
-        nameMap.set(name, idx);
-    })
+  friends.forEach((name, idx) => {
+    nameMap.set(name, idx)
+  })
 
-    gifts.forEach(info => {
-        const [from, to] = info.split(" ");
-        giftTable[nameMap.get(from)][nameMap.get(to)]++;
-    })
+  gifts.forEach((info) => {
+    const [from, to] = info.split(' ')
+    giftTable[nameMap.get(from)][nameMap.get(to)]++
+  })
 
-    for (let i=0; i<len; i++) {
-        rankInfo[i] = giftTable[i].reduce((acc, cur) => acc += cur, 0)
+  for (let i = 0; i < len; i++) {
+    rankInfo[i] = giftTable[i].reduce((acc, cur) => (acc += cur), 0)
 
-        for (let j=0; j<len; j++) {
-            rankInfo[i] -= giftTable[j][i];
-        }
+    for (let j = 0; j < len; j++) {
+      rankInfo[i] -= giftTable[j][i]
     }
+  }
 
-    for (let i=0; i<len; i++) {
-        for (let j=i+1; j<len; j++) {
-            if (i===j) continue;
-            if (giftTable[i][j] > giftTable[j][i]) nextMonth[i]++;
-            if (giftTable[i][j] < giftTable[j][i]) nextMonth[j]++;
-            if (giftTable[i][j] === giftTable[j][i]) {
-                if (rankInfo[i] > rankInfo[j]) nextMonth[i]++
-                if (rankInfo[i] < rankInfo[j]) nextMonth[j]++
-            }
-        }
+  for (let i = 0; i < len; i++) {
+    for (let j = i + 1; j < len; j++) {
+      if (i === j) continue
+      if (giftTable[i][j] > giftTable[j][i]) nextMonth[i]++
+      if (giftTable[i][j] < giftTable[j][i]) nextMonth[j]++
+      if (giftTable[i][j] === giftTable[j][i]) {
+        if (rankInfo[i] > rankInfo[j]) nextMonth[i]++
+        if (rankInfo[i] < rankInfo[j]) nextMonth[j]++
+      }
     }
+  }
 
-    return Math.max(...nextMonth)
+  return Math.max(...nextMonth)
 }
 
 /*
@@ -61,20 +61,20 @@ arr은 영어 소문자로 이루어져 있으며, 공통 문자는 중복 없�
  */
 
 function solution2(arr) {
-    let answer = [];
-    let set = new Set(arr[0]); // a, p, l, e
+  let answer = []
+  let set = new Set(arr[0]) // a, p, l, e
 
-    for (let i=1; i< arr.length; i++){
-        let curr = new Set(arr[i]);
-        set = new Set([...set].filter(e=> curr.has(e))) // 교집합
-    }
+  for (let i = 1; i < arr.length; i++) {
+    let curr = new Set(arr[i])
+    set = new Set([...set].filter((e) => curr.has(e))) // 교집합
+  }
 
-    if(set.length !== 0) {
-        answer = Array.from(set).sort();
-    } else {
-        return answer
-    }
-    return answer;
+  if (set.length !== 0) {
+    answer = Array.from(set).sort()
+  } else {
+    return answer
+  }
+  return answer
 }
 
 /*
@@ -99,17 +99,16 @@ t 초 후, 주어진 전광판에 노출되는 문자를 출력합니다.
  */
 
 function solution3(n, s, t) {
-    let answer = ''
+  let answer = ''
 
-    const text = '.'.repeat(n)+s +'.'.repeat(n-1); // 전광판을 초기화 (ex)= .....Snowball....
-    const duration = n + s.length; // 초기화 할때랑 값을 같게 할 필요 X > 초기화를 위한 "."은 생략
-    const time = t % duration; // 나머지로 처리
+  const text = '.'.repeat(n) + s + '.'.repeat(n - 1) // 전광판을 초기화 (ex)= .....Snowball....
+  const duration = n + s.length // 초기화 할때랑 값을 같게 할 필요 X > 초기화를 위한 "."은 생략
+  const time = t % duration // 나머지로 처리
 
-    answer = text.substr(time, n) // substr로 반복
+  answer = text.substr(time, n) // substr로 반복
 
-    return answer;
+  return answer
 }
-
 ```
 
 ```jsx
@@ -132,11 +131,11 @@ function solution3(n, s, t) {
  */
 
 function solution1(num) {
-    if (num % 4 === 1) {
-        return false
-    } else {
-        return true
-    }
+  if (num % 4 === 1) {
+    return false
+  } else {
+    return true
+  }
 }
 
 /*
@@ -147,15 +146,15 @@ function solution1(num) {
 주식의 일단위 주가 정보 배열
  */
 function solution2(A) {
-    let minPrice = A[0];
-    let answer = 0;
+  let minPrice = A[0]
+  let answer = 0
 
-    for (let i = 1; i < A.length; i++) {
-        answer = Math.max(answer, A[i] - minPrice);
-        minPrice = Math.min(minPrice, A[i]);
-    }
+  for (let i = 1; i < A.length; i++) {
+    answer = Math.max(answer, A[i] - minPrice)
+    minPrice = Math.min(minPrice, A[i])
+  }
 
-    return answer;
+  return answer
 }
 
 /*
@@ -173,13 +172,12 @@ function solution2(A) {
  */
 
 function solution3(n) {
-    let answer = 0;
-    for (let i = 0; i <= n; i++) {
-        answer += i
-    }
-    return answer;
+  let answer = 0
+  for (let i = 0; i <= n; i++) {
+    answer += i
+  }
+  return answer
 }
-
 ```
 
 ```jsx
@@ -189,28 +187,28 @@ function solution3(n) {
 // 입력: 정수 n (1 ≤ n ≤ 2^31 - 1)
 // 출력: n의 이진 표현에서 1과 1 사이의 최대 간격을 나타내는 정수
 function solution1(n) {
-    // n의 이진 표현을 문자열로 변환합니다.
-    const binaryString = n.toString(2);
+  // n의 이진 표현을 문자열로 변환합니다.
+  const binaryString = n.toString(2)
 
-    // 이전 1의 위치를 추적할 변수입니다.
-    let previousIndex = -1;
-    let maxGap = 0;
+  // 이전 1의 위치를 추적할 변수입니다.
+  let previousIndex = -1
+  let maxGap = 0
 
-    // 이진 문자열을 순회합니다.
-    for (let i = 0; i < binaryString.length; i++) {
-        if (binaryString[i] === '1') {
-            if (previousIndex !== -1) {
-                // 현재 1과 이전 1 사이의 거리를 계산합니다.
-                const gap = i - previousIndex;
-                // 가장 긴 거리를 업데이트합니다.
-                maxGap = Math.max(maxGap, gap);
-            }
-            // 이전 1의 위치를 현재 위치로 업데이트합니다.
-            previousIndex = i;
-        }
+  // 이진 문자열을 순회합니다.
+  for (let i = 0; i < binaryString.length; i++) {
+    if (binaryString[i] === '1') {
+      if (previousIndex !== -1) {
+        // 현재 1과 이전 1 사이의 거리를 계산합니다.
+        const gap = i - previousIndex
+        // 가장 긴 거리를 업데이트합니다.
+        maxGap = Math.max(maxGap, gap)
+      }
+      // 이전 1의 위치를 현재 위치로 업데이트합니다.
+      previousIndex = i
     }
+  }
 
-    return maxGap;
+  return maxGap
 }
 
 // 문제 2: 문자열에서 가장 많이 등장하는 숫자 찾기
@@ -219,29 +217,29 @@ function solution1(n) {
 // 입력: 문자열 s (1 ≤ s.length ≤ 1000): 숫자 문자로만 구성된 문자열
 // 출력: 문자열 s에 가장 많이 등장한 숫자를 나타내는 정수
 function solution2(s) {
-    // 각 숫자의 빈도를 저장할 배열을 초기화합니다.
-    const frequency = new Array(10).fill(0);
+  // 각 숫자의 빈도를 저장할 배열을 초기화합니다.
+  const frequency = new Array(10).fill(0)
 
-    // 문자열을 순회하면서 각 숫자의 빈도를 증가시킵니다.
-    for (let char of s) {
-        const digit = parseInt(char);
-        frequency[digit]++;
+  // 문자열을 순회하면서 각 숫자의 빈도를 증가시킵니다.
+  for (let char of s) {
+    const digit = parseInt(char)
+    frequency[digit]++
+  }
+
+  // 가장 많이 등장한 숫자를 찾습니다.
+  let maxFrequency = 0
+  let result = 9
+
+  for (let i = 0; i < 10; i++) {
+    if (frequency[i] > maxFrequency) {
+      maxFrequency = frequency[i]
+      result = i
+    } else if (frequency[i] === maxFrequency && i < result) {
+      result = i
     }
+  }
 
-    // 가장 많이 등장한 숫자를 찾습니다.
-    let maxFrequency = 0;
-    let result = 9;
-
-    for (let i = 0; i < 10; i++) {
-        if (frequency[i] > maxFrequency) {
-            maxFrequency = frequency[i];
-            result = i;
-        } else if (frequency[i] === maxFrequency && i < result) {
-            result = i;
-        }
-    }
-
-    return result;
+  return result
 }
 
 // 문제 3: 배열에서 조건을 만족하는 쌍의 개수 찾기
@@ -250,22 +248,21 @@ function solution2(s) {
 // 입력: 정수 배열 nums (1 ≤ nums.length ≤ 1000), 정수 d (1 ≤ d ≤ 100)
 // 출력: 조건을 만족하는 쌍 (i, j)의 개수를 나타내는 정수
 function solution3(nums, d) {
-    // 조건을 만족하는 쌍의 개수를 저장할 변수
-    let answer = 0;
+  // 조건을 만족하는 쌍의 개수를 저장할 변수
+  let answer = 0
 
-    // 배열을 이중 반복문으로 순회하면서 쌍을 찾습니다.
-    for (let a = 0; a < nums.length; a++) {
-        for (let b = a + 1; b < nums.length; b++) {
-            // 조건을 만족하는지 확인
-            if (nums[a] === nums[b] && nums[a] % d === 0) {
-                answer++;
-            }
-        }
+  // 배열을 이중 반복문으로 순회하면서 쌍을 찾습니다.
+  for (let a = 0; a < nums.length; a++) {
+    for (let b = a + 1; b < nums.length; b++) {
+      // 조건을 만족하는지 확인
+      if (nums[a] === nums[b] && nums[a] % d === 0) {
+        answer++
+      }
     }
+  }
 
-    return answer; // 조건을 만족하는 쌍의 개수 반환
+  return answer // 조건을 만족하는 쌍의 개수 반환
 }
-
 ```
 
 ```jsx
@@ -274,33 +271,33 @@ function solution3(nums, d) {
 // 입력: 문자열 s는 알파벳 대소문자와 숫자로 이루어져 있습니다. (0 ≤ s.length ≤ 10,000)
 // 출력: 중복되지 않은 문자로 이루어진 가장 긴 부분 문자열의 길이를 반환합니다.
 function solution1(s) {
-    // 고유한 문자를 추적하기 위한 Set
-    let seen = new Set();
+  // 고유한 문자를 추적하기 위한 Set
+  let seen = new Set()
 
-    // 최대 길이를 저장하는 변수
-    let maxLength = 0;
+  // 최대 길이를 저장하는 변수
+  let maxLength = 0
 
-    // 왼쪽 포인터
-    let left = 0;
+  // 왼쪽 포인터
+  let left = 0
 
-    // 문자열 s를 한 문자씩 오른쪽 포인터로 순회
-    for (let right = 0; right < s.length; right++) {
-        // 현재 문자가 이미 seen에 있다면, 중복이 없는 부분 문자열을 만들기 위해
-        // 왼쪽 포인터를 오른쪽으로 이동하고 seen에서 문자 제거
-        while (seen.has(s[right])) {
-            seen.delete(s[left]);
-            left++;
-        }
-
-        // 현재 문자를 seen에 추가
-        seen.add(s[right]);
-
-        // 현재 부분 문자열의 길이를 계산하고, 최대 길이와 비교하여 갱신
-        maxLength = Math.max(maxLength, right - left + 1);
+  // 문자열 s를 한 문자씩 오른쪽 포인터로 순회
+  for (let right = 0; right < s.length; right++) {
+    // 현재 문자가 이미 seen에 있다면, 중복이 없는 부분 문자열을 만들기 위해
+    // 왼쪽 포인터를 오른쪽으로 이동하고 seen에서 문자 제거
+    while (seen.has(s[right])) {
+      seen.delete(s[left])
+      left++
     }
 
-    // 최대 길이를 반환
-    return maxLength;
+    // 현재 문자를 seen에 추가
+    seen.add(s[right])
+
+    // 현재 부분 문자열의 길이를 계산하고, 최대 길이와 비교하여 갱신
+    maxLength = Math.max(maxLength, right - left + 1)
+  }
+
+  // 최대 길이를 반환
+  return maxLength
 }
 
 // 문제 2: 이진수 문자열을 0으로 만들기 위한 최소 연산 횟수
@@ -309,23 +306,23 @@ function solution1(s) {
 // 입력: 이진수 문자열 s (1 ≤ s.length ≤ 1000)
 // 출력: 이진수 문자열 s를 0으로 만들기 위한 최소 연산 횟수를 반환합니다.
 function countOperations(s) {
-    // 이진수 문자열을 정수로 변환
-    let num = parseInt(s, 2);
-    let operations = 0;
+  // 이진수 문자열을 정수로 변환
+  let num = parseInt(s, 2)
+  let operations = 0
 
-    // num이 0이 될 때까지 연산 수행
-    while (num > 0) {
-        if (num % 2 === 0) {
-            // 짝수인 경우 2로 나눈다
-            num /= 2;
-        } else {
-            // 홀수인 경우 1을 뺀다
-            num -= 1;
-        }
-        operations++;
+  // num이 0이 될 때까지 연산 수행
+  while (num > 0) {
+    if (num % 2 === 0) {
+      // 짝수인 경우 2로 나눈다
+      num /= 2
+    } else {
+      // 홀수인 경우 1을 뺀다
+      num -= 1
     }
+    operations++
+  }
 
-    return operations;
+  return operations
 }
 
 // 문제 3: 문자열이 회문인지 확인하기
@@ -333,12 +330,12 @@ function countOperations(s) {
 // 입력: 문자열 S (1 ≤ S.length ≤ 1000, 알파벳 소문자로만 이루어짐)
 // 출력: 문자열 S가 회문이면 1을 반환하고, 아니면 0을 반환합니다.
 function solution3(S) {
-    const reversedChar = S.split("").reverse().join("");
-    if (reversedChar === S) {
-        return 1;
-    } else {
-        return 0;
-    }
+  const reversedChar = S.split('').reverse().join('')
+  if (reversedChar === S) {
+    return 1
+  } else {
+    return 0
+  }
 }
 
 // 추가 사항
@@ -346,237 +343,239 @@ function solution3(S) {
 // 1. 진수 변환 방법
 // 10진수를 다른 진수로 변환하는 방법
 function decimalToOtherBases(n) {
-    console.log(`10진수: ${n}`);
-    console.log(`2진수: ${n.toString(2)}`);
-    console.log(`8진수: ${n.toString(8)}`);
-    console.log(`16진수: ${n.toString(16)}`);
+  console.log(`10진수: ${n}`)
+  console.log(`2진수: ${n.toString(2)}`)
+  console.log(`8진수: ${n.toString(8)}`)
+  console.log(`16진수: ${n.toString(16)}`)
 }
 
 // 다른 진수를 10진수로 변환하는 방법
 function otherBasesToDecimal() {
-    console.log(`2진수 "1010" -> 10진수: ${parseInt("1010", 2)}`);
-    console.log(`8진수 "52" -> 10진수: ${parseInt("52", 8)}`);
-    console.log(`16진수 "2a" -> 10진수: ${parseInt("2a", 16)}`);
+  console.log(`2진수 "1010" -> 10진수: ${parseInt('1010', 2)}`)
+  console.log(`8진수 "52" -> 10진수: ${parseInt('52', 8)}`)
+  console.log(`16진수 "2a" -> 10진수: ${parseInt('2a', 16)}`)
 }
 
 // 2. 회문(팰린드롬) 관련 함수
 // 문자열이 회문인지 확인
 function isPalindrome(s) {
-    const reversed = s.split('').reverse().join('');
-    return s === reversed;
+  const reversed = s.split('').reverse().join('')
+  return s === reversed
 }
 
 // 숫자가 회문인지 확인 (10진수 기준)
 function isNumericPalindrome(n) {
-    const str = n.toString();
-    return isPalindrome(str);
+  const str = n.toString()
+  return isPalindrome(str)
 }
 
 // 숫자가 특정 진수에서 회문인지 확인
 function isPalindromeInBase(n, base) {
-    const converted = n.toString(base);
-    return isPalindrome(converted);
+  const converted = n.toString(base)
+  return isPalindrome(converted)
 }
 
 // 3. 응용 문제: 진수와 회문 관련 문제 예제
 // 문제 1: 주어진 숫자가 10진수와 2진수에서 모두 회문인지 확인
 function isDoublePalindrome(n) {
-    const isDecimalPalindrome = isNumericPalindrome(n);
-    const isBinaryPalindrome = isPalindromeInBase(n, 2);
-    return isDecimalPalindrome && isBinaryPalindrome;
+  const isDecimalPalindrome = isNumericPalindrome(n)
+  const isBinaryPalindrome = isPalindromeInBase(n, 2)
+  return isDecimalPalindrome && isBinaryPalindrome
 }
 
 // 문제 2: 특정 범위에서 10진수와 2진수 모두 회문인 숫자를 찾기
 function findDoublePalindromesInRange(start, end) {
-    const results = [];
-    for (let i = start; i <= end; i++) {
-        if (isDoublePalindrome(i)) {
-            results.push(i);
-        }
+  const results = []
+  for (let i = start; i <= end; i++) {
+    if (isDoublePalindrome(i)) {
+      results.push(i)
     }
-    return results;
+  }
+  return results
 }
 
 // 실행 예제
-console.log("진수 변환 예제:");
-decimalToOtherBases(42);
-otherBasesToDecimal();
+console.log('진수 변환 예제:')
+decimalToOtherBases(42)
+otherBasesToDecimal()
 
-console.log("\n회문 관련 예제:");
-console.log(`"abba"는 회문인가? ${isPalindrome("abba")}`);
-console.log(`121은 10진수에서 회문인가? ${isNumericPalindrome(121)}`);
-console.log(`585은 2진수에서 회문인가? ${isPalindromeInBase(585, 2)}`);
+console.log('\n회문 관련 예제:')
+console.log(`"abba"는 회문인가? ${isPalindrome('abba')}`)
+console.log(`121은 10진수에서 회문인가? ${isNumericPalindrome(121)}`)
+console.log(`585은 2진수에서 회문인가? ${isPalindromeInBase(585, 2)}`)
 
-console.log("\n응용 문제:");
-console.log(`585은 10진수와 2진수에서 모두 회문인가? ${isDoublePalindrome(585)}`);
-console.log(`10에서 1000 사이의 숫자 중 10진수와 2진수 모두 회문인 숫자: ${findDoublePalindromesInRange(10, 1000)}`);
+console.log('\n응용 문제:')
+console.log(`585은 10진수와 2진수에서 모두 회문인가? ${isDoublePalindrome(585)}`)
+console.log(
+  `10에서 1000 사이의 숫자 중 10진수와 2진수 모두 회문인 숫자: ${findDoublePalindromesInRange(10, 1000)}`
+)
 
 // 문제 1: 가장 긴 회문 부분 문자열 찾기
 function longestPalindrome(s) {
-    let start = 0, maxLength = 0;
+  let start = 0,
+    maxLength = 0
 
-    function expandAroundCenter(left, right) {
-        while (left >= 0 && right < s.length && s[left] === s[right]) {
-            left--;
-            right++;
-        }
-        return right - left - 1;
+  function expandAroundCenter(left, right) {
+    while (left >= 0 && right < s.length && s[left] === s[right]) {
+      left--
+      right++
     }
+    return right - left - 1
+  }
 
-    for (let i = 0; i < s.length; i++) {
-        const len1 = expandAroundCenter(i, i); // 홀수 길이
-        const len2 = expandAroundCenter(i, i + 1); // 짝수 길이
-        const len = Math.max(len1, len2);
-        if (len > maxLength) {
-            maxLength = len;
-            start = i - Math.floor((len - 1) / 2);
-        }
+  for (let i = 0; i < s.length; i++) {
+    const len1 = expandAroundCenter(i, i) // 홀수 길이
+    const len2 = expandAroundCenter(i, i + 1) // 짝수 길이
+    const len = Math.max(len1, len2)
+    if (len > maxLength) {
+      maxLength = len
+      start = i - Math.floor((len - 1) / 2)
     }
-    return s.substring(start, start + maxLength);
+  }
+  return s.substring(start, start + maxLength)
 }
 
 // 문제 2: 최소 삽입 연산으로 회문 만들기
 function minInsertionsForPalindrome(s) {
-    const n = s.length;
-    const dp = Array.from({ length: n }, () => Array(n).fill(0));
+  const n = s.length
+  const dp = Array.from({ length: n }, () => Array(n).fill(0))
 
-    for (let len = 2; len <= n; len++) {
-        for (let i = 0; i <= n - len; i++) {
-            const j = i + len - 1;
-            if (s[i] === s[j]) {
-                dp[i][j] = dp[i + 1][j - 1];
-            } else {
-                dp[i][j] = Math.min(dp[i + 1][j], dp[i][j - 1]) + 1;
-            }
-        }
+  for (let len = 2; len <= n; len++) {
+    for (let i = 0; i <= n - len; i++) {
+      const j = i + len - 1
+      if (s[i] === s[j]) {
+        dp[i][j] = dp[i + 1][j - 1]
+      } else {
+        dp[i][j] = Math.min(dp[i + 1][j], dp[i][j - 1]) + 1
+      }
     }
+  }
 
-    return dp[0][n - 1];
+  return dp[0][n - 1]
 }
 
 // 문제 3: 회문 부분 문자열 개수
 function countPalindromeSubstrings(s) {
-    let count = 0;
+  let count = 0
 
-    function expandAroundCenter(left, right) {
-        while (left >= 0 && right < s.length && s[left] === s[right]) {
-            count++;
-            left--;
-            right++;
-        }
+  function expandAroundCenter(left, right) {
+    while (left >= 0 && right < s.length && s[left] === s[right]) {
+      count++
+      left--
+      right++
     }
+  }
 
-    for (let i = 0; i < s.length; i++) {
-        expandAroundCenter(i, i); // 홀수 길이
-        expandAroundCenter(i, i + 1); // 짝수 길이
-    }
+  for (let i = 0; i < s.length; i++) {
+    expandAroundCenter(i, i) // 홀수 길이
+    expandAroundCenter(i, i + 1) // 짝수 길이
+  }
 
-    return count;
+  return count
 }
 
 // 문제 4: 진법 변환과 회문 확인
 function isPalindromeInBase(n, base) {
-    const converted = n.toString(base);
-    const reversed = converted.split('').reverse().join('');
-    return converted === reversed;
+  const converted = n.toString(base)
+  const reversed = converted.split('').reverse().join('')
+  return converted === reversed
 }
 
 // 문제 5: 회문 순열 확인
 function canFormPalindrome(s) {
-    const charCount = {};
-    for (const char of s) {
-        charCount[char] = (charCount[char] || 0) + 1;
-    }
-    let oddCount = 0;
-    for (const count of Object.values(charCount)) {
-        if (count % 2 !== 0) oddCount++;
-    }
-    return oddCount <= 1;
+  const charCount = {}
+  for (const char of s) {
+    charCount[char] = (charCount[char] || 0) + 1
+  }
+  let oddCount = 0
+  for (const count of Object.values(charCount)) {
+    if (count % 2 !== 0) oddCount++
+  }
+  return oddCount <= 1
 }
 
 // 실행 예제
-console.log("Longest Palindrome: ", longestPalindrome("babad")); // "bab" 또는 "aba"
-console.log("Min Insertions: ", minInsertionsForPalindrome("abca")); // 1
-console.log("Count Palindrome Substrings: ", countPalindromeSubstrings("aaa")); // 6
-console.log("Is Palindrome in Base 2: ", isPalindromeInBase(585, 2)); // true
-console.log("Can Form Palindrome: ", canFormPalindrome("civic")); // true
+console.log('Longest Palindrome: ', longestPalindrome('babad')) // "bab" 또는 "aba"
+console.log('Min Insertions: ', minInsertionsForPalindrome('abca')) // 1
+console.log('Count Palindrome Substrings: ', countPalindromeSubstrings('aaa')) // 6
+console.log('Is Palindrome in Base 2: ', isPalindromeInBase(585, 2)) // true
+console.log('Can Form Palindrome: ', canFormPalindrome('civic')) // true
 ```
 
 ```jsx
 // 문제 1: 패턴과 문자열 매핑 여부 확인
 // 주어진 패턴과 문자열이 조건을 만족하는지 확인하는 함수
 function solution1(p, s) {
-    const words = s.split(' ');
-    if (p.length !== words.length) {
-        return false;
+  const words = s.split(' ')
+  if (p.length !== words.length) {
+    return false
+  }
+
+  const pMap = {}
+  const usedWords = new Set()
+
+  for (let i = 0; i < p.length; i++) {
+    const char = p[i]
+    const word = words[i]
+
+    if (pMap[char]) {
+      if (pMap[char] !== word) {
+        return false
+      }
+    } else {
+      if (usedWords.has(word)) {
+        return false
+      }
+      pMap[char] = word
+      usedWords.add(word)
     }
+  }
 
-    const pMap = {};
-    const usedWords = new Set();
-
-    for (let i = 0; i < p.length; i++) {
-        const char = p[i];
-        const word = words[i];
-
-        if (pMap[char]) {
-            if (pMap[char] !== word) {
-                return false;
-            }
-        } else {
-            if (usedWords.has(word)) {
-                return false;
-            }
-            pMap[char] = word;
-            usedWords.add(word);
-        }
-    }
-
-    return true;
+  return true
 }
 
 // 문제 2: 중복된 단어 제거 후 고유 단어 개수 반환
 // 주어진 문자열에서 중복된 단어를 제거한 후, 고유한 단어의 개수를 반환하는 함수
 function solution2(s) {
-    // 문자열을 공백을 기준으로 나누어 배열로 만듭니다.
-    const words = s.split(' ');
+  // 문자열을 공백을 기준으로 나누어 배열로 만듭니다.
+  const words = s.split(' ')
 
-    // Set 객체를 사용하여 중복된 단어를 제거합니다.
-    const uniqueWords = new Set(words);
+  // Set 객체를 사용하여 중복된 단어를 제거합니다.
+  const uniqueWords = new Set(words)
 
-    // 중복을 제거한 단어의 수를 반환합니다.
-    return uniqueWords.size;
+  // 중복을 제거한 단어의 수를 반환합니다.
+  return uniqueWords.size
 }
 
 // 문제 3: 알파벳의 모든 문자가 포함되었는지 확인
 // 주어진 문자열이 알파벳의 모든 문자를 포함하는지 확인하는 함수
 function solution3(s) {
-    // 문자열을 소문자로 변환합니다.
-    const lowerCaseString = s.toLowerCase();
+  // 문자열을 소문자로 변환합니다.
+  const lowerCaseString = s.toLowerCase()
 
-    // 알파벳 문자를 저장할 Set 객체를 생성합니다.
-    const alphabetSet = new Set();
+  // 알파벳 문자를 저장할 Set 객체를 생성합니다.
+  const alphabetSet = new Set()
 
-    // 문자열을 순회하며 알파벳 문자를 Set 객체에 추가합니다.
-    for (let char of lowerCaseString) {
-        if (char >= 'a' && char <= 'z') {
-            alphabetSet.add(char);
-        }
+  // 문자열을 순회하며 알파벳 문자를 Set 객체에 추가합니다.
+  for (let char of lowerCaseString) {
+    if (char >= 'a' && char <= 'z') {
+      alphabetSet.add(char)
     }
+  }
 
-    // Set 객체의 크기가 26이면 true, 아니면 false를 반환합니다.
-    return alphabetSet.size === 26;
+  // Set 객체의 크기가 26이면 true, 아니면 false를 반환합니다.
+  return alphabetSet.size === 26
 }
 
 // 실행 예제
-console.log("문제 1:", solution1("abba", "dog cat cat dog")); // true
-console.log("문제 1:", solution1("abba", "dog cat cat fish")); // false
+console.log('문제 1:', solution1('abba', 'dog cat cat dog')) // true
+console.log('문제 1:', solution1('abba', 'dog cat cat fish')) // false
 
-console.log("문제 2:", solution2("hello world world hello")); // 2
-console.log("문제 2:", solution2("a b c a b c")); // 3
+console.log('문제 2:', solution2('hello world world hello')) // 2
+console.log('문제 2:', solution2('a b c a b c')) // 3
 
-console.log("문제 3:", solution3("The quick brown fox jumps over the lazy dog")); // true
-console.log("문제 3:", solution3("Hello World")); // false
-
+console.log('문제 3:', solution3('The quick brown fox jumps over the lazy dog')) // true
+console.log('문제 3:', solution3('Hello World')) // false
 ```
 
 ```jsx
@@ -601,22 +600,22 @@ console.log("문제 3:", solution3("Hello World")); // false
 
 // 두 배열에 동시에 존재하는 숫자들을 찾는 함수
 function findCommonElements(arr1, arr2) {
-    // 두 배열을 집합(Set)으로 변환
-    let set1 = new Set(arr1);
-    let set2 = new Set(arr2);
+  // 두 배열을 집합(Set)으로 변환
+  let set1 = new Set(arr1)
+  let set2 = new Set(arr2)
 
-    // 공통 원소를 저장할 배열
-    let commonElements = [];
+  // 공통 원소를 저장할 배열
+  let commonElements = []
 
-    // set1의 원소가 set2에도 존재하면 공통 배열에 추가
-    set1.forEach(element => {
-        if (set2.has(element)) {
-            commonElements.push(element);
-        }
-    });
+  // set1의 원소가 set2에도 존재하면 공통 배열에 추가
+  set1.forEach((element) => {
+    if (set2.has(element)) {
+      commonElements.push(element)
+    }
+  })
 
-    // 오름차순으로 정렬하여 반환
-    return commonElements.sort((a, b) => a - b);
+  // 오름차순으로 정렬하여 반환
+  return commonElements.sort((a, b) => a - b)
 }
 
 /*
@@ -634,31 +633,31 @@ function findCommonElements(arr1, arr2) {
  */
 
 function countMutualFollows(followPairs) {
-    // 팔로우 관계를 저장할 객체
-    let followMap = {};
+  // 팔로우 관계를 저장할 객체
+  let followMap = {}
 
-    // 팔로우 관계를 객체에 저장
-    followPairs.forEach(pair => {
-        let [follower, followee] = pair;
-        if (!followMap[follower]) {
-            followMap[follower] = new Set();
-        }
-        followMap[follower].add(followee);
-    });
+  // 팔로우 관계를 객체에 저장
+  followPairs.forEach((pair) => {
+    let [follower, followee] = pair
+    if (!followMap[follower]) {
+      followMap[follower] = new Set()
+    }
+    followMap[follower].add(followee)
+  })
 
-    // 맞팔 관계 쌍의 갯수를 셈
-    let mutualCount = 0;
+  // 맞팔 관계 쌍의 갯수를 셈
+  let mutualCount = 0
 
-    followPairs.forEach(pair => {
-        let [follower, followee] = pair;
-        // 맞팔 관계인지 확인
-        if (followMap[followee] && followMap[followee].has(follower)) {
-            mutualCount++;
-        }
-    });
+  followPairs.forEach((pair) => {
+    let [follower, followee] = pair
+    // 맞팔 관계인지 확인
+    if (followMap[followee] && followMap[followee].has(follower)) {
+      mutualCount++
+    }
+  })
 
-    // 맞팔 관계는 서로 상호작용이 있으므로 2번씩 셈해지므로 2로 나눔
-    return mutualCount / 2;
+  // 맞팔 관계는 서로 상호작용이 있으므로 2번씩 셈해지므로 2로 나눔
+  return mutualCount / 2
 }
 
 /*
@@ -676,31 +675,30 @@ function countMutualFollows(followPairs) {
  */
 
 function isMinHeap(arr) {
-    // 배열의 길이를 구함
-    let n = arr.length;
+  // 배열의 길이를 구함
+  let n = arr.length
 
-    // 인덱스 1부터 시작하여 모든 노드가 최소 힙 조건을 만족하는지 확인
-    for (let i = 1; i <= Math.floor((n - 1) / 2); i++) {
-        // 왼쪽 자식 노드 인덱스
-        let leftChild = 2 * i;
-        // 오른쪽 자식 노드 인덱스
-        let rightChild = 2 * i + 1;
+  // 인덱스 1부터 시작하여 모든 노드가 최소 힙 조건을 만족하는지 확인
+  for (let i = 1; i <= Math.floor((n - 1) / 2); i++) {
+    // 왼쪽 자식 노드 인덱스
+    let leftChild = 2 * i
+    // 오른쪽 자식 노드 인덱스
+    let rightChild = 2 * i + 1
 
-        // 왼쪽 자식 노드가 존재하고, 부모 노드가 자식 노드보다 큰 경우
-        if (leftChild < n && arr[i] > arr[leftChild]) {
-            return "NO";
-        }
-
-        // 오른쪽 자식 노드가 존재하고, 부모 노드가 자식 노드보다 큰 경우
-        if (rightChild < n && arr[i] > arr[rightChild]) {
-            return "NO";
-        }
+    // 왼쪽 자식 노드가 존재하고, 부모 노드가 자식 노드보다 큰 경우
+    if (leftChild < n && arr[i] > arr[leftChild]) {
+      return 'NO'
     }
 
-    // 모든 노드가 최소 힙 조건을 만족하면
-    return "YES";
-}
+    // 오른쪽 자식 노드가 존재하고, 부모 노드가 자식 노드보다 큰 경우
+    if (rightChild < n && arr[i] > arr[rightChild]) {
+      return 'NO'
+    }
+  }
 
+  // 모든 노드가 최소 힙 조건을 만족하면
+  return 'YES'
+}
 ```
 
 ```jsx
@@ -714,25 +712,25 @@ function isMinHeap(arr) {
  */
 
 function solution1(nums) {
-    let length = nums.length;
-    let missingNumbers = [];
-    let count = new Array(length + 1).fill(false);
+  let length = nums.length
+  let missingNumbers = []
+  let count = new Array(length + 1).fill(false)
 
-    // 배열을 순회하면서 숫자의 존재 여부를 체크
-    for (let num of nums) {
-        if (num <= length) {
-            count[num] = true;
-        }
+  // 배열을 순회하면서 숫자의 존재 여부를 체크
+  for (let num of nums) {
+    if (num <= length) {
+      count[num] = true
     }
+  }
 
-    // 1부터 배열의 길이까지의 숫자 중에서 누락된 숫자를 찾기
-    for (let i = 1; i <= length; i++) {
-        if (!count[i]) {
-            missingNumbers.push(i);
-        }
+  // 1부터 배열의 길이까지의 숫자 중에서 누락된 숫자를 찾기
+  for (let i = 1; i <= length; i++) {
+    if (!count[i]) {
+      missingNumbers.push(i)
     }
+  }
 
-    return missingNumbers;
+  return missingNumbers
 }
 
 /*
@@ -746,15 +744,15 @@ s의 길이는 1 이상 100 이하입니다.
 */
 
 function solution2(s) {
-    try {
-        // 수식을 계산
-        let result = eval(s);
+  try {
+    // 수식을 계산
+    let result = eval(s)
 
-        // 결과를 소수점 둘째 자리까지 표현
-        return result.toFixed(2)
-    } catch (e) {
-        console.error("잘못된 수식입니다.");
-    }
+    // 결과를 소수점 둘째 자리까지 표현
+    return result.toFixed(2)
+  } catch (e) {
+    console.error('잘못된 수식입니다.')
+  }
 }
 
 /*
@@ -767,24 +765,23 @@ s 내에 숫자가 하나도 없을 경우 빈 문자열을 반환합니다.
 */
 
 function solution3(s) {
-    // 각 숫자의 빈도를 저장할 객체 초기화
-    let frequency = {};
-    for (let i = 0; i <= 9; i++) {
-        frequency[i] = 0;
-    }
+  // 각 숫자의 빈도를 저장할 객체 초기화
+  let frequency = {}
+  for (let i = 0; i <= 9; i++) {
+    frequency[i] = 0
+  }
 
-    // 문자열을 순회하며 숫자의 빈도 계산
-    for (let char of s) {
-        frequency[char]++;
-    }
+  // 문자열을 순회하며 숫자의 빈도 계산
+  for (let char of s) {
+    frequency[char]++
+  }
 
-    // 빈도를 기준으로 숫자들을 정렬
-    let sortedNumbers = Object.keys(frequency).sort((a, b) => frequency[b] - frequency[a]);
+  // 빈도를 기준으로 숫자들을 정렬
+  let sortedNumbers = Object.keys(frequency).sort((a, b) => frequency[b] - frequency[a])
 
-    // 결과를 공백으로 구분하여 출력
-    return sortedNumbers.join(" ");
+  // 결과를 공백으로 구분하여 출력
+  return sortedNumbers.join(' ')
 }
-
 ```
 
 ```jsx
@@ -794,51 +791,50 @@ function solution3(s) {
 // 가장 많은 식물이 심겨져 있는 서브 그리드 안의 식물 개수를 구하는 함수를 작성하세요.
 
 function solution1(field, n) {
-    const rows = field.length;
-    const cols = field[0].length;
-    let maxPlants = 0;
+  const rows = field.length
+  const cols = field[0].length
+  let maxPlants = 0
 
-    // r * c 크기의 모든 가능한 n * n 서브 그리드를 검사
-    for (let i = 0; i <= rows - n; i++) {
-        for (let j = 0; j <= cols - n; j++) {
-            let currentPlants = 0;
+  // r * c 크기의 모든 가능한 n * n 서브 그리드를 검사
+  for (let i = 0; i <= rows - n; i++) {
+    for (let j = 0; j <= cols - n; j++) {
+      let currentPlants = 0
 
-            // 현재 서브 그리드의 1의 개수를 센다
-            for (let k = 0; k < n; k++) {
-                for (let l = 0; l < n; l++) {
-                    currentPlants += field[i + k][j + l];
-                }
-            }
-
-            // 최대값 갱신
-            maxPlants = Math.max(maxPlants, currentPlants);
+      // 현재 서브 그리드의 1의 개수를 센다
+      for (let k = 0; k < n; k++) {
+        for (let l = 0; l < n; l++) {
+          currentPlants += field[i + k][j + l]
         }
-    }
+      }
 
-    return maxPlants;
+      // 최대값 갱신
+      maxPlants = Math.max(maxPlants, currentPlants)
+    }
+  }
+
+  return maxPlants
 }
 
 // 주어진 배열에서 네 개의 숫자를 선택하여 사각형을 만들 수 있는지 확인하세요.
 // 만약 만들 수 있다면, 그 네 변의 길이 합을 반환하고, 만들 수 없다면 0을 반환하세요.
 
 function solution2(arr) {
-    // 배열의 길이가 4 미만이면 사각형을 만들 수 없습니다.
-    if (arr.length < 4) {
-        return 0;
+  // 배열의 길이가 4 미만이면 사각형을 만들 수 없습니다.
+  if (arr.length < 4) {
+    return 0
+  }
+
+  // 배열을 내림차순으로 정렬합니다.
+  arr.sort((a, b) => b - a)
+
+  // 가장 큰 네 개의 수가 실제로 사각형을 만들 수 있는지 확인
+  for (let i = 0; i <= arr.length - 4; i++) {
+    if (arr[i] < arr[i + 1] + arr[i + 2] + arr[i + 3]) {
+      return arr[i] + arr[i + 1] + arr[i + 2] + arr[i + 3]
     }
+  }
 
-    // 배열을 내림차순으로 정렬합니다.
-    arr.sort((a, b) => b - a);
-
-    // 가장 큰 네 개의 수가 실제로 사각형을 만들 수 있는지 확인
-    for (let i = 0; i <= arr.length - 4; i++) {
-        if (arr[i] < arr[i + 1] + arr[i + 2] + arr[i + 3]) {
-            return arr[i] + arr[i + 1] + arr[i + 2] + arr[i + 3];
-        }
-    }
-
-    // 만약 사각형을 만들 수 없다면 0 반환
-    return 0;
+  // 만약 사각형을 만들 수 없다면 0 반환
+  return 0
 }
-
 ```

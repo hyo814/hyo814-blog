@@ -13,13 +13,13 @@ summary: 'Spring Boot CORS 에러 해결 과정 및 최종 솔루션'
 ## 1. 문제 상황
 
 - **CORS 에러 발생 조건**
-    - `localhost:3000`에서 인증이 필요한 페이지에 접근 시 CORS 에러 발생
-    - 같은 도메인 또는 인증이 필요 없는 요청에서는 정상 동작
+  - `localhost:3000`에서 인증이 필요한 페이지에 접근 시 CORS 에러 발생
+  - 같은 도메인 또는 인증이 필요 없는 요청에서는 정상 동작
 
-|  | localhost:3000 | triptune.site |
-| --- | --- | --- |
-| 인증 필요 | CORS 에러 O | CORS 에러 X |
-| 인증 불필요 | CORS 에러 X | CORS 에러 X |
+|             | localhost:3000 | triptune.site |
+| ----------- | -------------- | ------------- |
+| 인증 필요   | CORS 에러 O    | CORS 에러 X   |
+| 인증 불필요 | CORS 에러 X    | CORS 에러 X   |
 
 ---
 
@@ -94,9 +94,9 @@ Spring Security 활성화 시 모든 요청은 Security Filter에서 먼저 처�
 ### WebMvcConfigurer vs Spring Security
 
 - **WebMvcConfigurer**
-    - Spring MVC 레벨에서 동작하며 요청이 Controller에 도달한 후에야 적용.
+  - Spring MVC 레벨에서 동작하며 요청이 Controller에 도달한 후에야 적용.
 - **Spring Security**
-    - Filter Chain 레벨에서 동작하며 요청이 Controller에 도달하기 전에 적용.
+  - Filter Chain 레벨에서 동작하며 요청이 Controller에 도달하기 전에 적용.
 
 따라서 Spring Security가 활성화된 경우, CORS 설정은 Spring Security에 포함되어야 합니다.
 

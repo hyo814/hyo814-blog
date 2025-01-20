@@ -18,20 +18,17 @@ summary: 'WebSocket 연결 문제 및 HTTP/HTTPS 에러 분석'
 ### 해결 방안
 
 1. **조건부 연결 로직 구현**:
-    - 특정 작업(예: 일정 만들기 등)에서만 웹소켓 연결을 시도하도록 로직 수정.
-    - 상태 확인 후 연결 시도:
-        
-        ```jsx
-        if (shouldConnectWebSocket) {
-            const socket = new WebSocket("wss://example.com/socket");
-            socket.onopen = () => console.log("WebSocket 연결 성공");
-            socket.onerror = (error) => console.error("WebSocket 연결 오류", error);
-        }
-        
-        ```
-        
+   - 특정 작업(예: 일정 만들기 등)에서만 웹소켓 연결을 시도하도록 로직 수정.
+   - 상태 확인 후 연결 시도:
+     ```jsx
+     if (shouldConnectWebSocket) {
+       const socket = new WebSocket('wss://example.com/socket')
+       socket.onopen = () => console.log('WebSocket 연결 성공')
+       socket.onerror = (error) => console.error('WebSocket 연결 오류', error)
+     }
+     ```
 2. **서버 상태 확인**:
-    - 서버가 준비되지 않은 경우, 클라이언트가 일정 시간 후에 재시도하도록 구현.
+   - 서버가 준비되지 않은 경우, 클라이언트가 일정 시간 후에 재시도하도록 구현.
 
 ---
 
@@ -61,11 +58,11 @@ java.lang.IllegalArgumentException: Invalid character found in method name [...]
 ### 오류 원인
 
 1. **잘못된 HTTP 요청**:
-    - 클라이언트가 잘못된 형식으로 요청을 보냈을 가능성.
+   - 클라이언트가 잘못된 형식으로 요청을 보냈을 가능성.
 2. **악성 트래픽**:
-    - 외부 공격자가 비정상적인 요청을 보냈을 가능성.
+   - 외부 공격자가 비정상적인 요청을 보냈을 가능성.
 3. **SSL/TLS와 HTTP 프로토콜 혼용**:
-    - `wss://` 요청을 지원하지 않는 서버에 SSL 핸드셰이크 데이터가 전달되어 발생한 문제.
+   - `wss://` 요청을 지원하지 않는 서버에 SSL 핸드셰이크 데이터가 전달되어 발생한 문제.
 
 ### 16진수 메서드 이름의 원인
 
@@ -75,29 +72,24 @@ java.lang.IllegalArgumentException: Invalid character found in method name [...]
 ### 해결 방안
 
 1. **SSL 인증서 설정**:
-    - 서버에 SSL 인증서를 설정하여 HTTPS와 `wss://` 요청을 지원.
-    - Spring Boot 기준 설정 예시:
-        
-        ```
-        server.port=443
-        server.ssl.key-store=classpath:keystore.p12
-        server.ssl.key-store-password=yourpassword
-        server.ssl.key-store-type=PKCS12
-        server.ssl.key-alias=tomcat
-        
-        ```
-        
+   - 서버에 SSL 인증서를 설정하여 HTTPS와 `wss://` 요청을 지원.
+   - Spring Boot 기준 설정 예시:
+     ```
+     server.port=443
+     server.ssl.key-store=classpath:keystore.p12
+     server.ssl.key-store-password=yourpassword
+     server.ssl.key-store-type=PKCS12
+     server.ssl.key-alias=tomcat
+
+     ```
 2. **클라이언트 요청 수정**:
-    - 서버가 HTTP만 지원하는 경우, `ws://`로 요청.
-    - 예:
-        
-        ```jsx
-        const socket = new WebSocket("ws://example.com/socket");
-        
-        ```
-        
+   - 서버가 HTTP만 지원하는 경우, `ws://`로 요청.
+   - 예:
+     ```jsx
+     const socket = new WebSocket('ws://example.com/socket')
+     ```
 3. **프록시 설정**:
-    - Nginx나 Apache와 같은 프록시 서버를 사용하여 HTTPS 요청을 처리한 후 백엔드로 전달.
+   - Nginx나 Apache와 같은 프록시 서버를 사용하여 HTTPS 요청을 처리한 후 백엔드로 전달.
 
 ### 요약
 

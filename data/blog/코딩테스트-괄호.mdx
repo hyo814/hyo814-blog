@@ -9,99 +9,94 @@ summary: '프로그래머스 괄호 문제 정리'
 ```jsx
 // https://school.programmers.co.kr/learn/courses/30/lessons/12909
 function solution(s) {
-    let balance = 0;
+  let balance = 0
 
-    for (let char of s) {
-        if (char === '(') {
-            balance += 1;
-        } else {
-            balance -= 1;
-        }
-
-        // 괄호가 닫히기 전에 열려야 함
-        if (balance < 0) {
-            return false;
-        }
+  for (let char of s) {
+    if (char === '(') {
+      balance += 1
+    } else {
+      balance -= 1
     }
 
-    // 모든 열린 괄호가 닫혀야 함
-    return balance === 0;
+    // 괄호가 닫히기 전에 열려야 함
+    if (balance < 0) {
+      return false
+    }
+  }
+
+  // 모든 열린 괄호가 닫혀야 함
+  return balance === 0
 }
 
 // https://school.programmers.co.kr/learn/courses/30/lessons/76502
 function solution(s) {
-    const isValid = (str) => {
-        const stack = [];
-        const pairs = { ')': '(', ']': '[', '}': '{' };
+  const isValid = (str) => {
+    const stack = []
+    const pairs = { ')': '(', ']': '[', '}': '{' }
 
-        for (let char of str) {
-            if (['(', '[', '{'].includes(char)) {
-                stack.push(char);
-            } else if ([')', ']', '}'].includes(char)) {
-                if (stack.pop() !== pairs[char]) {
-                    return false;
-                }
-            }
+    for (let char of str) {
+      if (['(', '[', '{'].includes(char)) {
+        stack.push(char)
+      } else if ([')', ']', '}'].includes(char)) {
+        if (stack.pop() !== pairs[char]) {
+          return false
         }
-
-        return stack.length === 0;
-    };
-
-    let count = 0;
-
-    for (let i = 0; i < s.length; i++) {
-        const rotated = s.slice(i) + s.slice(0, i);
-        if (isValid(rotated)) {
-            count++;
-        }
+      }
     }
 
-    return count;
+    return stack.length === 0
+  }
+
+  let count = 0
+
+  for (let i = 0; i < s.length; i++) {
+    const rotated = s.slice(i) + s.slice(0, i)
+    if (isValid(rotated)) {
+      count++
+    }
+  }
+
+  return count
 }
 
 // https://school.programmers.co.kr/learn/courses/30/lessons/60058
 function solution(p) {
-    if (p === "") return ""; // 1단계: 빈 문자열이면 반환
+  if (p === '') return '' // 1단계: 빈 문자열이면 반환
 
-    const isBalanced = (str) => {
-        let balance = 0;
-        for (let char of str) {
-            balance += char === '(' ? 1 : -1;
-            if (balance < 0) return false;
-        }
-        return balance === 0;
-    };
-
-    const splitBalanced = (str) => {
-        let balance = 0;
-        for (let i = 0; i < str.length; i++) {
-            balance += str[i] === '(' ? 1 : -1;
-            if (balance === 0) return [str.slice(0, i + 1), str.slice(i + 1)];
-        }
-    };
-
-    const reverseParentheses = (str) => {
-        return str
-            .split("")
-            .map((char) => (char === '(' ? ')' : '('))
-            .join("");
-    };
-
-    // 2단계: u, v로 분리
-    const [u, v] = splitBalanced(p);
-
-    // 3단계: u가 "올바른 괄호 문자열"인지 확인
-    if (isBalanced(u)) {
-        return u + solution(v); // u + 재귀적으로 처리한 v를 반환
-    } else {
-        // 4단계: 새로운 문자열 생성
-        return (
-            "(" +
-            solution(v) +
-            ")" +
-            reverseParentheses(u.slice(1, u.length - 1))
-        );
+  const isBalanced = (str) => {
+    let balance = 0
+    for (let char of str) {
+      balance += char === '(' ? 1 : -1
+      if (balance < 0) return false
     }
+    return balance === 0
+  }
+
+  const splitBalanced = (str) => {
+    let balance = 0
+    for (let i = 0; i < str.length; i++) {
+      balance += str[i] === '(' ? 1 : -1
+      if (balance === 0) return [str.slice(0, i + 1), str.slice(i + 1)]
+    }
+  }
+
+  const reverseParentheses = (str) => {
+    return str
+      .split('')
+      .map((char) => (char === '(' ? ')' : '('))
+      .join('')
+  }
+
+  // 2단계: u, v로 분리
+  const [u, v] = splitBalanced(p)
+
+  // 3단계: u가 "올바른 괄호 문자열"인지 확인
+  if (isBalanced(u)) {
+    return u + solution(v) // u + 재귀적으로 처리한 v를 반환
+  } else {
+    // 4단계: 새로운 문자열 생성
+    return '(' + solution(v) + ')' + reverseParentheses(u.slice(1, u.length - 1))
+  }
 }
 
 // 관련 문제 -> 스택
@@ -110,5 +105,4 @@ function solution(p) {
 // https://school.programmers.co.kr/learn/courses/30/lessons/81303
 // https://school.programmers.co.kr/learn/courses/30/lessons/120853
 // https://school.programmers.co.kr/learn/courses/30/lessons/12906
-
 ```
