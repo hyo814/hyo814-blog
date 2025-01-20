@@ -10,88 +10,87 @@ summary: 'Promise'
 // 1. 콜백 지옥 (Callback Hell) 예제
 // 비동기 작업을 콜백 함수로 처리하는 방식
 function fetchDataCallback(callback) {
-    setTimeout(() => {
-        console.log("서버에서 데이터를 가져왔습니다.");
-        callback("서버 데이터");
-    }, 1000);
+  setTimeout(() => {
+    console.log('서버에서 데이터를 가져왔습니다.')
+    callback('서버 데이터')
+  }, 1000)
 }
 
 function processDataCallback(data, callback) {
-    setTimeout(() => {
-        console.log("데이터를 처리했습니다:", data);
-        callback("처리된 데이터");
-    }, 1000);
+  setTimeout(() => {
+    console.log('데이터를 처리했습니다:', data)
+    callback('처리된 데이터')
+  }, 1000)
 }
 
 function saveDataCallback(data, callback) {
-    setTimeout(() => {
-        console.log("데이터를 저장했습니다:", data);
-        callback("데이터 저장 완료");
-    }, 1000);
+  setTimeout(() => {
+    console.log('데이터를 저장했습니다:', data)
+    callback('데이터 저장 완료')
+  }, 1000)
 }
 
 // 콜백 지옥 방식으로 비동기 작업 처리
 fetchDataCallback((serverData) => {
-    processDataCallback(serverData, (processedData) => {
-        saveDataCallback(processedData, (message) => {
-            console.log(message);
-        });
-    });
-});
+  processDataCallback(serverData, (processedData) => {
+    saveDataCallback(processedData, (message) => {
+      console.log(message)
+    })
+  })
+})
 
 // 2. 프로미스 (Promise) 예제
 // 비동기 작업을 Promise로 처리하는 방식
 function fetchDataPromise() {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            console.log("서버에서 데이터를 가져왔습니다.");
-            resolve("서버 데이터");
-        }, 1000);
-    });
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log('서버에서 데이터를 가져왔습니다.')
+      resolve('서버 데이터')
+    }, 1000)
+  })
 }
 
 function processDataPromise(data) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            console.log("데이터를 처리했습니다:", data);
-            resolve("처리된 데이터");
-        }, 1000);
-    });
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log('데이터를 처리했습니다:', data)
+      resolve('처리된 데이터')
+    }, 1000)
+  })
 }
 
 function saveDataPromise(data) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            console.log("데이터를 저장했습니다:", data);
-            resolve("데이터 저장 완료");
-        }, 1000);
-    });
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log('데이터를 저장했습니다:', data)
+      resolve('데이터 저장 완료')
+    }, 1000)
+  })
 }
 
 // 프로미스를 사용한 비동기 작업 처리
 fetchDataPromise()
-    .then((serverData) => processDataPromise(serverData))
-    .then((processedData) => saveDataPromise(processedData))
-    .then((message) => console.log(message));
+  .then((serverData) => processDataPromise(serverData))
+  .then((processedData) => saveDataPromise(processedData))
+  .then((message) => console.log(message))
 
 // 3. async/await 예제
 // 비동기 작업을 async/await로 처리하는 방식
 async function handleDataAsync() {
-    try {
-        // 서버 데이터 가져오기
-        const serverData = await fetchDataPromise();
-        // 데이터 처리
-        const processedData = await processDataPromise(serverData);
-        // 데이터 저장
-        const message = await saveDataPromise(processedData);
-        // 결과 출력
-        console.log(message);
-    } catch (error) {
-        console.error("오류 발생:", error);
-    }
+  try {
+    // 서버 데이터 가져오기
+    const serverData = await fetchDataPromise()
+    // 데이터 처리
+    const processedData = await processDataPromise(serverData)
+    // 데이터 저장
+    const message = await saveDataPromise(processedData)
+    // 결과 출력
+    console.log(message)
+  } catch (error) {
+    console.error('오류 발생:', error)
+  }
 }
 
 // async/await를 사용한 비동기 작업 처리
-handleDataAsync();
-
+handleDataAsync()
 ```

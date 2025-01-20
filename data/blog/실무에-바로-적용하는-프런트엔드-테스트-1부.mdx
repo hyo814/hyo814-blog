@@ -20,16 +20,16 @@ summary: '실무에 바로 적용하는 프런트엔드 테스트 1부'
 ### 테스트 코드의 효과
 
 1. **좋은 설계에 대한 사고를 돕는다.**
-    - **결합도**: 어떤 모듈이 다른 모듈에 의존하는 정도.
-    - 결합도가 높으면:
-        - 한 모듈을 수정할 때 다른 모듈에도 영향을 줄 가능성.
-        - 특정 기능만 따로 검증하기 어려움.
-        - 복잡한 구조로 인해 테스트가 누락될 가능성.
-        - 여러 테스트 코드를 계속 수정해야 하는 문제가 발생.
+   - **결합도**: 어떤 모듈이 다른 모듈에 의존하는 정도.
+   - 결합도가 높으면:
+     - 한 모듈을 수정할 때 다른 모듈에도 영향을 줄 가능성.
+     - 특정 기능만 따로 검증하기 어려움.
+     - 복잡한 구조로 인해 테스트가 누락될 가능성.
+     - 여러 테스트 코드를 계속 수정해야 하는 문제가 발생.
 2. **빠르고 안정적인 리팩토링 가능.**
-    - **리팩토링**: 결과의 변경 없이 코드의 구조를 재조정.
+   - **리팩토링**: 결과의 변경 없이 코드의 구조를 재조정.
 3. **애플리케이션 이해를 돕는 문서 역할.**
-    - 잘 작성된 테스트 코드는 코드의 동작 원리와 의도를 명확히 설명해주는 문서로 활용 가능.
+   - 잘 작성된 테스트 코드는 코드의 동작 원리와 의도를 명확히 설명해주는 문서로 활용 가능.
 
 # 올바른 테스트 작성을 위한 규칙
 
@@ -43,12 +43,12 @@ summary: '실무에 바로 적용하는 프런트엔드 테스트 1부'
 ### 내부 구현에 대한 테스트의 문제점
 
 1. **변경되는 상태가 많을 경우**:
-    - 테스트 코드에서 일일이 상태를 직접 변경해야 하며, 변경의 이유와 상황이 명확히 드러나지 않음.
+   - 테스트 코드에서 일일이 상태를 직접 변경해야 하며, 변경의 이유와 상황이 명확히 드러나지 않음.
 2. **테스트 코드의 가독성 저하**:
-    - 내부 상태나 변수 값을 기준으로 검증하므로, 테스트 코드만 보고 어떤 것을 검증하는지 한눈에 파악하기 어려움.
+   - 내부 상태나 변수 값을 기준으로 검증하므로, 테스트 코드만 보고 어떤 것을 검증하는지 한눈에 파악하기 어려움.
 3. **구현에 종속적인 테스트 코드**:
-    - 내부 구현을 검증하려다 보니 변수명이나 상태 변경에 따라 테스트 코드를 전면 수정해야 하는 상황 발생.
-    - 이는 **캡슐화를 위반**하는 결과를 초래.
+   - 내부 구현을 검증하려다 보니 변수명이나 상태 변경에 따라 테스트 코드를 전면 수정해야 하는 상황 발생.
+   - 이는 **캡슐화를 위반**하는 결과를 초래.
 
 ### 단일 책임 원칙
 
@@ -72,11 +72,11 @@ summary: '실무에 바로 적용하는 프런트엔드 테스트 1부'
 ### **Arrange-Act-Assert 테스트 작성 패턴**
 
 1. **Arrange**: 테스트를 위한 환경을 설정.
-    - 필요한 데이터, 의존성, 초기 상태 준비.
+   - 필요한 데이터, 의존성, 초기 상태 준비.
 2. **Act**: 테스트 대상 동작을 실행.
-    - 함수 호출, 이벤트 발생 등.
+   - 함수 호출, 이벤트 발생 등.
 3. **Assert**: 예상한 결과와 실제 결과를 비교하여 검증.
-    - 동작이 의도한 대로 실행되었는지 확인.
+   - 동작이 의도한 대로 실행되었는지 확인.
 
 !https://prod-files-secure.s3.us-west-2.amazonaws.com/1eb37c0a-6ffd-4ad6-895c-732d3acb3944/f3693d96-0f92-49db-89d5-6e73c6404279/image.png
 
@@ -117,96 +117,99 @@ summary: '실무에 바로 적용하는 프런트엔드 테스트 1부'
 ### **테스트 작성 패턴**
 
 1. **Arrange (준비)**:
-    - 테스트를 실행하기 위한 초기 환경 구성.
-    - 예: 객체 생성, 의존성 설정.
+   - 테스트를 실행하기 위한 초기 환경 구성.
+   - 예: 객체 생성, 의존성 설정.
 2. **Act (실행)**:
-    - 테스트 대상 동작 실행.
-    - 예: 함수 호출, 이벤트 발생.
+   - 테스트 대상 동작 실행.
+   - 예: 함수 호출, 이벤트 발생.
 3. **Assert (검증)**:
-    - 예상한 결과와 실제 결과를 비교하여 검증.
+   - 예상한 결과와 실제 결과를 비교하여 검증.
 
 ---
 
 ### **주요 기능**
 
 1. **병렬 테스트 실행**
-    - `.concurrent` 키워드를 사용하여 테스트를 병렬 실행 가능.
 
-    ```jsx
-    import { describe, it } from 'vitest';
+   - `.concurrent` 키워드를 사용하여 테스트를 병렬 실행 가능.
 
-    describe.concurrent('병렬 테스트', () => {
-      it('테스트 1', async () => { /* ... */ });
-      it('테스트 2', async () => { /* ... */ });
-    });
+   ```jsx
+   import { describe, it } from 'vitest'
 
-    ```
+   describe.concurrent('병렬 테스트', () => {
+     it('테스트 1', async () => {
+       /* ... */
+     })
+     it('테스트 2', async () => {
+       /* ... */
+     })
+   })
+   ```
 
 2. **스냅샷 테스트**
-    - Jest 호환 스냅샷 지원.
 
-    ```jsx
-    import { expect, it } from 'vitest';
+   - Jest 호환 스냅샷 지원.
 
-    it('렌더링 확인', () => {
-      const result = render();
-      expect(result).toMatchSnapshot();
-    });
+   ```jsx
+   import { expect, it } from 'vitest'
 
-    ```
+   it('렌더링 확인', () => {
+     const result = render()
+     expect(result).toMatchSnapshot()
+   })
+   ```
 
 3. **목킹(Mock)**
-    - `Tinyspy`를 내장하여 Jest와 유사한 목킹 API 지원.
 
-    ```jsx
-    import { vi, expect } from 'vitest';
+   - `Tinyspy`를 내장하여 Jest와 유사한 목킹 API 지원.
 
-    const mockFn = vi.fn();
-    mockFn('테스트', 1);
+   ```jsx
+   import { vi, expect } from 'vitest'
 
-    expect(vi.isMockFunction(mockFn)).toBe(true);
-    expect(mockFn.mock.calls[0]).toEqual(['테스트', 1]);
+   const mockFn = vi.fn()
+   mockFn('테스트', 1)
 
-    ```
+   expect(vi.isMockFunction(mockFn)).toBe(true)
+   expect(mockFn.mock.calls[0]).toEqual(['테스트', 1])
+   ```
 
 4. **브라우저 테스트**
-    - 브라우저 환경에서 컴포넌트 테스트 실행 가능(`happy-dom`, `jsdom` 설치 필요).
 
-    ```jsx
-    // vitest.config.ts
-    export default defineConfig({
-      test: {
-        environment: 'happy-dom',
-      },
-    });
+   - 브라우저 환경에서 컴포넌트 테스트 실행 가능(`happy-dom`, `jsdom` 설치 필요).
 
-    ```
+   ```jsx
+   // vitest.config.ts
+   export default defineConfig({
+     test: {
+       environment: 'happy-dom',
+     },
+   })
+   ```
 
 5. **코드 커버리지**
-    - `v8` 및 `istanbul` 기반의 코드 커버리지 지원.
 
-    ```json
-    {
-      "scripts": {
-        "test": "vitest",
-        "coverage": "vitest run --coverage"
-      }
-    }
+   - `v8` 및 `istanbul` 기반의 코드 커버리지 지원.
 
-    ```
+   ```json
+   {
+     "scripts": {
+       "test": "vitest",
+       "coverage": "vitest run --coverage"
+     }
+   }
+   ```
 
 6. **타입 테스트**
-    - `expect-type` 패키지를 통해 타입 관련 회귀 테스트 지원.
 
-    ```jsx
-    import { assertType, expectTypeOf, test } from 'vitest';
+   - `expect-type` 패키지를 통해 타입 관련 회귀 테스트 지원.
 
-    test('타입 테스트', () => {
-      expectTypeOf(mount).toBeFunction();
-    });
+   ```jsx
+   import { assertType, expectTypeOf, test } from 'vitest'
 
-    ```
-
+   test('타입 테스트', () => {
+     expectTypeOf(mount).toBeFunction()
+   })
+   ```
 
 ---
 
@@ -216,20 +219,18 @@ summary: '실무에 바로 적용하는 프런트엔드 테스트 1부'
 - **테스트 병렬 처리**: `-pool=threads` 또는 `-pool=forks`로 설정 가능.
 - **커버리지 옵션**:
 
-    ```jsx
-    import { defineConfig } from 'vitest/config';
+  ```jsx
+  import { defineConfig } from 'vitest/config'
 
-    export default defineConfig({
-      test: {
-        coverage: {
-          enabled: true,
-          provider: 'istanbul',
-        },
+  export default defineConfig({
+    test: {
+      coverage: {
+        enabled: true,
+        provider: 'istanbul',
       },
-    });
-
-    ```
-
+    },
+  })
+  ```
 
 # setup과 teardown
 
@@ -255,26 +256,24 @@ teardown : 테스트를 실행 한 뒤 수행해야하는 작업
 - **기본 타임아웃**: 5초.
 
 ```jsx
-import { beforeEach } from 'vitest';
+import { beforeEach } from 'vitest'
 
 beforeEach(async () => {
-  await stopMocking(); // 모의 동작 초기화
-  await addUser({ name: 'John' }); // 테스트 데이터 추가
-});
-
+  await stopMocking() // 모의 동작 초기화
+  await addUser({ name: 'John' }) // 테스트 데이터 추가
+})
 ```
 
 **Cleanup 기능 지원**: 테스트 후 정리 작업을 위해 정리 함수 반환 가능.
 
 ```jsx
 beforeEach(async () => {
-  await prepareSomething();
+  await prepareSomething()
 
   return async () => {
-    await resetSomething(); // 각 테스트 후 정리 작업
-  };
-});
-
+    await resetSomething() // 각 테스트 후 정리 작업
+  }
+})
 ```
 
 ---
@@ -287,12 +286,11 @@ beforeEach(async () => {
 - **기본 타임아웃**: 5초.
 
 ```jsx
-import { afterEach } from 'vitest';
+import { afterEach } from 'vitest'
 
 afterEach(async () => {
-  await clearTestingData(); // 테스트 데이터 초기화
-});
-
+  await clearTestingData() // 테스트 데이터 초기화
+})
 ```
 
 ---
@@ -305,25 +303,23 @@ afterEach(async () => {
 - **기본 타임아웃**: 5초.
 
 ```jsx
-import { beforeAll } from 'vitest';
+import { beforeAll } from 'vitest'
 
 beforeAll(async () => {
-  await startMocking(); // 모든 테스트 실행 전 모의 동작 설정
-});
-
+  await startMocking() // 모든 테스트 실행 전 모의 동작 설정
+})
 ```
 
 **Cleanup 기능 지원**: 테스트가 끝난 후 정리 작업을 위해 정리 함수 반환 가능.
 
 ```jsx
 beforeAll(async () => {
-  await startMocking();
+  await startMocking()
 
   return async () => {
-    await stopMocking(); // 모든 테스트 후 정리 작업
-  };
-});
-
+    await stopMocking() // 모든 테스트 후 정리 작업
+  }
+})
 ```
 
 ---
@@ -336,12 +332,11 @@ beforeAll(async () => {
 - **기본 타임아웃**: 5초.
 
 ```jsx
-import { afterAll } from 'vitest';
+import { afterAll } from 'vitest'
 
 afterAll(async () => {
-  await stopMocking(); // 모든 테스트 실행 후 모의 동작 초기화
-});
-
+  await stopMocking() // 모든 테스트 실행 후 모의 동작 초기화
+})
 ```
 
 # Testing Library
@@ -361,11 +356,11 @@ Queries는 Testing Library에서 제공하는 **DOM 요소를 찾는 방법**입
 ### **Query의 활용**
 
 1. **사용자 상호작용 시뮬레이션**
-    - `user-event` 또는 `Events API`를 사용해 상호작용 테스트.
+   - `user-event` 또는 `Events API`를 사용해 상호작용 테스트.
 2. **DOM 변경 감지**
-    - DOM 변화는 `waitFor` 또는 `findBy`를 통해 비동기적으로 처리 가능.
+   - DOM 변화는 `waitFor` 또는 `findBy`를 통해 비동기적으로 처리 가능.
 3. **특정 컨테이너에서만 Query 수행**
-    - `within`을 사용해 특정 컨테이너 내부의 요소만 검색 가능.
+   - `within`을 사용해 특정 컨테이너 내부의 요소만 검색 가능.
 
 ---
 
@@ -374,25 +369,25 @@ Queries는 Testing Library에서 제공하는 **DOM 요소를 찾는 방법**입
 ### **단일 요소 관련**
 
 - **`getBy...`**
-    - 요소를 찾지 못하면 오류를 던짐.
-    - 다수의 요소가 매칭될 경우 오류를 던짐.
+  - 요소를 찾지 못하면 오류를 던짐.
+  - 다수의 요소가 매칭될 경우 오류를 던짐.
 - **`queryBy...`**
-    - 요소를 찾지 못하면 `null`을 반환.
-    - 다수의 요소가 매칭되면 오류를 던짐.
+  - 요소를 찾지 못하면 `null`을 반환.
+  - 다수의 요소가 매칭되면 오류를 던짐.
 - **`findBy...`**
-    - Promise를 반환하며, 요소를 찾기 위해 **비동기적으로 재시도**.
-    - 요소를 찾지 못하거나 다수 매칭 시 오류를 던짐.
+  - Promise를 반환하며, 요소를 찾기 위해 **비동기적으로 재시도**.
+  - 요소를 찾지 못하거나 다수 매칭 시 오류를 던짐.
 
 ### **다수 요소 관련**
 
 - **`getAllBy...`**
-    - 매칭되는 모든 요소 배열 반환.
-    - 요소를 찾지 못하면 오류를 던짐.
+  - 매칭되는 모든 요소 배열 반환.
+  - 요소를 찾지 못하면 오류를 던짐.
 - **`queryAllBy...`**
-    - 매칭되는 모든 요소 배열 반환.
-    - 요소를 찾지 못하면 빈 배열(`[]`) 반환.
+  - 매칭되는 모든 요소 배열 반환.
+  - 요소를 찾지 못하면 빈 배열(`[]`) 반환.
 - **`findAllBy...`**
-    - Promise를 반환하며, 매칭되는 모든 요소 배열을 비동기로 반환.
+  - Promise를 반환하며, 매칭되는 모든 요소 배열을 비동기로 반환.
 
 ---
 
@@ -401,16 +396,16 @@ Queries는 Testing Library에서 제공하는 **DOM 요소를 찾는 방법**입
 **사용자 경험을 반영한 우선순위**
 
 1. **접근성 중심 Queries**
-    - `getByRole`: 버튼, 링크 등 **접근성 트리**에 노출된 요소 검색.
-    - `getByLabelText`: 라벨과 연결된 입력 필드 검색. (폼 테스트에 적합)
-    - `getByPlaceholderText`: 플레이스홀더 기반 검색. (라벨이 없는 경우 사용)
-    - `getByText`: 텍스트 콘텐츠 기반 검색.
-    - `getByDisplayValue`: 입력 필드에 표시된 현재 값 검색.
+   - `getByRole`: 버튼, 링크 등 **접근성 트리**에 노출된 요소 검색.
+   - `getByLabelText`: 라벨과 연결된 입력 필드 검색. (폼 테스트에 적합)
+   - `getByPlaceholderText`: 플레이스홀더 기반 검색. (라벨이 없는 경우 사용)
+   - `getByText`: 텍스트 콘텐츠 기반 검색.
+   - `getByDisplayValue`: 입력 필드에 표시된 현재 값 검색.
 2. **HTML5 및 ARIA 준수 Queries**
-    - `getByAltText`: 이미지와 같은 요소의 `alt` 속성 검색.
-    - `getByTitle`: 요소의 `title` 속성 검색.
+   - `getByAltText`: 이미지와 같은 요소의 `alt` 속성 검색.
+   - `getByTitle`: 요소의 `title` 속성 검색.
 3. **Test ID 기반 Queries**
-    - `getByTestId`: 테스트를 위한 고유 식별자 기반 검색.
+   - `getByTestId`: 테스트를 위한 고유 식별자 기반 검색.
 
 ---
 
@@ -419,38 +414,35 @@ Queries는 Testing Library에서 제공하는 **DOM 요소를 찾는 방법**입
 ### 기본 Query 사용:
 
 ```jsx
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react'
 
 test('로그인 폼 테스트', () => {
-  render(<Login />);
-  const input = screen.getByLabelText('Username');
+  render(<Login />)
+  const input = screen.getByLabelText('Username')
   // 이벤트 및 검증...
-});
-
+})
 ```
 
 ### `TextMatch` 옵션 활용:
 
 ```jsx
 // 텍스트 검색
-screen.getByText('Hello World'); // 정확히 일치
-screen.getByText(/World/i); // 정규식 기반 검색 (대소문자 무시)
+screen.getByText('Hello World') // 정확히 일치
+screen.getByText(/World/i) // 정규식 기반 검색 (대소문자 무시)
 
 // 커스텀 함수 사용
-screen.getByText((content) => content.startsWith('Hello'));
-
+screen.getByText((content) => content.startsWith('Hello'))
 ```
 
 ### DOM 변경 감지:
 
 ```jsx
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react'
 
 test('비동기 테스트', async () => {
-  render(<AsyncComponent />);
-  await waitFor(() => expect(screen.getByText('완료')).toBeInTheDocument());
-});
-
+  render(<AsyncComponent />)
+  await waitFor(() => expect(screen.getByText('완료')).toBeInTheDocument())
+})
 ```
 
 ---
@@ -458,9 +450,9 @@ test('비동기 테스트', async () => {
 ### **추가 도구**
 
 1. **Browser Extension**
-    - Chrome 확장 프로그램인 **Testing Playground**를 사용하면 테스트 요소 선택에 적합한 Query를 추천받을 수 있습니다.
+   - Chrome 확장 프로그램인 **Testing Playground**를 사용하면 테스트 요소 선택에 적합한 Query를 추천받을 수 있습니다.
 2. **Playground**
-    - [Testing Playground](https://testing-playground.com/)를 통해 Query 실습 가능.
+   - [Testing Playground](https://testing-playground.com/)를 통해 Query 실습 가능.
 
 ### **Mocking 함수와 객체**
 
@@ -477,16 +469,15 @@ Mocking은 테스트 중 함수의 동작을 감시(spy)하거나, 글로벌 및
 - Mock 함수의 동작을 조작 가능.
 
 ```jsx
-const getApples = vi.fn(() => 0);
+const getApples = vi.fn(() => 0)
 
-getApples();
-expect(getApples).toHaveBeenCalled();
-expect(getApples).toHaveReturnedWith(0);
+getApples()
+expect(getApples).toHaveBeenCalled()
+expect(getApples).toHaveReturnedWith(0)
 
-getApples.mockReturnValueOnce(5);
-expect(getApples()).toBe(5);
-expect(getApples).toHaveNthReturnedWith(2, 5);
-
+getApples.mockReturnValueOnce(5)
+expect(getApples()).toBe(5)
+expect(getApples).toHaveNthReturnedWith(2, 5)
 ```
 
 ---
@@ -506,18 +497,17 @@ expect(getApples).toHaveNthReturnedWith(2, 5);
 - **Mock 구현** 변경 가능.
 
 ```jsx
-let apples = 0;
+let apples = 0
 const cart = {
   getApples: () => 42,
-};
+}
 
-const spy = vi.spyOn(cart, 'getApples').mockImplementation(() => apples);
+const spy = vi.spyOn(cart, 'getApples').mockImplementation(() => apples)
 
-apples = 1;
-expect(cart.getApples()).toBe(1);
-expect(spy).toHaveBeenCalled();
-expect(spy).toHaveReturnedWith(1);
-
+apples = 1
+expect(cart.getApples()).toBe(1)
+expect(spy).toHaveBeenCalled()
+expect(spy).toHaveReturnedWith(1)
 ```
 
 ---
@@ -529,12 +519,11 @@ expect(spy).toHaveReturnedWith(1);
 - `vi.unstubAllEnvs`로 원래 값 복원 가능.
 
 ```jsx
-vi.stubEnv('NODE_ENV', 'production');
-expect(process.env.NODE_ENV).toBe('production');
+vi.stubEnv('NODE_ENV', 'production')
+expect(process.env.NODE_ENV).toBe('production')
 
-vi.unstubAllEnvs();
-expect(process.env.NODE_ENV).toBe('development');
-
+vi.unstubAllEnvs()
+expect(process.env.NODE_ENV).toBe('development')
 ```
 
 ---
@@ -546,12 +535,11 @@ expect(process.env.NODE_ENV).toBe('development');
 - `vi.unstubAllGlobals`로 원래 값 복원 가능.
 
 ```jsx
-vi.stubGlobal('innerWidth', 100);
-expect(innerWidth).toBe(100);
+vi.stubGlobal('innerWidth', 100)
+expect(innerWidth).toBe(100)
 
-vi.unstubAllGlobals();
-expect(globalThis.innerWidth).toBeUndefined();
-
+vi.unstubAllGlobals()
+expect(globalThis.innerWidth).toBeUndefined()
 ```
 
 ---
@@ -559,16 +547,15 @@ expect(globalThis.innerWidth).toBeUndefined();
 ### **Mocking 유용한 팁**
 
 1. **`vi.restoreAllMocks` 활용**
-    - 테스트 후 원래 메서드 구현 복원.
+   - 테스트 후 원래 메서드 구현 복원.
 2. **Browser Mode에서의 제한**
-    - Browser Mode에서는 `vi.spyOn`으로 **직접 메서드 스파이 생성이 불가능**.
-    - 대신 `vi.mock`으로 파일 내 모든 메서드를 스파이 가능:
 
-        ```jsx
-        vi.mock('./src/file.js', { spy: true });
+   - Browser Mode에서는 `vi.spyOn`으로 **직접 메서드 스파이 생성이 불가능**.
+   - 대신 `vi.mock`으로 파일 내 모든 메서드를 스파이 가능:
 
-        ```
-
+     ```jsx
+     vi.mock('./src/file.js', { spy: true })
+     ```
 
 ---
 
@@ -577,48 +564,44 @@ expect(globalThis.innerWidth).toBeUndefined();
 ### 함수 Mock
 
 ```jsx
-const mockFn = vi.fn(() => 'Hello');
-expect(mockFn()).toBe('Hello');
-expect(mockFn).toHaveBeenCalled();
-
+const mockFn = vi.fn(() => 'Hello')
+expect(mockFn()).toBe('Hello')
+expect(mockFn).toHaveBeenCalled()
 ```
 
 ### 객체 메서드 Mock
 
 ```jsx
-const obj = { greet: () => 'Hi' };
-const spy = vi.spyOn(obj, 'greet').mockReturnValue('Hello');
-expect(obj.greet()).toBe('Hello');
-vi.restoreAllMocks();
-
+const obj = { greet: () => 'Hi' }
+const spy = vi.spyOn(obj, 'greet').mockReturnValue('Hello')
+expect(obj.greet()).toBe('Hello')
+vi.restoreAllMocks()
 ```
 
 ### 환경 변수 Mock
 
 ```jsx
-vi.stubEnv('MODE', 'test');
-expect(import.meta.env.MODE).toBe('test');
-vi.unstubAllEnvs();
-
+vi.stubEnv('MODE', 'test')
+expect(import.meta.env.MODE).toBe('test')
+vi.unstubAllEnvs()
 ```
 
 ### 글로벌 변수 Mock
 
 ```jsx
-vi.stubGlobal('customVar', 123);
-expect(globalThis.customVar).toBe(123);
-vi.unstubAllGlobals();
-
+vi.stubGlobal('customVar', 123)
+expect(globalThis.customVar).toBe(123)
+vi.unstubAllGlobals()
 ```
 
 # 단위 테스트 대상 선정하기
 
 - state나 로직처리 없이 UI만 그리는 컴포넌트는 검증하지 않는다.
-    - 해당 검증은 스토리북과 같은 도구를 통해 검증
+  - 해당 검증은 스토리북과 같은 도구를 통해 검증
 - 간단한 로직 처리만 하는 컴포넌트는 상위 컴포넌트의 통합 테스트에서 검증한다.
 - 공통 유틸 함수는 단위 테스트로 검증한다.
-    - 다른 모듈과의 의존성의 없다.
-    - 여러 곳에서 사용되기 때문에 검증을 통해 안정성을 높인다.
+  - 다른 모듈과의 의존성의 없다.
+  - 여러 곳에서 사용되기 때문에 검증을 통해 안정성을 높인다.
 
 # 모듈 모킹
 
@@ -635,29 +618,29 @@ vi.unstubAllGlobals();
 ### **2. 모킹의 특징**
 
 1. **외부 모듈 모킹**
-    - `vi.mock()`을 사용하여 특정 모듈의 동작을 가짜로 구현.
-    - 외부 모듈의 **검증은 배제**하고, 테스트 대상 컴포넌트에만 집중 가능.
-    - 단, 외부 모듈은 별도로 검증되어야 함.
 
-    ```jsx
-    // 외부 모듈 모킹 예시
-    import { fetchData } from './api';
+   - `vi.mock()`을 사용하여 특정 모듈의 동작을 가짜로 구현.
+   - 외부 모듈의 **검증은 배제**하고, 테스트 대상 컴포넌트에만 집중 가능.
+   - 단, 외부 모듈은 별도로 검증되어야 함.
 
-    vi.mock('./api', () => ({
-      fetchData: vi.fn(() => Promise.resolve('mocked data')),
-    }));
+   ```jsx
+   // 외부 모듈 모킹 예시
+   import { fetchData } from './api'
 
-    test('fetchData를 호출해야 한다.', async () => {
-      const data = await fetchData();
-      expect(fetchData).toHaveBeenCalled();
-      expect(data).toBe('mocked data');
-    });
+   vi.mock('./api', () => ({
+     fetchData: vi.fn(() => Promise.resolve('mocked data')),
+   }))
 
-    ```
+   test('fetchData를 호출해야 한다.', async () => {
+     const data = await fetchData()
+     expect(fetchData).toHaveBeenCalled()
+     expect(data).toBe('mocked data')
+   })
+   ```
 
 2. **함수와 의존성 대체**
-    - 복잡한 연산이나 호출 횟수 제한이 있는 API 대신 **가벼운 Mock 구현**으로 대체 가능.
-    - 예: 데이터베이스 연결, API 호출, 파일 I/O 등.
+   - 복잡한 연산이나 호출 횟수 제한이 있는 API 대신 **가벼운 Mock 구현**으로 대체 가능.
+   - 예: 데이터베이스 연결, API 호출, 파일 I/O 등.
 
 ---
 
@@ -668,64 +651,63 @@ vi.unstubAllGlobals();
 Vitest는 이를 위해 여러 초기화 메서드를 제공합니다.
 
 1. **`vi.clearAllMocks`**
-    - 모든 Mock 함수의 **호출 기록 초기화**.
-    - Mock 함수의 **구현은 유지**.
 
-    ```jsx
-    const mockFn = vi.fn();
-    mockFn();
-    expect(mockFn).toHaveBeenCalled();
-    vi.clearAllMocks();
-    expect(mockFn).not.toHaveBeenCalled();
+   - 모든 Mock 함수의 **호출 기록 초기화**.
+   - Mock 함수의 **구현은 유지**.
 
-    ```
+   ```jsx
+   const mockFn = vi.fn()
+   mockFn()
+   expect(mockFn).toHaveBeenCalled()
+   vi.clearAllMocks()
+   expect(mockFn).not.toHaveBeenCalled()
+   ```
 
 2. **`vi.resetAllMocks`**
-    - 모든 Mock 함수의 **호출 기록 초기화** 및 **구현을 빈 함수로 리셋**.
 
-    ```jsx
-    const mockFn = vi.fn(() => 'data');
-    mockFn();
-    vi.resetAllMocks();
-    expect(mockFn()).toBeUndefined(); // 구현 초기화됨
+   - 모든 Mock 함수의 **호출 기록 초기화** 및 **구현을 빈 함수로 리셋**.
 
-    ```
+   ```jsx
+   const mockFn = vi.fn(() => 'data')
+   mockFn()
+   vi.resetAllMocks()
+   expect(mockFn()).toBeUndefined() // 구현 초기화됨
+   ```
 
 3. **`vi.restoreAllMocks`**
-    - 모든 Mock 함수의 **호출 기록 초기화** 및 **원래 구현 복원**.
-    - 원본 동작으로 돌아가야 하는 경우 사용.
 
-    ```jsx
-    const obj = { greet: () => 'Hello' };
-    const spy = vi.spyOn(obj, 'greet').mockReturnValue('Hi');
-    expect(obj.greet()).toBe('Hi');
-    vi.restoreAllMocks();
-    expect(obj.greet()).toBe('Hello');
+   - 모든 Mock 함수의 **호출 기록 초기화** 및 **원래 구현 복원**.
+   - 원본 동작으로 돌아가야 하는 경우 사용.
 
-    ```
-
+   ```jsx
+   const obj = { greet: () => 'Hello' }
+   const spy = vi.spyOn(obj, 'greet').mockReturnValue('Hi')
+   expect(obj.greet()).toBe('Hi')
+   vi.restoreAllMocks()
+   expect(obj.greet()).toBe('Hello')
+   ```
 
 ---
 
 ### **4. 모킹의 장점**
 
 1. **테스트 독립성 확보**
-    - 외부 모듈의 동작에 의존하지 않고 테스트 대상에만 집중 가능.
+   - 외부 모듈의 동작에 의존하지 않고 테스트 대상에만 집중 가능.
 2. **효율적인 테스트 환경 구성**
-    - 복잡한 연산이나 시간 소모적인 작업을 Mock으로 대체.
+   - 복잡한 연산이나 시간 소모적인 작업을 Mock으로 대체.
 3. **의존성 분리**
-    - 컴포넌트나 함수의 동작을 외부 요인으로부터 분리하여 검증 가능.
+   - 컴포넌트나 함수의 동작을 외부 요인으로부터 분리하여 검증 가능.
 
 ---
 
 ### **5. 주의 사항**
 
 1. **외부 모듈 검증**
-    - 모킹된 모듈 자체의 동작은 별도로 검증되어야 함.
+   - 모킹된 모듈 자체의 동작은 별도로 검증되어야 함.
 2. **모킹 초기화 누락**
-    - 초기화를 누락하면 테스트 간 데이터가 공유되어 예기치 않은 결과 발생 가능.
+   - 초기화를 누락하면 테스트 간 데이터가 공유되어 예기치 않은 결과 발생 가능.
 3. **Mock 동작 과도 의존**
-    - Mock으로 인해 실제 동작과 차이가 발생할 수 있으므로 실제 환경 테스트도 필요.
+   - Mock으로 인해 실제 동작과 차이가 발생할 수 있으므로 실제 환경 테스트도 필요.
 
 ---
 
@@ -734,42 +716,40 @@ Vitest는 이를 위해 여러 초기화 메서드를 제공합니다.
 ### 1) API 호출 모킹
 
 ```jsx
-import { fetchData } from './api';
+import { fetchData } from './api'
 
 vi.mock('./api', () => ({
   fetchData: vi.fn(() => Promise.resolve({ data: 'mocked data' })),
-}));
+}))
 
 test('API 호출 테스트', async () => {
-  const response = await fetchData();
-  expect(fetchData).toHaveBeenCalled();
-  expect(response).toEqual({ data: 'mocked data' });
-});
-
+  const response = await fetchData()
+  expect(fetchData).toHaveBeenCalled()
+  expect(response).toEqual({ data: 'mocked data' })
+})
 ```
 
 ### 2) 모킹 초기화
 
 ```jsx
-import { fetchData } from './api';
+import { fetchData } from './api'
 
 vi.mock('./api', () => ({
   fetchData: vi.fn(() => Promise.resolve({ data: 'mocked data' })),
-}));
+}))
 
 afterEach(() => {
-  vi.clearAllMocks(); // 각 테스트 후 호출 기록 초기화
-});
+  vi.clearAllMocks() // 각 테스트 후 호출 기록 초기화
+})
 
 test('테스트 1', async () => {
-  const response = await fetchData();
-  expect(fetchData).toHaveBeenCalledTimes(1);
-});
+  const response = await fetchData()
+  expect(fetchData).toHaveBeenCalledTimes(1)
+})
 
 test('테스트 2', async () => {
-  expect(fetchData).not.toHaveBeenCalled(); // 호출 기록 초기화됨
-});
-
+  expect(fetchData).not.toHaveBeenCalled() // 호출 기록 초기화됨
+})
 ```
 
 # 리액트 훅 테스트
@@ -786,10 +766,9 @@ React Test Utilities는 React 컴포넌트를 테스트 프레임워크에서 �
 
 ```jsx
 // ES6
-import ReactTestUtils from 'react-dom/test-utils';
+import ReactTestUtils from 'react-dom/test-utils'
 // ES5
-const ReactTestUtils = require('react-dom/test-utils');
-
+const ReactTestUtils = require('react-dom/test-utils')
 ```
 
 ### **추천 도구**
@@ -809,14 +788,14 @@ const ReactTestUtils = require('react-dom/test-utils');
 **사용 예시**
 
 ```jsx
-import { act } from 'react-dom/test-utils';
+import { act } from 'react-dom/test-utils'
 
 class Counter extends React.Component {
   constructor() {
-    super();
-    this.state = { count: 0 };
+    super()
+    this.state = { count: 0 }
   }
-  handleClick = () => this.setState({ count: this.state.count + 1 });
+  handleClick = () => this.setState({ count: this.state.count + 1 })
 
   render() {
     return (
@@ -824,37 +803,36 @@ class Counter extends React.Component {
         <p>You clicked {this.state.count} times</p>
         <button onClick={this.handleClick}>Click me</button>
       </div>
-    );
+    )
   }
 }
 
-let container;
+let container
 
 beforeEach(() => {
-  container = document.createElement('div');
-  document.body.appendChild(container);
-});
+  container = document.createElement('div')
+  document.body.appendChild(container)
+})
 
 afterEach(() => {
-  document.body.removeChild(container);
-  container = null;
-});
+  document.body.removeChild(container)
+  container = null
+})
 
 it('renders and updates the counter', () => {
   act(() => {
-    ReactDOM.createRoot(container).render(<Counter />);
-  });
+    ReactDOM.createRoot(container).render(<Counter />)
+  })
 
-  const button = container.querySelector('button');
-  const label = container.querySelector('p');
-  expect(label.textContent).toBe('You clicked 0 times');
+  const button = container.querySelector('button')
+  const label = container.querySelector('p')
+  expect(label.textContent).toBe('You clicked 0 times')
 
   act(() => {
-    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  });
-  expect(label.textContent).toBe('You clicked 1 times');
-});
-
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  expect(label.textContent).toBe('You clicked 1 times')
+})
 ```
 
 ---
@@ -862,7 +840,7 @@ it('renders and updates the counter', () => {
 ### **2) Mocking**
 
 - `mockComponent(componentClass, [mockTagName])`
-모의 컴포넌트를 생성. `jest.mock()` 사용을 권장.
+  모의 컴포넌트를 생성. `jest.mock()` 사용을 권장.
 
 ### **3) 요소 확인**
 
@@ -898,9 +876,8 @@ it('renders and updates the counter', () => {
 - DOM이 필요하며, `document.createElement`로 생성된 DOM 컨테이너에 요소를 렌더링.
 
 ```jsx
-const domContainer = document.createElement('div');
-ReactDOM.createRoot(domContainer).render(<MyComponent />);
-
+const domContainer = document.createElement('div')
+ReactDOM.createRoot(domContainer).render(<MyComponent />)
 ```
 
 ---
@@ -916,32 +893,29 @@ ReactDOM.createRoot(domContainer).render(<MyComponent />);
 
 1. **클릭 이벤트**
 
-    ```jsx
-    const button = document.querySelector('button');
-    ReactTestUtils.Simulate.click(button);
-
-    ```
+   ```jsx
+   const button = document.querySelector('button')
+   ReactTestUtils.Simulate.click(button)
+   ```
 
 2. **입력 필드 변경 후 Enter 키 입력**
 
-    ```jsx
-    const input = document.querySelector('input');
-    input.value = 'Test Value';
-    ReactTestUtils.Simulate.change(input);
-    ReactTestUtils.Simulate.keyDown(input, { key: 'Enter', keyCode: 13 });
-
-    ```
-
+   ```jsx
+   const input = document.querySelector('input')
+   input.value = 'Test Value'
+   ReactTestUtils.Simulate.change(input)
+   ReactTestUtils.Simulate.keyDown(input, { key: 'Enter', keyCode: 13 })
+   ```
 
 ---
 
 ### **6. 추가 참고 사항**
 
 1. **테스트 환경**
-    - React는 DOM을 접근할 수 있어야 합니다.
-    - Jest에서는 `testEnvironment`를 `jsdom`으로 설정.
+   - React는 DOM을 접근할 수 있어야 합니다.
+   - Jest에서는 `testEnvironment`를 `jsdom`으로 설정.
 2. **Testing Library 활용**
-    - React Testing Library를 사용하면 `act()`와 같은 보일러플레이트 코드를 줄이고 사용자 관점에서 테스트 작성 가능.
+   - React Testing Library를 사용하면 `act()`와 같은 보일러플레이트 코드를 줄이고 사용자 관점에서 테스트 작성 가능.
 
 # 타이머 테스트
 
@@ -967,24 +941,23 @@ ReactDOM.createRoot(domContainer).render(<MyComponent />);
 **사용 예시**
 
 ```jsx
-import { vi } from 'vitest';
+import { vi } from 'vitest'
 
 test('타이머 모킹으로 setTimeout 테스트', () => {
-  vi.useFakeTimers(); // 타이머 모킹 활성화
+  vi.useFakeTimers() // 타이머 모킹 활성화
 
-  const callback = vi.fn();
-  setTimeout(callback, 1000);
+  const callback = vi.fn()
+  setTimeout(callback, 1000)
 
   // 아직 시간이 흐르지 않았으므로 callback은 호출되지 않음
-  expect(callback).not.toHaveBeenCalled();
+  expect(callback).not.toHaveBeenCalled()
 
   // 1초(1000ms)가 흐른 것으로 시뮬레이션
-  vi.advanceTimersByTime(1000);
+  vi.advanceTimersByTime(1000)
 
   // callback이 호출되었는지 확인
-  expect(callback).toHaveBeenCalled();
-});
-
+  expect(callback).toHaveBeenCalled()
+})
 ```
 
 ---
@@ -999,19 +972,18 @@ test('타이머 모킹으로 setTimeout 테스트', () => {
 **사용 예시**
 
 ```jsx
-vi.useFakeTimers();
+vi.useFakeTimers()
 
-const callback = vi.fn();
-setTimeout(callback, 2000);
+const callback = vi.fn()
+setTimeout(callback, 2000)
 
 // 1초만 경과 시킴
-vi.advanceTimersByTime(1000);
-expect(callback).not.toHaveBeenCalled(); // 아직 실행되지 않음
+vi.advanceTimersByTime(1000)
+expect(callback).not.toHaveBeenCalled() // 아직 실행되지 않음
 
 // 추가로 1초 더 경과 시킴
-vi.advanceTimersByTime(1000);
-expect(callback).toHaveBeenCalled(); // 2초가 지나 callback 실행
-
+vi.advanceTimersByTime(1000)
+expect(callback).toHaveBeenCalled() // 2초가 지나 callback 실행
 ```
 
 ### **2) `setSystemTime()`**
@@ -1022,15 +994,14 @@ expect(callback).toHaveBeenCalled(); // 2초가 지나 callback 실행
 **사용 예시**
 
 ```jsx
-vi.useFakeTimers();
+vi.useFakeTimers()
 
 // 현재 시스템 시간을 2025년 1월 1일로 설정
-const mockDate = new Date('2025-01-01T00:00:00Z');
-vi.setSystemTime(mockDate);
+const mockDate = new Date('2025-01-01T00:00:00Z')
+vi.setSystemTime(mockDate)
 
-const currentDate = new Date();
-expect(currentDate.toISOString()).toBe('2025-01-01T00:00:00.000Z');
-
+const currentDate = new Date()
+expect(currentDate.toISOString()).toBe('2025-01-01T00:00:00.000Z')
 ```
 
 ---
@@ -1050,23 +1021,22 @@ expect(currentDate.toISOString()).toBe('2025-01-01T00:00:00.000Z');
 **사용 예시**
 
 ```jsx
-import { vi } from 'vitest';
+import { vi } from 'vitest'
 
 beforeEach(() => {
-  vi.useFakeTimers(); // 각 테스트 시작 전에 타이머 모킹
-});
+  vi.useFakeTimers() // 각 테스트 시작 전에 타이머 모킹
+})
 
 afterEach(() => {
-  vi.useRealTimers(); // 각 테스트 후 타이머 복원
-});
+  vi.useRealTimers() // 각 테스트 후 타이머 복원
+})
 
 test('setTimeout 테스트', () => {
-  const callback = vi.fn();
-  setTimeout(callback, 500);
-  vi.advanceTimersByTime(500);
-  expect(callback).toHaveBeenCalled();
-});
-
+  const callback = vi.fn()
+  setTimeout(callback, 500)
+  vi.advanceTimersByTime(500)
+  expect(callback).toHaveBeenCalled()
+})
 ```
 
 ---
@@ -1074,11 +1044,11 @@ test('setTimeout 테스트', () => {
 ### **4. 타이머 테스트의 장점**
 
 1. **시간 제어**
-    - 실제로 기다리지 않고 시간 경과를 제어할 수 있어 테스트 속도 향상.
+   - 실제로 기다리지 않고 시간 경과를 제어할 수 있어 테스트 속도 향상.
 2. **정확한 검증**
-    - 시간에 의존적인 코드(예: 애니메이션, API 호출 지연 등)를 정확하게 검증.
+   - 시간에 의존적인 코드(예: 애니메이션, API 호출 지연 등)를 정확하게 검증.
 3. **독립성 보장**
-    - 시스템 시간과 무관하게 테스트를 실행하여 환경에 따른 테스트 실패 방지.
+   - 시스템 시간과 무관하게 테스트를 실행하여 환경에 따른 테스트 실패 방지.
 
 # useEvent 를 사용한 사용자 상호작용 테스트
 
@@ -1106,43 +1076,37 @@ React Testing Library에서 제공하는 `fireEvent`와 `userEvent`는 DOM 상�
 **예제 1: 버튼 클릭**
 
 ```jsx
-import { fireEvent, render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react'
+import '@testing-library/jest-dom'
+import React from 'react'
 
 function ButtonComponent() {
-  const [clicked, setClicked] = React.useState(false);
+  const [clicked, setClicked] = React.useState(false)
 
-  return (
-    <button onClick={() => setClicked(true)}>
-      {clicked ? 'Clicked!' : 'Click Me'}
-    </button>
-  );
+  return <button onClick={() => setClicked(true)}>{clicked ? 'Clicked!' : 'Click Me'}</button>
 }
 
 test('버튼 클릭 시 상태 변경', () => {
-  render(<ButtonComponent />);
+  render(<ButtonComponent />)
 
-  const button = screen.getByText('Click Me');
-  fireEvent.click(button); // 클릭 이벤트 트리거
+  const button = screen.getByText('Click Me')
+  fireEvent.click(button) // 클릭 이벤트 트리거
 
-  expect(button).toHaveTextContent('Clicked!'); // 상태 변화 확인
-});
-
+  expect(button).toHaveTextContent('Clicked!') // 상태 변화 확인
+})
 ```
 
 **예제 2: 입력 필드 값 변경**
 
 ```jsx
 test('입력 필드 값 변경', () => {
-  render(<input placeholder="Type here" />);
+  render(<input placeholder="Type here" />)
 
-  const input = screen.getByPlaceholderText('Type here');
-  fireEvent.change(input, { target: { value: 'Hello' } }); // change 이벤트 발생
+  const input = screen.getByPlaceholderText('Type here')
+  fireEvent.change(input, { target: { value: 'Hello' } }) // change 이벤트 발생
 
-  expect(input.value).toBe('Hello'); // 값이 변경되었는지 확인
-});
-
+  expect(input.value).toBe('Hello') // 값이 변경되었는지 확인
+})
 ```
 
 ---
@@ -1166,46 +1130,44 @@ test('입력 필드 값 변경', () => {
 **예제 1: 버튼 클릭 (연쇄 이벤트 발생)**
 
 ```jsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 test('버튼 클릭 시 연쇄 이벤트 확인', async () => {
-  render(<button onClick={() => console.log('clicked')}>Click Me</button>);
+  render(<button onClick={() => console.log('clicked')}>Click Me</button>)
 
-  const button = screen.getByText('Click Me');
-  await userEvent.click(button); // 연쇄적인 클릭 이벤트 발생
+  const button = screen.getByText('Click Me')
+  await userEvent.click(button) // 연쇄적인 클릭 이벤트 발생
 
   // 클릭 이벤트 발생 시 예상된 콘솔 출력 확인 (테스트 환경에서 확인 가능)
-});
-
+})
 ```
 
 **예제 2: 키보드 입력**
 
 ```jsx
 test('입력 필드에 텍스트 입력', async () => {
-  render(<input placeholder="Type something" />);
+  render(<input placeholder="Type something" />)
 
-  const input = screen.getByPlaceholderText('Type something');
-  await userEvent.type(input, 'Hello World!'); // 사용자가 입력하는 것처럼 동작
+  const input = screen.getByPlaceholderText('Type something')
+  await userEvent.type(input, 'Hello World!') // 사용자가 입력하는 것처럼 동작
 
-  expect(input).toHaveValue('Hello World!'); // 입력된 값 확인
-});
-
+  expect(input).toHaveValue('Hello World!') // 입력된 값 확인
+})
 ```
 
 ---
 
 ### **3. `fireEvent`와 `userEvent`의 비교**
 
-| **기능** | **fireEvent** | **userEvent** |
-| --- | --- | --- |
-| **DOM 이벤트 발생** | 단일 DOM 이벤트 발생 | 연쇄적인 DOM 이벤트 발생 |
-| **실제 사용자 상호작용** | 모방하지 않음 | 실제 사용자 동작에 가까운 테스트 가능 |
-| **비활성화된 버튼 처리** | 강제 이벤트 발생 가능 | 클릭 이벤트 발생하지 않음 |
-| **입력 필드 제어** | 입력 불가능한 필드에도 강제 입력 가능 | 입력 불가능한 필드에서는 입력 차단 |
-| **테스트 신뢰성** | 낮음 | 높음 |
-| **주요 사용 사례** | 간단한 DOM 이벤트 검증 | 사용자 상호작용 테스트 |
+| **기능**                 | **fireEvent**                         | **userEvent**                         |
+| ------------------------ | ------------------------------------- | ------------------------------------- |
+| **DOM 이벤트 발생**      | 단일 DOM 이벤트 발생                  | 연쇄적인 DOM 이벤트 발생              |
+| **실제 사용자 상호작용** | 모방하지 않음                         | 실제 사용자 동작에 가까운 테스트 가능 |
+| **비활성화된 버튼 처리** | 강제 이벤트 발생 가능                 | 클릭 이벤트 발생하지 않음             |
+| **입력 필드 제어**       | 입력 불가능한 필드에도 강제 입력 가능 | 입력 불가능한 필드에서는 입력 차단    |
+| **테스트 신뢰성**        | 낮음                                  | 높음                                  |
+| **주요 사용 사례**       | 간단한 DOM 이벤트 검증                | 사용자 상호작용 테스트                |
 
 ---
 
@@ -1282,38 +1244,38 @@ test('입력 필드에 텍스트 입력', async () => {
 
 ### **3. 단위 테스트와 통합 테스트의 비교**
 
-| **특징** | **단위 테스트** | **통합 테스트** |
-| --- | --- | --- |
-| **테스트 범위** | 개별 함수나 모듈 | 모듈 간 상호작용 및 통합된 기능 검증 |
-| **의존성 처리** | Mocking을 주로 사용 | 실제 의존성을 포함하거나 테스트용 데이터 사용 |
-| **테스트 속도** | 빠름 | 상대적으로 느림 |
-| **복잡성** | 낮음 | 높음 |
-| **문제 발견** | 개별 모듈의 문제 검출 | 모듈 간 통합 문제 및 의존성 관련 오류 발견 |
-| **사용자 관점의 검증** | 없음 | 일부 사용자 시나리오 검증 가능 |
+| **특징**               | **단위 테스트**       | **통합 테스트**                               |
+| ---------------------- | --------------------- | --------------------------------------------- |
+| **테스트 범위**        | 개별 함수나 모듈      | 모듈 간 상호작용 및 통합된 기능 검증          |
+| **의존성 처리**        | Mocking을 주로 사용   | 실제 의존성을 포함하거나 테스트용 데이터 사용 |
+| **테스트 속도**        | 빠름                  | 상대적으로 느림                               |
+| **복잡성**             | 낮음                  | 높음                                          |
+| **문제 발견**          | 개별 모듈의 문제 검출 | 모듈 간 통합 문제 및 의존성 관련 오류 발견    |
+| **사용자 관점의 검증** | 없음                  | 일부 사용자 시나리오 검증 가능                |
 
 ---
 
 ### **4. 통합 테스트의 장점**
 
 1. **상호작용 문제 검출**
-    - 모듈 간의 의존성이나 데이터 흐름이 올바르게 작동하는지 확인할 수 있습니다.
+   - 모듈 간의 의존성이나 데이터 흐름이 올바르게 작동하는지 확인할 수 있습니다.
 2. **테스트의 현실성**
-    - 실제 환경과 비슷한 조건에서 테스트를 수행하므로, 실환경에서 발생할 수 있는 문제를 미리 발견할 수 있습니다.
+   - 실제 환경과 비슷한 조건에서 테스트를 수행하므로, 실환경에서 발생할 수 있는 문제를 미리 발견할 수 있습니다.
 3. **비즈니스 로직 검증**
-    - 모듈이 통합되어 동작하는 전체 비즈니스 로직을 검증할 수 있습니다.
+   - 모듈이 통합되어 동작하는 전체 비즈니스 로직을 검증할 수 있습니다.
 4. **시스템 안정성 향상**
-    - 단위 테스트로는 놓칠 수 있는 문제를 통합 테스트에서 보완하여 시스템의 신뢰성과 안정성을 높일 수 있습니다.
+   - 단위 테스트로는 놓칠 수 있는 문제를 통합 테스트에서 보완하여 시스템의 신뢰성과 안정성을 높일 수 있습니다.
 
 ---
 
 ### **5. 통합 테스트의 단점**
 
 1. **설정과 유지보수의 복잡성**
-    - 통합 테스트는 실제 데이터베이스, API, 파일 시스템 등 외부 의존성을 필요로 하므로, 설정과 유지보수가 복잡할 수 있습니다.
+   - 통합 테스트는 실제 데이터베이스, API, 파일 시스템 등 외부 의존성을 필요로 하므로, 설정과 유지보수가 복잡할 수 있습니다.
 2. **긴 실행 시간**
-    - 실제 환경에서 동작하는 테스트는 단위 테스트보다 실행 속도가 느립니다.
+   - 실제 환경에서 동작하는 테스트는 단위 테스트보다 실행 속도가 느립니다.
 3. **디버깅의 어려움**
-    - 문제가 발생하면 여러 모듈이 관여하기 때문에 원인을 특정하기 어렵습니다.
+   - 문제가 발생하면 여러 모듈이 관여하기 때문에 원인을 특정하기 어렵습니다.
 
 ---
 
@@ -1322,9 +1284,9 @@ test('입력 필드에 텍스트 입력', async () => {
 단위 테스트와 통합 테스트는 상호 보완적인 역할을 합니다. 두 테스트를 적절히 활용하여 **테스트 피라미드**를 구성하는 것이 중요합니다.
 
 - **테스트 피라미드**:
-    - **단위 테스트**: 가장 많은 양을 작성하여 기본적인 동작을 검증.
-    - **통합 테스트**: 중간 규모로 작성하여 모듈 간의 상호작용을 검증.
-    - **엔드투엔드(E2E) 테스트**: 사용자 관점에서 최종 동작을 검증하는 소수의 테스트.
+  - **단위 테스트**: 가장 많은 양을 작성하여 기본적인 동작을 검증.
+  - **통합 테스트**: 중간 규모로 작성하여 모듈 간의 상호작용을 검증.
+  - **엔드투엔드(E2E) 테스트**: 사용자 관점에서 최종 동작을 검증하는 소수의 테스트.
 
 # 통합 테스트란 무엇일까?
 
@@ -1343,11 +1305,11 @@ test('입력 필드에 텍스트 입력', async () => {
 ### 주요 테스트 러너
 
 - **Jest**: 인기 있는 테스트 러너. CommonJS 기반.
-    - [Jest 시작하기](https://jestjs.io/docs/getting-started)
-    - [Jest 설정 - 테스트 환경](https://jestjs.io/docs/configuration#testenvironment-string)
+  - [Jest 시작하기](https://jestjs.io/docs/getting-started)
+  - [Jest 설정 - 테스트 환경](https://jestjs.io/docs/configuration#testenvironment-string)
 - **Vitest**: 빠른 테스트 러너. ES 모듈 기반.
-    - [Vitest 시작하기](https://vitest.dev/guide/)
-    - [Vitest 설정 - 테스트 환경](https://vitest.dev/config/#test)
+  - [Vitest 시작하기](https://vitest.dev/guide/)
+  - [Vitest 설정 - 테스트 환경](https://vitest.dev/config/#test)
 
 ---
 
@@ -1356,13 +1318,13 @@ test('입력 필드에 텍스트 입력', async () => {
 React와 관련된 UI 컴포넌트를 테스트하거나 네트워크 요청을 모킹하려면 아래 도구를 추천합니다.
 
 1. **React Testing Library (RTL)**:
-    - React DOM을 테스트하는 데 사용되는 간단하고 완전한 도구.
-    - `ReactDOM`의 `render` 및 `react-dom/test-utils`의 `act`를 기반으로 동작.
-    - [React Testing Library 설정](https://testing-library.com/docs/react-testing-library/setup)
+   - React DOM을 테스트하는 데 사용되는 간단하고 완전한 도구.
+   - `ReactDOM`의 `render` 및 `react-dom/test-utils`의 `act`를 기반으로 동작.
+   - [React Testing Library 설정](https://testing-library.com/docs/react-testing-library/setup)
 2. **Mock Service Worker (MSW)**:
-    - 네트워크 요청을 모킹하기 위한 도구.
-    - 애플리케이션 로직을 수정하지 않고도 테스트가 가능.
-    - [MSW 설치](https://mswjs.io/docs/getting-started)
+   - 네트워크 요청을 모킹하기 위한 도구.
+   - 애플리케이션 로직을 수정하지 않고도 테스트가 가능.
+   - [MSW 설치](https://mswjs.io/docs/getting-started)
 
 ---
 
@@ -1374,45 +1336,43 @@ Zustand는 React 상태 관리 라이브러리입니다. 테스트를 위해 **s
 
 1. **Zustand 모킹 파일 생성**: `__mocks__/zustand.ts`
 
-    ```tsx
-    import { act } from '@testing-library/react';
-    import type * as ZustandExportedTypes from 'zustand';
-    export * from 'zustand';
+   ```tsx
+   import { act } from '@testing-library/react';
+   import type * as ZustandExportedTypes from 'zustand';
+   export * from 'zustand';
 
-    const { create: actualCreate } = jest.requireActual<typeof ZustandExportedTypes>('zustand');
+   const { create: actualCreate } = jest.requireActual<typeof ZustandExportedTypes>('zustand');
 
-    const storeResetFns = new Set<() => void>();
+   const storeResetFns = new Set<() => void>();
 
-    export const create = <T>(stateCreator: ZustandExportedTypes.StateCreator<T>) => {
-      const store = actualCreate(stateCreator);
-      const initialState = store.getState();
-      storeResetFns.add(() => store.setState(initialState, true));
-      return store;
-    };
+   export const create = <T>(stateCreator: ZustandExportedTypes.StateCreator<T>) => {
+     const store = actualCreate(stateCreator);
+     const initialState = store.getState();
+     storeResetFns.add(() => store.setState(initialState, true));
+     return store;
+   };
 
-    afterEach(() => {
-      act(() => {
-        storeResetFns.forEach((resetFn) => resetFn());
-      });
-    });
+   afterEach(() => {
+     act(() => {
+       storeResetFns.forEach((resetFn) => resetFn());
+     });
+   });
 
-    ```
+   ```
 
 2. **Jest 설정 파일 생성**: `jest.config.ts`
 
-    ```tsx
-    import type { JestConfigWithTsJest } from 'ts-jest';
+   ```tsx
+   import type { JestConfigWithTsJest } from 'ts-jest'
 
-    const config: JestConfigWithTsJest = {
-      preset: 'ts-jest',
-      testEnvironment: 'jsdom',
-      setupFilesAfterEnv: ['./setup-jest.ts'],
-    };
+   const config: JestConfigWithTsJest = {
+     preset: 'ts-jest',
+     testEnvironment: 'jsdom',
+     setupFilesAfterEnv: ['./setup-jest.ts'],
+   }
 
-    export default config;
-
-    ```
-
+   export default config
+   ```
 
 ---
 
@@ -1420,45 +1380,43 @@ Zustand는 React 상태 관리 라이브러리입니다. 테스트를 위해 **s
 
 1. **Zustand 모킹 파일 생성**: `__mocks__/zustand.ts`
 
-    ```tsx
-    import { act } from '@testing-library/react';
-    import type * as ZustandExportedTypes from 'zustand';
-    export * from 'zustand';
+   ```tsx
+   import { act } from '@testing-library/react';
+   import type * as ZustandExportedTypes from 'zustand';
+   export * from 'zustand';
 
-    const { create: actualCreate } = await vi.importActual<typeof ZustandExportedTypes>('zustand');
+   const { create: actualCreate } = await vi.importActual<typeof ZustandExportedTypes>('zustand');
 
-    const storeResetFns = new Set<() => void>();
+   const storeResetFns = new Set<() => void>();
 
-    export const create = <T>(stateCreator: ZustandExportedTypes.StateCreator<T>) => {
-      const store = actualCreate(stateCreator);
-      const initialState = store.getState();
-      storeResetFns.add(() => store.setState(initialState, true));
-      return store;
-    };
+   export const create = <T>(stateCreator: ZustandExportedTypes.StateCreator<T>) => {
+     const store = actualCreate(stateCreator);
+     const initialState = store.getState();
+     storeResetFns.add(() => store.setState(initialState, true));
+     return store;
+   };
 
-    afterEach(() => {
-      act(() => {
-        storeResetFns.forEach((resetFn) => resetFn());
-      });
-    });
+   afterEach(() => {
+     act(() => {
+       storeResetFns.forEach((resetFn) => resetFn());
+     });
+   });
 
-    ```
+   ```
 
 2. **Vitest 설정 파일 생성**: `vitest.config.ts`
 
-    ```tsx
-    import { defineConfig } from 'vitest/config';
+   ```tsx
+   import { defineConfig } from 'vitest/config'
 
-    export default defineConfig({
-      test: {
-        globals: true,
-        environment: 'jsdom',
-        setupFiles: ['./setup-vitest.ts'],
-      },
-    });
-
-    ```
-
+   export default defineConfig({
+     test: {
+       globals: true,
+       environment: 'jsdom',
+       setupFiles: ['./setup-vitest.ts'],
+     },
+   })
+   ```
 
 ---
 
@@ -1468,56 +1426,52 @@ Zustand는 React 상태 관리 라이브러리입니다. 테스트를 위해 **s
 
 1. Zustand Store 생성: `use-counter-store.ts`
 
-    ```tsx
-    import { create } from 'zustand';
+   ```tsx
+   import { create } from 'zustand'
 
-    type CounterStore = {
-      count: number;
-      inc: () => void;
-    };
+   type CounterStore = {
+     count: number
+     inc: () => void
+   }
 
-    export const useCounterStore = create<CounterStore>((set) => ({
-      count: 1,
-      inc: () => set((state) => ({ count: state.count + 1 })),
-    }));
-
-    ```
+   export const useCounterStore = create<CounterStore>((set) => ({
+     count: 1,
+     inc: () => set((state) => ({ count: state.count + 1 })),
+   }))
+   ```
 
 2. Counter 컴포넌트:
 
-    ```tsx
-    import { useCounterStore } from '../stores/use-counter-store';
+   ```tsx
+   import { useCounterStore } from '../stores/use-counter-store'
 
-    export function Counter() {
-      const { count, inc } = useCounterStore();
+   export function Counter() {
+     const { count, inc } = useCounterStore()
 
-      return (
-        <div>
-          <h4>{count}</h4>
-          <button onClick={inc}>Increment</button>
-        </div>
-      );
-    }
-
-    ```
+     return (
+       <div>
+         <h4>{count}</h4>
+         <button onClick={inc}>Increment</button>
+       </div>
+     )
+   }
+   ```
 
 3. Counter 컴포넌트 테스트:
 
-    ```tsx
-    import { render, screen } from '@testing-library/react';
-    import userEvent from '@testing-library/user-event';
-    import { Counter } from './counter';
+   ```tsx
+   import { render, screen } from '@testing-library/react'
+   import userEvent from '@testing-library/user-event'
+   import { Counter } from './counter'
 
-    test('Counter increases value on button click', async () => {
-      render(<Counter />);
-      expect(screen.getByText('1')).toBeInTheDocument();
+   test('Counter increases value on button click', async () => {
+     render(<Counter />)
+     expect(screen.getByText('1')).toBeInTheDocument()
 
-      await userEvent.click(screen.getByText('Increment'));
-      expect(screen.getByText('2')).toBeInTheDocument();
-    });
-
-    ```
-
+     await userEvent.click(screen.getByText('Increment'))
+     expect(screen.getByText('2')).toBeInTheDocument()
+   })
+   ```
 
 # msw로 API 모킹하기
 
@@ -1544,7 +1498,7 @@ Zustand는 React 상태 관리 라이브러리입니다. 테스트를 위해 **s
 예를 들어, 테스트 전용 설정을 포함한 `render.jsx` 수정:
 
 ```jsx
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -1554,17 +1508,12 @@ const createTestQueryClient = () =>
         staleTime: Infinity, // 캐시된 데이터를 항상 최신으로 간주
       },
     },
-  });
+  })
 
 export const renderWithQueryClient = (ui) => {
-  const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>
-      {ui}
-    </QueryClientProvider>
-  );
-};
-
+  const queryClient = createTestQueryClient()
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+}
 ```
 
 ---
@@ -1584,79 +1533,71 @@ MSW는 API 요청을 모킹하여 테스트 환경에서 실제 서버 호출 �
 
 1. **핸들러 작성**
 
-    API 요청을 모킹하기 위해 핸들러를 작성합니다.
+   API 요청을 모킹하기 위해 핸들러를 작성합니다.
 
-    ```jsx
-    // mock/handlers.js
-    import { rest } from 'msw';
+   ```jsx
+   // mock/handlers.js
+   import { rest } from 'msw'
 
-    export const handlers = [
-      rest.get('/api/data', (req, res, ctx) => {
-        return res(
-          ctx.status(200),
-          ctx.json({ data: ['item1', 'item2', 'item3'] })
-        );
-      }),
-    ];
-
-    ```
+   export const handlers = [
+     rest.get('/api/data', (req, res, ctx) => {
+       return res(ctx.status(200), ctx.json({ data: ['item1', 'item2', 'item3'] }))
+     }),
+   ]
+   ```
 
 2. **MSW 초기화**
 
-    서비스 워커를 설정합니다.
+   서비스 워커를 설정합니다.
 
-    ```jsx
-    // mock/server.js
-    import { setupServer } from 'msw/node';
-    import { handlers } from './handlers';
+   ```jsx
+   // mock/server.js
+   import { setupServer } from 'msw/node'
+   import { handlers } from './handlers'
 
-    export const server = setupServer(...handlers);
+   export const server = setupServer(...handlers)
 
-    // 테스트 환경 setup
-    beforeAll(() => server.listen()); // 테스트 시작 전 서비스 워커 활성화
-    afterEach(() => server.resetHandlers()); // 각 테스트 후 핸들러 리셋
-    afterAll(() => server.close()); // 테스트 종료 후 서비스 워커 비활성화
-
-    ```
+   // 테스트 환경 setup
+   beforeAll(() => server.listen()) // 테스트 시작 전 서비스 워커 활성화
+   afterEach(() => server.resetHandlers()) // 각 테스트 후 핸들러 리셋
+   afterAll(() => server.close()) // 테스트 종료 후 서비스 워커 비활성화
+   ```
 
 3. **테스트 파일에서 MSW 설정 포함**
 
-    MSW 서버를 포함하여 테스트를 실행합니다.
+   MSW 서버를 포함하여 테스트를 실행합니다.
 
-    ```jsx
-    import { render, screen } from '@testing-library/react';
-    import { renderWithQueryClient } from './test-utils';
-    import App from './App'; // 테스트할 컴포넌트
-    import { server } from './mock/server';
+   ```jsx
+   import { render, screen } from '@testing-library/react'
+   import { renderWithQueryClient } from './test-utils'
+   import App from './App' // 테스트할 컴포넌트
+   import { server } from './mock/server'
 
-    test('API 데이터를 렌더링해야 합니다', async () => {
-      renderWithQueryClient(<App />);
+   test('API 데이터를 렌더링해야 합니다', async () => {
+     renderWithQueryClient(<App />)
 
-      expect(await screen.findByText(/item1/i)).toBeInTheDocument();
-      expect(await screen.findByText(/item2/i)).toBeInTheDocument();
-    });
-
-    ```
-
+     expect(await screen.findByText(/item1/i)).toBeInTheDocument()
+     expect(await screen.findByText(/item2/i)).toBeInTheDocument()
+   })
+   ```
 
 ---
 
 ### 3. 테스트 시 유의 사항
 
 1. **setup과 teardown 사용**
-    - MSW 설정은 **테스트 실행 전**에 활성화(`setup`)되고, 테스트 종료 후 비활성화(`teardown`)되어야 합니다.
+   - MSW 설정은 **테스트 실행 전**에 활성화(`setup`)되고, 테스트 종료 후 비활성화(`teardown`)되어야 합니다.
 2. **테스트 데이터 분리**
-    - 각 테스트는 독립적으로 실행되므로, 필요하면 `server.resetHandlers()`를 호출해 핸들러를 초기화합니다.
+   - 각 테스트는 독립적으로 실행되므로, 필요하면 `server.resetHandlers()`를 호출해 핸들러를 초기화합니다.
 3. **로깅 활용**
-    - 테스트 중 발생하는 API 요청 및 응답을 추적하기 위해 MSW의 로깅 기능을 활성화할 수 있습니다.
 
-    ```jsx
-    server.events.on('request:start', (req) => {
-      console.log('Starting request:', req.url.href);
-    });
+   - 테스트 중 발생하는 API 요청 및 응답을 추적하기 위해 MSW의 로깅 기능을 활성화할 수 있습니다.
 
-    ```
-
+   ```jsx
+   server.events.on('request:start', (req) => {
+     console.log('Starting request:', req.url.href)
+   })
+   ```
 
 # React Testing Library (RTL) 비동기 유틸 함수 활용 테스트 작성
 
@@ -1676,9 +1617,8 @@ React Testing Library(RTL)는 비동기 작업(예: API 호출, 시간 지연 �
 
 ```jsx
 // 예: 비동기 데이터가 렌더링될 때까지 기다림
-const heading = await screen.findByText(/비동기 제목/i);
-expect(heading).toBeInTheDocument();
-
+const heading = await screen.findByText(/비동기 제목/i)
+expect(heading).toBeInTheDocument()
 ```
 
 ### 1.2 `waitFor`
@@ -1688,9 +1628,8 @@ expect(heading).toBeInTheDocument();
 
 ```jsx
 await waitFor(() => {
-  expect(screen.getByText(/완료/i)).toBeInTheDocument();
-});
-
+  expect(screen.getByText(/완료/i)).toBeInTheDocument()
+})
 ```
 
 ### 1.3 `waitForElementToBeRemoved`
@@ -1700,8 +1639,7 @@ await waitFor(() => {
 
 ```jsx
 // 예: 로딩 스피너가 사라질 때까지 기다림
-await waitForElementToBeRemoved(() => screen.getByText(/로딩 중/i));
-
+await waitForElementToBeRemoved(() => screen.getByText(/로딩 중/i))
 ```
 
 ---
@@ -1714,26 +1652,26 @@ await waitForElementToBeRemoved(() => screen.getByText(/로딩 중/i));
 
 ```jsx
 // components/AsyncComponent.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'
 
 const fetchData = () =>
   new Promise((resolve) => {
-    setTimeout(() => resolve(['아이템 1', '아이템 2', '아이템 3']), 1000);
-  });
+    setTimeout(() => resolve(['아이템 1', '아이템 2', '아이템 3']), 1000)
+  })
 
 export function AsyncComponent() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchData().then((data) => {
-      setItems(data);
-      setLoading(false);
-    });
-  }, []);
+      setItems(data)
+      setLoading(false)
+    })
+  }, [])
 
   if (loading) {
-    return <div>로딩 중...</div>;
+    return <div>로딩 중...</div>
   }
 
   return (
@@ -1742,35 +1680,33 @@ export function AsyncComponent() {
         <li key={index}>{item}</li>
       ))}
     </ul>
-  );
+  )
 }
-
 ```
 
 ### 2.2 테스트 코드
 
 ```jsx
 // components/AsyncComponent.test.jsx
-import { render, screen } from '@testing-library/react';
-import { AsyncComponent } from './AsyncComponent';
+import { render, screen } from '@testing-library/react'
+import { AsyncComponent } from './AsyncComponent'
 
 test('API 데이터를 비동기적으로 렌더링', async () => {
-  render(<AsyncComponent />);
+  render(<AsyncComponent />)
 
   // 로딩 상태 확인
-  expect(screen.getByText(/로딩 중.../i)).toBeInTheDocument();
+  expect(screen.getByText(/로딩 중.../i)).toBeInTheDocument()
 
   // 데이터가 렌더링될 때까지 기다림
-  const item1 = await screen.findByText(/아이템 1/i);
-  const item2 = await screen.findByText(/아이템 2/i);
+  const item1 = await screen.findByText(/아이템 1/i)
+  const item2 = await screen.findByText(/아이템 2/i)
 
-  expect(item1).toBeInTheDocument();
-  expect(item2).toBeInTheDocument();
+  expect(item1).toBeInTheDocument()
+  expect(item2).toBeInTheDocument()
 
   // 로딩 메시지가 사라지는지 확인
-  expect(screen.queryByText(/로딩 중.../i)).not.toBeInTheDocument();
-});
-
+  expect(screen.queryByText(/로딩 중.../i)).not.toBeInTheDocument()
+})
 ```
 
 ---
@@ -1778,14 +1714,14 @@ test('API 데이터를 비동기적으로 렌더링', async () => {
 ### 3. 유용한 팁과 주의사항
 
 1. **`findBy`와 `waitFor`의 차이**
-    - `findBy`: 요소가 나타날 때까지 기다린 후 반환.
-    - `waitFor`: 특정 조건이 충족되는지 반복적으로 확인.
+   - `findBy`: 요소가 나타날 때까지 기다린 후 반환.
+   - `waitFor`: 특정 조건이 충족되는지 반복적으로 확인.
 2. **타이밍 관련 문제 방지**
-    - 테스트는 항상 **비동기 작업이 완료된 이후 상태를 확인**해야 합니다.
-    - `findBy` 또는 `waitFor`를 사용해 비동기 흐름을 정확히 테스트합니다.
+   - 테스트는 항상 **비동기 작업이 완료된 이후 상태를 확인**해야 합니다.
+   - `findBy` 또는 `waitFor`를 사용해 비동기 흐름을 정확히 테스트합니다.
 3. **불필요한 대기 제거**
-    - `waitFor` 내부에서 테스트 대상의 상태를 검증하며, 불필요한 `setTimeout`을 피하세요.
+   - `waitFor` 내부에서 테스트 대상의 상태를 검증하며, 불필요한 `setTimeout`을 피하세요.
 4. **네트워크 요청 모킹**
-    - Mock Service Worker(MSW)를 사용해 API 요청을 모킹하면 테스트 결과를 더 신뢰할 수 있습니다.
+   - Mock Service Worker(MSW)를 사용해 API 요청을 모킹하면 테스트 결과를 더 신뢰할 수 있습니다.
 
-![수료증](/static/images/실무에_바로_적용하는_프런트엔드_테스트.jpeg)
+![수료증](/static/images/실무에_바로_적용하는_프런트엔드_테스트_1부.jpeg)

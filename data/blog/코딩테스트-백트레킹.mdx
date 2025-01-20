@@ -26,43 +26,43 @@ n 퀸 문제
  * @returns {string[][]} - 가능한 모든 배치
  */
 function solveNQueens(n) {
-    const board = Array.from({ length: n }, () => Array(n).fill(".")); // 체스판 초기화
-    const solutions = [];
+  const board = Array.from({ length: n }, () => Array(n).fill('.')) // 체스판 초기화
+  const solutions = []
 
-    // 퀸을 놓을 수 있는지 확인
-    function isSafe(row, col) {
-        for (let i = 0; i < row; i++) {
-            if (board[i][col] === "Q") return false; // 같은 열에 퀸이 있는 경우
-            if (col - (row - i) >= 0 && board[i][col - (row - i)] === "Q") return false; // 좌측 대각선
-            if (col + (row - i) < n && board[i][col + (row - i)] === "Q") return false; // 우측 대각선
-        }
-        return true;
+  // 퀸을 놓을 수 있는지 확인
+  function isSafe(row, col) {
+    for (let i = 0; i < row; i++) {
+      if (board[i][col] === 'Q') return false // 같은 열에 퀸이 있는 경우
+      if (col - (row - i) >= 0 && board[i][col - (row - i)] === 'Q') return false // 좌측 대각선
+      if (col + (row - i) < n && board[i][col + (row - i)] === 'Q') return false // 우측 대각선
+    }
+    return true
+  }
+
+  // 백트래킹 함수
+  function backtrack(row) {
+    if (row === n) {
+      solutions.push(board.map((row) => row.join(''))) // 결과 저장
+      return
     }
 
-    // 백트래킹 함수
-    function backtrack(row) {
-        if (row === n) {
-            solutions.push(board.map((row) => row.join(""))); // 결과 저장
-            return;
-        }
-
-        for (let col = 0; col < n; col++) {
-            if (isSafe(row, col)) {
-                board[row][col] = "Q"; // 퀸 배치
-                backtrack(row + 1); // 다음 행 탐색
-                board[row][col] = "."; // 백트래킹 (원상 복구)
-            }
-        }
+    for (let col = 0; col < n; col++) {
+      if (isSafe(row, col)) {
+        board[row][col] = 'Q' // 퀸 배치
+        backtrack(row + 1) // 다음 행 탐색
+        board[row][col] = '.' // 백트래킹 (원상 복구)
+      }
     }
+  }
 
-    backtrack(0);
-    return solutions;
+  backtrack(0)
+  return solutions
 }
 
 // N-Queens 실행 예제
-const n = 4;
-console.log(`N-Queens (${n}x${n}):`);
-console.log(solveNQueens(n));
+const n = 4
+console.log(`N-Queens (${n}x${n}):`)
+console.log(solveNQueens(n))
 
 /**
  * 2. Subset 생성 문제
@@ -70,28 +70,27 @@ console.log(solveNQueens(n));
  * @returns {number[][]} - 모든 부분 집합
  */
 function generateSubsets(nums) {
-    const result = [];
+  const result = []
 
-    // 백트래킹 함수
-    function backtrack(start, subset) {
-        result.push([...subset]); // 현재 부분 집합 저장
+  // 백트래킹 함수
+  function backtrack(start, subset) {
+    result.push([...subset]) // 현재 부분 집합 저장
 
-        for (let i = start; i < nums.length; i++) {
-            subset.push(nums[i]); // 요소 추가
-            backtrack(i + 1, subset); // 다음 요소 탐색
-            subset.pop(); // 백트래킹 (요소 제거)
-        }
+    for (let i = start; i < nums.length; i++) {
+      subset.push(nums[i]) // 요소 추가
+      backtrack(i + 1, subset) // 다음 요소 탐색
+      subset.pop() // 백트래킹 (요소 제거)
     }
+  }
 
-    backtrack(0, []);
-    return result;
+  backtrack(0, [])
+  return result
 }
 
 // Subset 실행 예제
-const nums = [1, 2, 3];
-console.log("모든 부분 집합:");
-console.log(generateSubsets(nums));
-
+const nums = [1, 2, 3]
+console.log('모든 부분 집합:')
+console.log(generateSubsets(nums))
 ```
 
 [백트레킹](https://www.notion.so/17a4843169a9808c97f5d42446e9cebc?pvs=21)

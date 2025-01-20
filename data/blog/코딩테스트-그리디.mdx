@@ -10,22 +10,22 @@ summary: '코딩테스트 그리디'
 
 ```jsx
 function getMinCoins(change, coins) {
-  let count = 0;
-  coins.sort((a, b) => b - a); // 동전 종류를 내림차순으로 정렬
+  let count = 0
+  coins.sort((a, b) => b - a) // 동전 종류를 내림차순으로 정렬
 
   for (let coin of coins) {
-    count += Math.floor(change / coin); // 현재 동전으로 최대한 거슬러줌
-    change %= coin; // 남은 거스름돈 계산
+    count += Math.floor(change / coin) // 현재 동전으로 최대한 거슬러줌
+    change %= coin // 남은 거스름돈 계산
   }
 
-  return count;
+  return count
 }
 
 // 예제 실행
-const coins = [1, 5, 10, 50, 100, 500];
-const change = 1260;
+const coins = [1, 5, 10, 50, 100, 500]
+const change = 1260
 
-console.log(getMinCoins(change, coins)); // 출력: 6
+console.log(getMinCoins(change, coins)) // 출력: 6
 ```
 
 그리디 알고리즘은 지역 최적해를 추구한다.
@@ -43,32 +43,32 @@ const graph = [
   [0, 3, 0, 0, 7],
   [6, 8, 0, 0, 9],
   [0, 5, 7, 9, 0],
-];
+]
 
 // 프림 알고리즘 구현
 function primMST(graph) {
-  const numNodes = graph.length;
-  const selected = Array(numNodes).fill(false); // 노드 선택 여부
-  const parent = Array(numNodes).fill(-1); // 부모 노드 저장
-  const key = Array(numNodes).fill(Infinity); // 각 노드의 최소 비용
+  const numNodes = graph.length
+  const selected = Array(numNodes).fill(false) // 노드 선택 여부
+  const parent = Array(numNodes).fill(-1) // 부모 노드 저장
+  const key = Array(numNodes).fill(Infinity) // 각 노드의 최소 비용
 
   // 시작 노드 설정 (0번 노드)
-  key[0] = 0;
+  key[0] = 0
 
   for (let i = 0; i < numNodes - 1; i++) {
     // 최소 비용을 가진 노드 찾기
-    let minKey = Infinity;
-    let minIndex = -1;
+    let minKey = Infinity
+    let minIndex = -1
 
     for (let v = 0; v < numNodes; v++) {
       if (!selected[v] && key[v] < minKey) {
-        minKey = key[v];
-        minIndex = v;
+        minKey = key[v]
+        minIndex = v
       }
     }
 
     // 최소 비용 노드 선택
-    selected[minIndex] = true;
+    selected[minIndex] = true
 
     // 인접한 노드의 키 값 갱신
     for (let v = 0; v < numNodes; v++) {
@@ -77,21 +77,20 @@ function primMST(graph) {
         !selected[v] && // 아직 선택되지 않은 노드
         graph[minIndex][v] < key[v] // 더 작은 비용이면 갱신
       ) {
-        key[v] = graph[minIndex][v];
-        parent[v] = minIndex;
+        key[v] = graph[minIndex][v]
+        parent[v] = minIndex
       }
     }
   }
 
   // 결과 출력
-  console.log("Edge \tWeight");
+  console.log('Edge \tWeight')
   for (let i = 1; i < numNodes; i++) {
-    console.log(`${parent[i]} - ${i} \t ${graph[i][parent[i]]}`);
+    console.log(`${parent[i]} - ${i} \t ${graph[i][parent[i]]}`)
   }
 }
 
-primMST(graph);
-
+primMST(graph)
 ```
 
 크루스칼 알고리즘
@@ -99,30 +98,30 @@ primMST(graph);
 ```jsx
 class UnionFind {
   constructor(size) {
-    this.parent = Array.from({ length: size }, (_, i) => i);
-    this.rank = Array(size).fill(0);
+    this.parent = Array.from({ length: size }, (_, i) => i)
+    this.rank = Array(size).fill(0)
   }
 
   find(node) {
     if (this.parent[node] !== node) {
-      this.parent[node] = this.find(this.parent[node]); // Path compression
+      this.parent[node] = this.find(this.parent[node]) // Path compression
     }
-    return this.parent[node];
+    return this.parent[node]
   }
 
   union(node1, node2) {
-    const root1 = this.find(node1);
-    const root2 = this.find(node2);
+    const root1 = this.find(node1)
+    const root2 = this.find(node2)
 
     if (root1 !== root2) {
       // Union by rank
       if (this.rank[root1] > this.rank[root2]) {
-        this.parent[root2] = root1;
+        this.parent[root2] = root1
       } else if (this.rank[root1] < this.rank[root2]) {
-        this.parent[root1] = root2;
+        this.parent[root1] = root2
       } else {
-        this.parent[root2] = root1;
-        this.rank[root1]++;
+        this.parent[root2] = root1
+        this.rank[root1]++
       }
     }
   }
@@ -130,27 +129,27 @@ class UnionFind {
 
 function kruskalAlgorithm(vertices, edges) {
   // Initialize Union-Find
-  const uf = new UnionFind(vertices);
+  const uf = new UnionFind(vertices)
 
   // Sort edges by weight
-  edges.sort((a, b) => a[2] - b[2]);
+  edges.sort((a, b) => a[2] - b[2])
 
-  const mst = [];
-  let mstCost = 0;
+  const mst = []
+  let mstCost = 0
 
   for (const [u, v, weight] of edges) {
     if (uf.find(u) !== uf.find(v)) {
-      uf.union(u, v);
-      mst.push([u, v, weight]);
-      mstCost += weight;
+      uf.union(u, v)
+      mst.push([u, v, weight])
+      mstCost += weight
     }
   }
 
-  return { mst, mstCost };
+  return { mst, mstCost }
 }
 
 // Example usage
-const vertices = 5; // Number of vertices (0 to 4)
+const vertices = 5 // Number of vertices (0 to 4)
 const edges = [
   [0, 1, 4],
   [0, 2, 3],
@@ -159,13 +158,12 @@ const edges = [
   [2, 3, 4],
   [3, 4, 2],
   [2, 4, 5],
-];
+]
 
-const { mst, mstCost } = kruskalAlgorithm(vertices, edges);
+const { mst, mstCost } = kruskalAlgorithm(vertices, edges)
 
-console.log("Minimum Spanning Tree:", mst);
-console.log("Total Cost:", mstCost);
-
+console.log('Minimum Spanning Tree:', mst)
+console.log('Total Cost:', mstCost)
 ```
 
 ```jsx
@@ -179,21 +177,21 @@ console.log("Total Cost:", mstCost);
  * @returns {number[]} - 각 동전의 개수
  */
 function coinChange(coins, amount) {
-    coins.sort((a, b) => b - a); // 큰 단위의 동전부터 사용
-    const result = [];
+  coins.sort((a, b) => b - a) // 큰 단위의 동전부터 사용
+  const result = []
 
-    for (const coin of coins) {
-        const count = Math.floor(amount / coin); // 현재 동전으로 몇 개를 사용할 수 있는지 계산
-        result.push({ coin, count });
-        amount %= coin; // 남은 금액 계산
-    }
+  for (const coin of coins) {
+    const count = Math.floor(amount / coin) // 현재 동전으로 몇 개를 사용할 수 있는지 계산
+    result.push({ coin, count })
+    amount %= coin // 남은 금액 계산
+  }
 
-    return result;
+  return result
 }
 
 // 동전 거스름돈 문제 실행 예제
-console.log("동전 거스름돈 문제:");
-console.log(coinChange([500, 100, 50, 10], 1260)); // [{coin: 500, count: 2}, ...]
+console.log('동전 거스름돈 문제:')
+console.log(coinChange([500, 100, 50, 10], 1260)) // [{coin: 500, count: 2}, ...]
 
 /**
  * 2. 최대 회의 배정 문제
@@ -202,30 +200,32 @@ console.log(coinChange([500, 100, 50, 10], 1260)); // [{coin: 500, count: 2}, ..
  * @returns {Array<{start: number, end: number}>} - 선택된 회의 배열
  */
 function scheduleMeetings(meetings) {
-    meetings.sort((a, b) => a.end - b.end); // 종료 시간이 빠른 순으로 정렬
-    const result = [];
-    let lastEndTime = 0;
+  meetings.sort((a, b) => a.end - b.end) // 종료 시간이 빠른 순으로 정렬
+  const result = []
+  let lastEndTime = 0
 
-    for (const meeting of meetings) {
-        if (meeting.start >= lastEndTime) {
-            result.push(meeting); // 선택된 회의 추가
-            lastEndTime = meeting.end; // 마지막 회의 종료 시간 갱신
-        }
+  for (const meeting of meetings) {
+    if (meeting.start >= lastEndTime) {
+      result.push(meeting) // 선택된 회의 추가
+      lastEndTime = meeting.end // 마지막 회의 종료 시간 갱신
     }
+  }
 
-    return result;
+  return result
 }
 
 // 최대 회의 배정 문제 실행 예제
-console.log("최대 회의 배정 문제:");
-console.log(scheduleMeetings([
+console.log('최대 회의 배정 문제:')
+console.log(
+  scheduleMeetings([
     { start: 1, end: 4 },
     { start: 3, end: 5 },
     { start: 0, end: 6 },
     { start: 5, end: 7 },
     { start: 8, end: 9 },
-    { start: 5, end: 9 }
-])); // [{start: 1, end: 4}, {start: 5, end: 7}, {start: 8, end: 9}]
+    { start: 5, end: 9 },
+  ])
+) // [{start: 1, end: 4}, {start: 5, end: 7}, {start: 8, end: 9}]
 
 /**
  * 3. 활동 선택 문제 (Activity Selection Problem)
@@ -234,30 +234,31 @@ console.log(scheduleMeetings([
  * @returns {number} - 최대 선택 가능한 활동 수
  */
 function activitySelection(activities) {
-    activities.sort((a, b) => a.end - b.end); // 종료 시간이 빠른 순으로 정렬
-    let count = 0;
-    let lastEndTime = 0;
+  activities.sort((a, b) => a.end - b.end) // 종료 시간이 빠른 순으로 정렬
+  let count = 0
+  let lastEndTime = 0
 
-    for (const activity of activities) {
-        if (activity.start >= lastEndTime) {
-            count++; // 활동 추가
-            lastEndTime = activity.end; // 마지막 활동 종료 시간 갱신
-        }
+  for (const activity of activities) {
+    if (activity.start >= lastEndTime) {
+      count++ // 활동 추가
+      lastEndTime = activity.end // 마지막 활동 종료 시간 갱신
     }
+  }
 
-    return count;
+  return count
 }
 
 // 활동 선택 문제 실행 예제
-console.log("활동 선택 문제:");
-console.log(activitySelection([
+console.log('활동 선택 문제:')
+console.log(
+  activitySelection([
     { start: 1, end: 3 },
     { start: 2, end: 5 },
     { start: 3, end: 9 },
     { start: 6, end: 8 },
-    { start: 8, end: 9 }
-])); // 3
-
+    { start: 8, end: 9 },
+  ])
+) // 3
 ```
 
 [그리디](https://www.notion.so/17a4843169a9802d9034db81cecb29a9?pvs=21)

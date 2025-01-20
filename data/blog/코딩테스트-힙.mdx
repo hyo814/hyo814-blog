@@ -17,86 +17,82 @@ summary: '코딩테스트 힙'
 
 ```jsx
 class MinHeap {
-    constructor() {
-        this.heap = [];
+  constructor() {
+    this.heap = []
+  }
+
+  // 부모 노드의 인덱스
+  getParentIndex(childIndex) {
+    return Math.floor((childIndex - 1) / 2)
+  }
+
+  // 왼쪽 자식 노드의 인덱스
+  getLeftChildIndex(parentIndex) {
+    return parentIndex * 2 + 1
+  }
+
+  // 오른쪽 자식 노드의 인덱스
+  getRightChildIndex(parentIndex) {
+    return parentIndex * 2 + 2
+  }
+
+  // 값 교환
+  swap(index1, index2) {
+    ;[this.heap[index1], this.heap[index2]] = [this.heap[index2], this.heap[index1]]
+  }
+
+  // 힙에 값 추가
+  insert(value) {
+    this.heap.push(value)
+    this.heapifyUp()
+  }
+
+  // 위로 힙 정렬
+  heapifyUp() {
+    let index = this.heap.length - 1
+    while (index > 0) {
+      const parentIndex = this.getParentIndex(index)
+      if (this.heap[parentIndex] <= this.heap[index]) break
+      this.swap(index, parentIndex)
+      index = parentIndex
     }
+  }
 
-    // 부모 노드의 인덱스
-    getParentIndex(childIndex) {
-        return Math.floor((childIndex - 1) / 2);
+  // 힙에서 최소값 제거
+  remove() {
+    if (this.heap.length === 0) return null
+    if (this.heap.length === 1) return this.heap.pop()
+
+    const root = this.heap[0]
+    this.heap[0] = this.heap.pop()
+    this.heapifyDown()
+    return root
+  }
+
+  // 아래로 힙 정렬
+  heapifyDown() {
+    let index = 0
+    const length = this.heap.length
+
+    while (this.getLeftChildIndex(index) < length) {
+      let smallerChildIndex = this.getLeftChildIndex(index)
+      const rightChildIndex = this.getRightChildIndex(index)
+
+      if (rightChildIndex < length && this.heap[rightChildIndex] < this.heap[smallerChildIndex]) {
+        smallerChildIndex = rightChildIndex
+      }
+
+      if (this.heap[index] <= this.heap[smallerChildIndex]) break
+      this.swap(index, smallerChildIndex)
+      index = smallerChildIndex
     }
+  }
 
-    // 왼쪽 자식 노드의 인덱스
-    getLeftChildIndex(parentIndex) {
-        return parentIndex * 2 + 1;
-    }
-
-    // 오른쪽 자식 노드의 인덱스
-    getRightChildIndex(parentIndex) {
-        return parentIndex * 2 + 2;
-    }
-
-    // 값 교환
-    swap(index1, index2) {
-        [this.heap[index1], this.heap[index2]] = [this.heap[index2], this.heap[index1]];
-    }
-
-    // 힙에 값 추가
-    insert(value) {
-        this.heap.push(value);
-        this.heapifyUp();
-    }
-
-    // 위로 힙 정렬
-    heapifyUp() {
-        let index = this.heap.length - 1;
-        while (index > 0) {
-            const parentIndex = this.getParentIndex(index);
-            if (this.heap[parentIndex] <= this.heap[index]) break;
-            this.swap(index, parentIndex);
-            index = parentIndex;
-        }
-    }
-
-    // 힙에서 최소값 제거
-    remove() {
-        if (this.heap.length === 0) return null;
-        if (this.heap.length === 1) return this.heap.pop();
-
-        const root = this.heap[0];
-        this.heap[0] = this.heap.pop();
-        this.heapifyDown();
-        return root;
-    }
-
-    // 아래로 힙 정렬
-    heapifyDown() {
-        let index = 0;
-        const length = this.heap.length;
-
-        while (this.getLeftChildIndex(index) < length) {
-            let smallerChildIndex = this.getLeftChildIndex(index);
-            const rightChildIndex = this.getRightChildIndex(index);
-
-            if (
-                rightChildIndex < length &&
-                this.heap[rightChildIndex] < this.heap[smallerChildIndex]
-            ) {
-                smallerChildIndex = rightChildIndex;
-            }
-
-            if (this.heap[index] <= this.heap[smallerChildIndex]) break;
-            this.swap(index, smallerChildIndex);
-            index = smallerChildIndex;
-        }
-    }
-
-    // 힙의 최소값 반환
-    peek() {
-        return this.heap.length > 0 ? this.heap[0] : null;
-    }
+  // 힙의 최소값 반환
+  peek() {
+    return this.heap.length > 0 ? this.heap[0] : null
+  }
 }
-
 ```
 
 ---
@@ -122,25 +118,24 @@ class MinHeap {
 
 ```jsx
 function findKthSmallest(arr, k) {
-    const minHeap = new MinHeap();
+  const minHeap = new MinHeap()
 
-    // 배열의 모든 요소를 힙에 추가
-    arr.forEach(num => minHeap.insert(num));
+  // 배열의 모든 요소를 힙에 추가
+  arr.forEach((num) => minHeap.insert(num))
 
-    // k번째 최소값 추출
-    let result;
-    for (let i = 0; i < k; i++) {
-        result = minHeap.remove();
-    }
+  // k번째 최소값 추출
+  let result
+  for (let i = 0; i < k; i++) {
+    result = minHeap.remove()
+  }
 
-    return result;
+  return result
 }
 
 // 테스트
-const arr = [7, 10, 4, 3, 20, 15];
-const k = 3;
-console.log(findKthSmallest(arr, k)); // 7
-
+const arr = [7, 10, 4, 3, 20, 15]
+const k = 3
+console.log(findKthSmallest(arr, k)) // 7
 ```
 
 ---
@@ -150,8 +145,8 @@ console.log(findKthSmallest(arr, k)); // 7
 1. `MinHeap` 클래스를 사용해 배열의 모든 값을 최소 힙에 추가합니다.
 2. 힙에서 `k`번 값을 제거하면, 그 값이 배열의 `k번째`로 작은 값이 됩니다.
 3. 시간 복잡도:
-    - 힙 삽입: `O(log N)`
-    - 힙 제거: `O(log N)`
-    - 전체: `O(N log N)` (N은 배열 길이)
+   - 힙 삽입: `O(log N)`
+   - 힙 제거: `O(log N)`
+   - 전체: `O(N log N)` (N은 배열 길이)
 
 [힙](https://www.notion.so/17a4843169a98042a7bef7a8fd7cc9f0?pvs=21)
