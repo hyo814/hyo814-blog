@@ -3,7 +3,7 @@ title: React Infinite Scroll 구현하기
 date: '2025-01-12'
 tags: [기술노트]
 draft: false
-summary: 'React Infinite Scroll 구현하기'
+summary: 'React Infinite Scroll 구현하기를 3종류로 구현'
 ---
 
 무한 스크롤은 많은 웹 애플리케이션에서 데이터 로딩 경험을 개선하기 위해 자주 사용되는 패턴입니다. React에서 무한 스크롤을 구현하는 방법은 여러 가지가 있는데, 이번 글에서는 `@tanstack/react-query`의 `useInfiniteQuery`와 `useQuery`, 그리고 `swr`의 `useSWR`을 사용하여 무한 스크롤을 구현하는 방법을 비교해보려고 합니다.
@@ -262,14 +262,3 @@ export default InfiniteScroll
 
 - **무한 스크롤 추가 로직 필요**: 무한 스크롤을 구현하기 위해 추가적인 로직을 직접 구현해야 합니다.
 - **내장 옵션 부족**: `react-query`처럼 다음 페이지 데이터를 명확하게 처리하기 위한 내장 옵션이 부족합니다.
-
----
-
-## 결론
-
-React에서 무한 스크롤을 구현하는 데는 여러 가지 방법이 있으며, 각각의 라이브러리와 Hook은 장단점이 있습니다.
-
-- **빠르고 간단한 구현을 원한다면**: `useInfiniteQuery`를 사용하는 것이 좋습니다.
-- **복잡한 상태를 직접 관리하고 싶다면**: `useQuery`나 `useSWR`을 활용해 무한 스크롤을 구현할 수 있습니다.
-
-무한 스크롤을 구현할 때, 프로젝트의 요구 사항에 따라 적절한 도구와 접근 방식을 선택하는 것이 중요합니다. 여러분의 프로젝트에 가장 적합한 도구를 선택해, 사용자에게 최적의 스크롤 경험을 제공해 보세요!

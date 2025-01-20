@@ -1,0 +1,122 @@
+---
+title: 클린코드 찍먹
+date: '2025-01-19'
+tags: [기술노트]
+draft: false
+summary: '인프런 강의 정리 : 클린코드 찍먹'
+---
+
+### 클린 코드: 효율적인 소프트웨어 개발의 핵심
+
+클린 코드는 가독성과 유지보수가 뛰어난 코드로, 개발자가 효율적으로 협업하고 문제를 해결할 수 있도록 돕습니다. 이번 블로그에서는 클린 코드를 작성하기 위한 몇 가지 핵심 원칙과 팁을 소개합니다.
+
+---
+
+#### 1. **변수 이름은 의도를 명확히 표현하라**
+
+- **문제점**: 애매한 변수명은 코드 이해를 어렵게 만듭니다. 예를 들어 `t`나 `cbm` 같은 이름은 역할을 추측하기 어렵습니다.
+- **해결책**: 변수 이름만으로도 역할을 명확히 알 수 있도록 구체적으로 작성하세요.
+
+  ```javascript
+  // Bad
+  const t = '' // 유저가 선택한 날짜
+
+  // Good
+  const selectedDate = '' // 유저가 선택한 날짜
+  ```
+
+---
+
+#### 2. **매직 넘버와 하드코딩 금지**
+
+- **문제점**: 의미 없는 숫자나 값이 코드 곳곳에 하드코딩되어 있으면 유지보수가 어렵습니다.
+- **해결책**: 매직 넘버를 상수나 열거형으로 정의하세요.
+
+  ```javascript
+  // Bad
+  if (comments.length > 140) {
+    throw new Error('exceed comment length')
+  }
+
+  // Good
+  const COMMENT_LIMIT = 140
+  if (comments.length > COMMENT_LIMIT) {
+    throw new Error('exceed comment length')
+  }
+  ```
+
+---
+
+#### 3. **함수는 순수하게 만들라 (Pure Function)**
+
+- **문제점**: 함수가 외부 상태에 의존하거나 상태를 변경하면 예측 가능성이 떨어집니다.
+- **해결책**: 입력값이 같으면 항상 같은 결과를 반환하도록 하고, 외부 상태를 건드리지 않도록 만드세요.
+
+  ```javascript
+  // Bad
+  let outerValue = 7
+  function impure(input) {
+    return input + outerValue // 외부 상태에 의존
+  }
+
+  // Good
+  function pure(input, addValue) {
+    return input + addValue // 외부 상태를 사용하지 않음
+  }
+  ```
+
+---
+
+#### 4. **부수효과(Side Effect)를 피하라**
+
+- **문제점**: 함수 내부에서 발생하는 변화가 외부 상태에 영향을 미치면, 디버깅이 어렵고 유지보수가 복잡해집니다.
+- **해결책**: 함수의 주된 책임 이외의 작업은 별도로 분리하세요.
+
+  ```javascript
+  // Bad
+  function checkPassword(password) {
+    if (password === 'cleanCode123') {
+      Session.init() // 부수효과 발생
+      return true
+    }
+    return false
+  }
+
+  // Good
+  function checkPassword(password) {
+    return password === 'cleanCode123'
+  }
+
+  const isValid = checkPassword('cleanCode123')
+  if (isValid) {
+    Session.init() // 부수효과를 함수 밖으로 분리
+  }
+  ```
+
+---
+
+#### 5. **단일 책임 원칙 (Single Responsibility Principle)**
+
+- **문제점**: 여러 가지 역할을 하는 함수는 테스트와 수정이 어렵습니다.
+- **해결책**: 함수는 하나의 일만 하도록 작성하세요.
+
+  ```javascript
+  // Bad
+  function checkPasswordAndInitSession(password) {
+    if (password === 'cleanCode123') {
+      Session.init() // 유저 세션 초기화
+      return true
+    }
+    return false
+  }
+
+  // Good
+  function checkPassword(password) {
+    return password === 'cleanCode123'
+  }
+
+  const isValid = checkPassword('cleanCode123')
+  if (isValid) {
+    Session.init()
+  }
+  ```
