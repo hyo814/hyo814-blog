@@ -16,22 +16,22 @@ summary: '코딩 테스트 탐색 이진탐색 완전탐색'
  * @returns {number} - 값의 인덱스 (없으면 -1)
  */
 function binarySearchIterative(arr, target) {
-    let left = 0;
-    let right = arr.length - 1;
+  let left = 0
+  let right = arr.length - 1
 
-    while (left <= right) {
-        const mid = Math.floor((left + right) / 2);
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2)
 
-        if (arr[mid] === target) {
-            return mid; // 타겟 값을 찾음
-        } else if (arr[mid] < target) {
-            left = mid + 1; // 오른쪽 탐색
-        } else {
-            right = mid - 1; // 왼쪽 탐색
-        }
+    if (arr[mid] === target) {
+      return mid // 타겟 값을 찾음
+    } else if (arr[mid] < target) {
+      left = mid + 1 // 오른쪽 탐색
+    } else {
+      right = mid - 1 // 왼쪽 탐색
     }
+  }
 
-    return -1; // 값이 없을 때
+  return -1 // 값이 없을 때
 }
 
 /**
@@ -43,34 +43,30 @@ function binarySearchIterative(arr, target) {
  * @returns {number} - 값의 인덱스 (없으면 -1)
  */
 function binarySearchRecursive(arr, target, left, right) {
-    if (left > right) {
-        return -1; // 값이 없을 때
-    }
+  if (left > right) {
+    return -1 // 값이 없을 때
+  }
 
-    const mid = Math.floor((left + right) / 2);
+  const mid = Math.floor((left + right) / 2)
 
-    if (arr[mid] === target) {
-        return mid; // 타겟 값을 찾음
-    } else if (arr[mid] < target) {
-        return binarySearchRecursive(arr, target, mid + 1, right); // 오른쪽 탐색
-    } else {
-        return binarySearchRecursive(arr, target, left, mid - 1); // 왼쪽 탐색
-    }
+  if (arr[mid] === target) {
+    return mid // 타겟 값을 찾음
+  } else if (arr[mid] < target) {
+    return binarySearchRecursive(arr, target, mid + 1, right) // 오른쪽 탐색
+  } else {
+    return binarySearchRecursive(arr, target, left, mid - 1) // 왼쪽 탐색
+  }
 }
 
 // 배열과 타겟 값 예제
-const sortedArray = [1, 3, 5, 7, 9, 11, 13];
-const target = 7;
+const sortedArray = [1, 3, 5, 7, 9, 11, 13]
+const target = 7
 
 // 반복문 사용
-console.log("반복문 결과:", binarySearchIterative(sortedArray, target)); // 3
+console.log('반복문 결과:', binarySearchIterative(sortedArray, target)) // 3
 
 // 재귀 사용
-console.log(
-    "재귀 결과:",
-    binarySearchRecursive(sortedArray, target, 0, sortedArray.length - 1)
-); // 3
-
+console.log('재귀 결과:', binarySearchRecursive(sortedArray, target, 0, sortedArray.length - 1)) // 3
 ```
 
 [이진 탐색 / 완전 탐색](https://www.notion.so/1764843169a980edb12df1dbc19e7b31?pvs=21)

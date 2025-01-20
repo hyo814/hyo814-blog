@@ -48,8 +48,7 @@ summary: '"WebSocket connection to 'wss:…' failed" 오류의 원인과 해결 
 - 클라이언트 코드에서 사용 중인 URL이 정확한지 확인하세요. 예를 들어:
 
 ```jsx
-const brokerURL = "wss:...";
-
+const brokerURL = 'wss:...'
 ```
 
 - URL의 도메인, 포트, 경로를 재확인하세요.
@@ -107,10 +106,9 @@ telnet 13.209.177.247 8080
 - 최소한의 WebSocket 연결 테스트 코드를 작성하여 복잡한 코드 문제를 분리하세요.
 
 ```jsx
-const socket = new WebSocket("wss:...");
-socket.onopen = () => console.log("Connection established");
-socket.onerror = (error) => console.error("Connection error:", error);
-
+const socket = new WebSocket('wss:...')
+socket.onopen = () => console.log('Connection established')
+socket.onerror = (error) => console.error('Connection error:', error)
 ```
 
 ### 3-5. **SSL/TLS 인증서 확인**

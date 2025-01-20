@@ -11,88 +11,88 @@ summary: '코딩테스트 덱'
 
 // 덱 클래스 구현
 class Deque {
-    constructor() {
-        this.items = [];
-    }
+  constructor() {
+    this.items = []
+  }
 
-    // 앞쪽에 요소 추가
-    addFront(element) {
-        this.items.unshift(element);
-    }
+  // 앞쪽에 요소 추가
+  addFront(element) {
+    this.items.unshift(element)
+  }
 
-    // 뒤쪽에 요소 추가
-    addRear(element) {
-        this.items.push(element);
-    }
+  // 뒤쪽에 요소 추가
+  addRear(element) {
+    this.items.push(element)
+  }
 
-    // 앞쪽에서 요소 제거
-    removeFront() {
-        if (this.isEmpty()) return undefined;
-        return this.items.shift();
-    }
+  // 앞쪽에서 요소 제거
+  removeFront() {
+    if (this.isEmpty()) return undefined
+    return this.items.shift()
+  }
 
-    // 뒤쪽에서 요소 제거
-    removeRear() {
-        if (this.isEmpty()) return undefined;
-        return this.items.pop();
-    }
+  // 뒤쪽에서 요소 제거
+  removeRear() {
+    if (this.isEmpty()) return undefined
+    return this.items.pop()
+  }
 
-    // 앞쪽 요소 확인
-    peekFront() {
-        return this.isEmpty() ? undefined : this.items[0];
-    }
+  // 앞쪽 요소 확인
+  peekFront() {
+    return this.isEmpty() ? undefined : this.items[0]
+  }
 
-    // 뒤쪽 요소 확인
-    peekRear() {
-        return this.isEmpty() ? undefined : this.items[this.items.length - 1];
-    }
+  // 뒤쪽 요소 확인
+  peekRear() {
+    return this.isEmpty() ? undefined : this.items[this.items.length - 1]
+  }
 
-    // 덱이 비었는지 확인
-    isEmpty() {
-        return this.items.length === 0;
-    }
+  // 덱이 비었는지 확인
+  isEmpty() {
+    return this.items.length === 0
+  }
 
-    // 덱의 크기 반환
-    size() {
-        return this.items.length;
-    }
+  // 덱의 크기 반환
+  size() {
+    return this.items.length
+  }
 
-    // 덱의 모든 요소 출력
-    print() {
-        console.log(this.items.toString());
-    }
+  // 덱의 모든 요소 출력
+  print() {
+    console.log(this.items.toString())
+  }
 }
 
 // 덱 사용 예제
-const deque = new Deque();
+const deque = new Deque()
 
 // 앞쪽에 요소 추가
-deque.addFront(10);
-deque.addFront(20);
+deque.addFront(10)
+deque.addFront(20)
 
 // 뒤쪽에 요소 추가
-deque.addRear(30);
-deque.addRear(40);
+deque.addRear(30)
+deque.addRear(40)
 
 // 덱 출력
-console.log("덱 상태:");
-deque.print(); // 20,10,30,40
+console.log('덱 상태:')
+deque.print() // 20,10,30,40
 
 // 앞쪽과 뒤쪽에서 요소 제거
-console.log("앞쪽에서 제거:", deque.removeFront()); // 20
-console.log("뒤쪽에서 제거:", deque.removeRear());  // 40
+console.log('앞쪽에서 제거:', deque.removeFront()) // 20
+console.log('뒤쪽에서 제거:', deque.removeRear()) // 40
 
 // 덱 상태 확인
-console.log("덱 상태:");
-deque.print(); // 10,30
+console.log('덱 상태:')
+deque.print() // 10,30
 
 // 덱의 앞쪽과 뒤쪽 요소 확인
-console.log("앞쪽 요소:", deque.peekFront()); // 10
-console.log("뒤쪽 요소:", deque.peekRear());  // 30
+console.log('앞쪽 요소:', deque.peekFront()) // 10
+console.log('뒤쪽 요소:', deque.peekRear()) // 30
 
 // 덱의 크기와 비어있는지 확인
-console.log("덱 크기:", deque.size());       // 2
-console.log("덱이 비었는가:", deque.isEmpty()); // false
+console.log('덱 크기:', deque.size()) // 2
+console.log('덱이 비었는가:', deque.isEmpty()) // false
 ```
 
 [덱](https://www.notion.so/17a4843169a980208a54efc1af2c651d?pvs=21)
