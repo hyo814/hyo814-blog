@@ -1,0 +1,106 @@
+---
+title: React에서 스크롤 위치 기억하기: `useScrollMemory` 훅
+date: '2025-02-21'
+tags: [기술노트]
+draft: false
+summary: '웹 애플리케이션에서 사용자가 특정 페이지에서 스크롤한 위치를 기억하고, 페이지를 다시 방문했을 때 해당 위치로 자동으로 스크롤하는 기능'
+---
+
+### 1. `useScrollMemory` 훅 구현
+
+```tsx
+import { useEffect } from 'react';
+
+export const useScrollMemory = (): void => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const key = `scroll-position`;
+
+    // 브라우저의 기본 스크롤 복원을 방지
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    // 스크롤 이벤트로 현재 위치 저장 (0이 아닌 값만 저장)
+    const handleScroll = (): void => {
+      const scrollY = window.scrollY;
+      if (scrollY > 0) {
+        sessionStorage.setItem(key, scrollY.toString());
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      const finalScroll = window.scrollY;
+      if (finalScroll > 0) {
+        sessionStorage.setItem(key, finalScroll.toString());
+      }
+    };
+  }, []);
+};
+```
+
+#### ✅ 주요 기능
+
+1. `sessionStorage`를 활용해 스크롤 위치를 저장합니다.
+2. `window.history.scrollRestoration = 'manual'`을 설정해 브라우저의 기본 스크롤 복원 기능을 비활성화합니다.
+3. 페이지 이동 시 스크롤 이벤트를 감지해 `sessionStorage`에 현재 위치를 저장합니다.
+4. 언마운트될 때 마지막 스크롤 위치를 한 번 더 저장합니다.
+
+---
+
+### 2. `useScrollMemory` 훅 적용
+
+`useScrollMemory` 훅을 적용하여 페이지 방문 시 기존 스크롤 위치를 복원하는 코드입니다.
+
+```tsx
+'use client';
+import { useEffect } from 'react';
+import { useScrollMemory } from '@/hooks/useScrollMemory';
+
+const PageComponent = () => {
+  useScrollMemory();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedPosition = sessionStorage.getItem('scroll-position');
+      if (savedPosition) {
+        window.scrollTo(0, parseInt(savedPosition, 10));
+      }
+    }
+  }, []);
+
+  return (
+    <div style={{ height: '200vh', padding: '20px' }}>
+      <h1>스크롤 메모리 테스트</h1>
+      <p>이 페이지에서 스크롤한 위치를 기억하고, 다시 방문하면 해당 위치로 이동합니다.</p>
+    </div>
+  );
+};
+
+export default PageComponent;
+```
+
+#### ✅ 적용 결과
+
+- 페이지를 스크롤한 후 새로고침해도 기존 위치를 유지합니다.
+- 페이지를 벗어나고 다시 돌아와도 마지막 스크롤 위치로 자동 이동합니다.
+
+---
+
+### 3. `useScrollMemory` 활용 예시
+
+이 훅을 사용하면 다음과 같은 상황에서 유용합니다.
+
+- **목록형 페이지 (게시판, 상품 리스트, 예약 목록 등)**: 스크롤이 긴 페이지에서 사용자가 이전에 확인한 위치를 유지할 수 있습니다.
+- **페이지 이동 후 돌아왔을 때**: 특정 페이지를 방문한 후 다시 돌아왔을 때 스크롤 위치가 유지됩니다.
+- **SPA (Single Page Application)에서 자연스러운 UX 제공**: 사용자가 새로고침해도 원하는 위치를 유지할 수 있습니다.
+
+---
+
+### 4. 결론
+
+React 및 Next.js 프로젝트에서 `useScrollMemory` 훅을 사용하면 간단한 코드로 스크롤 위치를 기억하고 복원할 수 있습니다. 이를 통해 사용자 경험을 향상시키고, 특히 긴 페이지를 다루는 애플리케이션에서 큰 도움이 될 것입니다.

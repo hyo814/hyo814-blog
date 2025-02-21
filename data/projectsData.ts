@@ -13,7 +13,7 @@ const projectsData: Project[] = [
     href: 'https://hyo814-blog.vercel.app/blog/%EC%A7%81%EC%A7%B1-%EA%B1%B4%EA%B0%95-%EC%A7%81%EC%9E%A5%EC%9D%B8%EC%9D%84-%EC%9C%84%ED%95%9C-%EC%98%AC%EC%9D%B8%EC%9B%90-%ED%97%AC%EC%8A%A4%EC%BC%80%EC%96%B4-%EC%84%9C%EB%B9%84%EC%8A%A4-%EA%B0%9C%EB%B0%9C',
   },
   {
-    title: '여행을 함께, TripTune (예정)',
+    title: '여행을 함께, TripTune',
     description: `함께 여행계획을 작성하는 웹프로젝트`,
     imgSrc: '/static/images/triptune/image12.png',
     href: 'https://hyo814-blog.vercel.app/blog/%EC%9B%B9%20%EA%B8%B0%EC%88%A0%EB%A1%9C%20%EB%A7%8C%EB%93%9C%EB%8A%94%20%ED%98%91%EC%97%85%ED%98%95%20%EC%97%AC%ED%96%89%20%EA%B3%84%ED%9A%8D%20%ED%94%8C%EB%9E%AB%ED%8F%BC%20TripTune%20%EA%B0%9C%EB%B0%9C',
