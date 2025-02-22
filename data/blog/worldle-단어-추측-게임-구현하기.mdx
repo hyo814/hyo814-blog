@@ -7,26 +7,27 @@ summary: 'Worldle 단어 추측 게임 구현하기 사이드 프로젝트'
 ---
 
 # ✔ Worldle : 단어 추측 게임 구현하기
+
 - 6번의 시도 안에 오늘의 워들을 알아내세요.
 - 워들은 플레이어가 6번의 시도로 주어진 5글자의 영어단어를 추측하는 게임입니다.
 - 이 프로그램은 React와 Next.js를 기반으로 구축되며, Recoil을 사용한 상태 관리를 통해 게임의 상태를 효과적으로 관리합니다.
 - 게임의 주요 목표는 사용자가 제한된 횟수의 시도 안에 숨겨진 단어를 맞히는 것입니다.
 
-
 ## ✔ 기술 스택 사용 이유
-  - 1. REACT :
+
+- 1. REACT :
 - 컴포넌트 기반 아키텍처
 - 상태 관리의 용이성
 - 반응형 및 동적 UI
 
-
   - 2. NEXT :
+
 - SSR과 SSG : 더 빠르게 로드 되기 위함
 - 라우팅의 용이성
 - 빌드 최적화와 기능
 
-
   - 3. RECOIL :
+
 - 상태 관리를 더 간편하게 만듦
 - 여러 상태 관리가 있지만 선택한 이유
 - 컴포넌트 간 상태 공유
@@ -35,38 +36,45 @@ summary: 'Worldle 단어 추측 게임 구현하기 사이드 프로젝트'
 - 유연성과 확장성
 - REACT와 유사한 패러다임 적용
 
-
 ### ✔ 사전 요구사항 (개발 당시 조건 )
+
 - `node` : `v20.11.0`,
 - `npm` : `v10.2.4`,
 - `next`: `v12.3.4`,
 - `react`: `v18.2.0`,
 
-
 ### ✔ 프로그램 실행 방법
- - 1. GitHub에서 원하는 저장소로 이동합니다.
- - 2. 저장소 페이지의 우측 상단에서 "Code" 버튼을 클릭합니다.
- - 3. "HTTPS" 탭이 선택되어 있는지 확인하고, 제공된 URL을 복사합니다.
- - 4. 터미널이나 명령 프롬프트를 열고, 파일을 클론하고자 하는 로컬 디렉토리로 이동합니다.
- - 5. 다음 명령어를 사용하여 저장소를 클론합니다.
-```
+
+- 1.  GitHub에서 원하는 저장소로 이동합니다.
+- 2.  저장소 페이지의 우측 상단에서 "Code" 버튼을 클릭합니다.
+- 3.  "HTTPS" 탭이 선택되어 있는지 확인하고, 제공된 URL을 복사합니다.
+- 4.  터미널이나 명령 프롬프트를 열고, 파일을 클론하고자 하는 로컬 디렉토리로 이동합니다.
+- 5.  다음 명령어를 사용하여 저장소를 클론합니다.
+
+````
 $ git clone [복사한 URL]
      ```
  - 6. 해당 되는 디렉토리 위치에서 아래 명령어를 실행하여 node 모듈을 설치합니다.
-```
+````
+
 $ yarn install
-     ```
- - 7. yarn 모듈 설치가 완료되면, 아래 명령어로 프론트를 빌드합니다.
 ```
+
+- 7.  yarn 모듈 설치가 완료되면, 아래 명령어로 프론트를 빌드합니다.
+
+````
 $ yarn build
      ```
  * 개발을 진행하고자 한다면 8- 선택 1번 , 프로덕션을 진행 한다면 8- 선택 2번을 실행합니다.
  - 8. 빌드가 완료되면, 아래 명령어로 로컬 페이지로 접속 합니다. (개발 모드) - 선택 1
-```
+````
+
 $ yarn dev
-     ```
- - 8. 빌드가 완료되면, 아래 명령어로 로컬 페이지로 접속 합니다. (프로덕션 모드) - 선택 2
 ```
+
+- 8.  빌드가 완료되면, 아래 명령어로 로컬 페이지로 접속 합니다. (프로덕션 모드) - 선택 2
+
+````
 $ yarn start
      ```
  - 9. http://localhost:3000 로 접속하여 페이지에 대한 기능 확인이 가능합니다.
@@ -75,60 +83,62 @@ $ yarn start
 
 
 ### ✔ 파일 구조
-```
+````
+
 Wordle
 ├── src
-│   ├── __test__  # 테스트파일
-│   │   ├── Answer.spec.tsx
-│   │   ├── Complete.spec.tsx
-│   │   ├── Game.spec.tsx
-│   │   └── Index.spec.tsx
-│   │
-│   ├── components
-│   │   ├── Common  # 공통
-│   │   │   ├── CommonAlert.tsx
-│   │   │   └── DecryptWithRetry.tsx
-│   │   ├── Game  # 게임적용
-│   │   │   ├── Board
-│   │   │   │   ├── Spelling.tsx
-│   │   │   │   └── Board.tsx
-│   │   │   ├── KeyBoard
-│   │   │   │   ├── Key.tsx
-│   │   │   │   └── KeyBoard.tsx
-│   │   │   └── WordleView.ts
-│   │
-│   ├── pages  # 페이지뷰
-│   │   ├── Answer  # 워들생성
-│   │   │   └── index.tsx
-│   │   ├── api #API
-│   │   │   └── index.ts
-│   │   ├── Complete  # 게임성공/실패 후
-│   │   │   └── index.tsx
-│   │   ├── Game  # 게임(워들)
-│   │   │   └── index.tsx
-│   │   ├── _app.tsx
-│   │   ├── _document.tsx
-│   │   └── index.tsx
-│   │
-│   ├── state  # recoil 적용
-│   │   ├── answer.ts
-│   │   ├── complete.ts
-│   │   ├── game.ts
-│   │   ├── index.ts
-│   │   └── snackbar.ts
-│   │
-│   ├── styles  # css 적용
-│   │   ├── Board.module.css
-│   │   ├── Error.module.css
-│   │   ├── Game.module.css
-│   │   ├── Index.module.css
-│   │   ├── Key.module.css
-│   │   ├── KeyBoard.module.css
-│   │   └── Spelling.module.css
-│   │
-│   └── types  # 타입 적용
-│       └── index.ts
-```
+│ ├── **test** # 테스트파일
+│ │ ├── Answer.spec.tsx
+│ │ ├── Complete.spec.tsx
+│ │ ├── Game.spec.tsx
+│ │ └── Index.spec.tsx
+│ │
+│ ├── components
+│ │ ├── Common # 공통
+│ │ │ ├── CommonAlert.tsx
+│ │ │ └── DecryptWithRetry.tsx
+│ │ ├── Game # 게임적용
+│ │ │ ├── Board
+│ │ │ │ ├── Spelling.tsx
+│ │ │ │ └── Board.tsx
+│ │ │ ├── KeyBoard
+│ │ │ │ ├── Key.tsx
+│ │ │ │ └── KeyBoard.tsx
+│ │ │ └── WordleView.ts
+│ │
+│ ├── pages # 페이지뷰
+│ │ ├── Answer # 워들생성
+│ │ │ └── index.tsx
+│ │ ├── api #API
+│ │ │ └── index.ts
+│ │ ├── Complete # 게임성공/실패 후
+│ │ │ └── index.tsx
+│ │ ├── Game # 게임(워들)
+│ │ │ └── index.tsx
+│ │ ├── \_app.tsx
+│ │ ├── \_document.tsx
+│ │ └── index.tsx
+│ │
+│ ├── state # recoil 적용
+│ │ ├── answer.ts
+│ │ ├── complete.ts
+│ │ ├── game.ts
+│ │ ├── index.ts
+│ │ └── snackbar.ts
+│ │
+│ ├── styles # css 적용
+│ │ ├── Board.module.css
+│ │ ├── Error.module.css
+│ │ ├── Game.module.css
+│ │ ├── Index.module.css
+│ │ ├── Key.module.css
+│ │ ├── KeyBoard.module.css
+│ │ └── Spelling.module.css
+│ │
+│ └── types # 타입 적용
+│ └── index.ts
+
+````
 
 
 ### ✔ 필수 요구사항:
@@ -212,3 +222,4 @@ Wordle
 - 게임 결과 표시: 게임의 플레이 시간, 승리 횟수, 승률, 시도 통계, 총 게임 횟수를 화면에 표시
 - 게임 재시작 처리: "게임 재시작하기" 버튼을 클릭하면 모든 게임 데이터를 초기화하고 초기 화면으로 리디렉션
 - 뒤로 가기 방지 및 처리: 사용자가 브라우저의 뒤로 가기를 시도할 때 초기 화면으로 넘어가는 로직을 처리하고, 페이지를 벗어나려 할 때 경고를 표시
+````

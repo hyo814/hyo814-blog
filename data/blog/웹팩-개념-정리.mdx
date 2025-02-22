@@ -11,9 +11,11 @@ summary: ' 인프런 강의 정리 : 프론트엔드 개발 웹팩 '
 > **참고 자료**: [Webpack 공식 문서](https://webpack.js.org), [MDN Web Docs](https://developer.mozilla.org/docs/Web/JavaScript)
 
 ## **1. Webpack의 철학과 배경**
+
 Webpack은 **모듈 번들러(Module Bundler)** 로, 여러 개의 소스(HTML, CSS, JS, 이미지, 폰트 등)를 하나 이상의 번들로 통합 및 최적화한다. 근본적으로, 프로젝트 규모가 커지면서 발생하는 **복잡한 의존성 관리**와 **성능 병목 현상**을 해결하기 위해 만들어졌다. 최신 JavaScript 문법, TypeScript, SASS 등의 프리프로세서 사용도 일반적이므로, 코드 번들링 및 트랜스파일링 기능은 현대 웹 개발에서 매우 중요한 역할을 담당한다.
 
 ### **왜 Webpack인가?**
+
 1. **통합 빌드 환경**: 로더(Loader)와 플러그인(Plugin)을 통해 모든 리소스를 한 곳에서 관리하고, 배포 가능한 형태로 번들링한다.
 2. **코드 스플리팅(Code Splitting)**: 초기에 필요한 코드만 로드하고, 추가적인 의존성은 비동기로 가져오도록 설계할 수 있어 성능 최적화에 강점이 있다.
 3. **Tree Shaking**: 사용하지 않는 코드를 제거해 최종 번들을 최소화한다.
@@ -24,6 +26,7 @@ Webpack은 **모듈 번들러(Module Bundler)** 로, 여러 개의 소스(HTML, 
 ## **2. Webpack의 전반적인 구조**
 
 ### **2.1 Entry (엔트리)**
+
 엔트리는 애플리케이션의 **시작점**이며, Webpack은 엔트리에 지정된 파일로부터 의존성을 추적하여 필요한 자원을 모두 가져와 번들링한다.
 
 ```js
@@ -31,7 +34,7 @@ Webpack은 **모듈 번들러(Module Bundler)** 로, 여러 개의 소스(HTML, 
 module.exports = {
   entry: './src/index.js', // 단일 엔트리
   // ...
-};
+}
 ```
 
 엔트리를 객체 형태로 구성하여 다중 번들을 생성할 수도 있다.
@@ -40,13 +43,14 @@ module.exports = {
 module.exports = {
   entry: {
     main: './src/main.js',
-    admin: './src/admin.js'
+    admin: './src/admin.js',
   },
   // ...
-};
+}
 ```
 
 ### **2.2 Output (출력)**
+
 엔트리에서 불러온 파일들을 하나의 번들로 합쳐 **어떤 경로(path)** 와 **어떤 이름(filename)** 으로 배포할지 지정한다.
 
 ```js
@@ -57,13 +61,14 @@ module.exports = {
     publicPath: '/',
   },
   // ...
-};
+}
 ```
 
 - `filename`: 최종 출력되는 JS 파일명. 해시 값을 포함하면 변경 여부를 캐싱 전략에 활용 가능하다.
 - `publicPath`: 배포 시에 CDN 또는 특정 서브 경로를 사용하려 할 때 설정한다.
 
 ### **2.3 Loaders (로더)**
+
 Webpack은 **JS, JSON 파일** 이외에는 원칙적으로 해석할 수 없으므로, HTML, CSS, 폰트, 이미지 등 다양한 리소스를 번들에 포함시키기 위해 **로더**를 적용한다.
 
 1. **Babel Loader**
@@ -77,6 +82,7 @@ Webpack은 **JS, JSON 파일** 이외에는 원칙적으로 해석할 수 없으
    - 이미지, 폰트 같은 바이너리 파일을 번들에 포함하거나 Base64로 인라인 처리
 
 #### **로더 적용 예시**
+
 ```js
 module.exports = {
   module: {
@@ -84,11 +90,11 @@ module.exports = {
       {
         test: /\.js$/,
         exclude: /node_modules/,
-        use: 'babel-loader' // Babel을 통해 트랜스파일링
+        use: 'babel-loader', // Babel을 통해 트랜스파일링
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader'] // CSS, Style 로더 적용
+        use: ['style-loader', 'css-loader'], // CSS, Style 로더 적용
       },
       {
         test: /\.(png|jpg|gif|svg)$/,
@@ -96,16 +102,17 @@ module.exports = {
           loader: 'url-loader',
           options: {
             limit: 8192, // 8KB 이하 이미지는 Base64 인라인 처리
-            name: '[name].[hash].[ext]'
-          }
-        }
-      }
-    ]
-  }
-};
+            name: '[name].[hash].[ext]',
+          },
+        },
+      },
+    ],
+  },
+}
 ```
 
 ### **2.4 Plugins (플러그인)**
+
 Webpack의 **빌드 과정**을 확장해주는 도구이다. 빌드 결과물 최적화, HTML 자동 생성, 환경변수 정의, CSS 파일 분리 등 다양한 기능을 수행한다.
 
 1. **HTML Webpack Plugin**: HTML 파일 자동 생성 및 `<script>` 태그 삽입
@@ -115,27 +122,29 @@ Webpack의 **빌드 과정**을 확장해주는 도구이다. 빌드 결과물 �
 5. **TerserPlugin**: JS 압축 및 난독화 (프로덕션 빌드 시 주로 사용)
 
 #### **플러그인 적용 예시**
+
 ```js
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 module.exports = {
   plugins: [
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
-      template: './src/index.html'
+      template: './src/index.html',
     }),
     new MiniCssExtractPlugin({
-      filename: '[name].[contenthash].css'
-    })
-  ]
-};
+      filename: '[name].[contenthash].css',
+    }),
+  ],
+}
 ```
 
 ---
 
 ## **3. 실시간 개발 환경: Webpack Dev Server**
+
 코드를 수정할 때마다 직접 번들링하고 새로고침하는 것은 불편하다. **Webpack Dev Server**를 사용하면 파일 변경 시 자동으로 리로드하며, HMR(Hot Module Replacement)을 통해 **전체 페이지 새로고침 없이 변경된 부분만 갱신**할 수 있다.
 
 ```bash
@@ -147,9 +156,9 @@ module.exports = {
   devServer: {
     port: 3000,
     static: path.join(__dirname, 'dist'),
-    hot: true
-  }
-};
+    hot: true,
+  },
+}
 ```
 
 개발 서버 실행 후 `localhost:3000`으로 접속하면 실시간 반영을 확인할 수 있다.
@@ -159,32 +168,40 @@ module.exports = {
 ## **4. 고급 최적화 기법**
 
 ### **4.1 Code Splitting (코드 분할)**
+
 애플리케이션 규모가 커질수록 단일 번들이 너무 커지게 되는데, 코드 스플리팅으로 **특정 시점**에 필요한 모듈만 불러와 성능을 최적화한다.
 
 #### **동적 import() 활용 예시**
+
 ```js
 // src/index.js
 function loadAdmin() {
   import('./admin.js').then((module) => {
-    module.initAdminPanel();
-  });
+    module.initAdminPanel()
+  })
 }
 ```
+
 이를 Webpack이 감지하면 별도의 청크로 분리한다.
 
 ### **4.2 Tree Shaking**
+
 사용되지 않는 코드를 제거하여 최종 번들 크기를 줄여주는 기능이다. **`mode: 'production'`** 상태에서 동작하며, ECMAScript 모듈 형태(ESM)로 작성된 코드를 효율적으로 제거한다.
 
 ### **4.3 Caching을 위한 파일 이름 관리**
+
 빌드 결과물이 변경될 때만 해시가 바뀌도록 관리하면 브라우저 캐시를 효과적으로 활용할 수 있다.
+
 ```js
 output: {
   filename: '[name].[contenthash].js'
 }
 ```
+
 이렇게 설정하면 파일 내용이 바뀌어야만 해시 값이 달라져, 불필요한 캐시 무효화를 방지한다.
 
 ### **4.4 Webpack Merge (환경별 설정 분리)**
+
 프로젝트가 커지면 **개발용(development)** 과 **배포용(production)** 설정을 분리하여 관리하는 편이 효율적이다.
 
 ```bash
@@ -196,30 +213,30 @@ npm install webpack-merge --save-dev
 module.exports = {
   entry: './src/index.js',
   // 모든 환경에서 공통되는 설정
-};
+}
 ```
 
 ```js
 // webpack.dev.js
-const { merge } = require('webpack-merge');
-const common = require('./webpack.common.js');
+const { merge } = require('webpack-merge')
+const common = require('./webpack.common.js')
 
 module.exports = merge(common, {
   mode: 'development',
   devtool: 'inline-source-map',
   // ...
-});
+})
 ```
 
 ```js
 // webpack.prod.js
-const { merge } = require('webpack-merge');
-const common = require('./webpack.common.js');
+const { merge } = require('webpack-merge')
+const common = require('./webpack.common.js')
 
 module.exports = merge(common, {
   mode: 'production',
   // 최적화, 압축, 캐싱 관련 설정
-});
+})
 ```
 
 ---
@@ -228,10 +245,10 @@ module.exports = merge(common, {
 
 ```js
 // webpack.config.js
-const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const path = require('path')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 module.exports = {
   entry: './src/index.js',
@@ -246,27 +263,27 @@ module.exports = {
       {
         test: /\.js$/,
         exclude: /node_modules/,
-        use: 'babel-loader'
+        use: 'babel-loader',
       },
       {
         test: /\.css$/,
-        use: [MiniCssExtractPlugin.loader, 'css-loader']
+        use: [MiniCssExtractPlugin.loader, 'css-loader'],
       },
       {
         test: /\.(png|jpg|jpeg|gif|svg)$/,
         type: 'asset',
         // webpack 5에서 'asset/resource' 또는 'asset/inline' 선택 가능
-      }
-    ]
+      },
+    ],
   },
   plugins: [
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
-      template: './src/index.html'
+      template: './src/index.html',
     }),
     new MiniCssExtractPlugin({
-      filename: '[name].[contenthash].css'
-    })
+      filename: '[name].[contenthash].css',
+    }),
   ],
   devServer: {
     static: path.join(__dirname, 'dist'),
@@ -277,9 +294,9 @@ module.exports = {
     splitChunks: {
       chunks: 'all',
     },
-    runtimeChunk: 'single'
-  }
-};
+    runtimeChunk: 'single',
+  },
+}
 ```
 
 - **CleanWebpackPlugin**: `dist` 폴더 초기화
@@ -290,6 +307,7 @@ module.exports = {
 ---
 
 ## **6. 번들링 이후에 더 나아가기**
+
 1. **Source Map**: 프로덕션 모드에서도 소스 맵을 생성하여 디버깅을 수월하게 할 수 있다.
 2. **모듈 연합(Module Federation)**: 마이크로 프론트엔드(Micro Frontend) 구조를 적용할 때 사용한다.
 3. **Server-Side Rendering(SSR)**: React, Vue 등 프레임워크와 SSR을 결합할 때, Webpack 설정을 약간씩 커스텀해야 한다.
@@ -297,12 +315,14 @@ module.exports = {
 ---
 
 ## **정리**
+
 1. **Webpack**은 복잡해 보이지만, 각 **핵심 개념(Entry, Output, Loader, Plugin, Dev Server, Mode)** 을 이해하면 훨씬 수월하다.
 2. 규모가 커질수록 **코드 스플리팅**, **Tree Shaking**, **Caching** 등 고급 기법을 적극적으로 도입해 최적화 성능을 확보한다.
 3. 개발 편의를 위해 **Webpack Dev Server**와 **HMR**을 적극 활용한다.
 4. 배포 환경에서는 **production 모드**, **MiniCssExtractPlugin**, **TerserPlugin** 등을 통해 번들을 최소화한다.
 
 > **추가 참고 자료**:
+>
 > - [Webpack 공식 문서](https://webpack.js.org)
 > - [MDN Web Docs - JavaScript 모듈](https://developer.mozilla.org/docs/Web/JavaScript/Guide/Modules)
 
