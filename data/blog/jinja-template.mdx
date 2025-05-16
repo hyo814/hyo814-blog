@@ -83,7 +83,7 @@ summary: '장고에서 템플릿을 어떻게 사용 해야할지에 대한 정�
 | `{% import %}`   | 매크로 임포트      | `<code>{% import 'macros.html' as m %}</code>` |
 | `{% from %}`     | 특정 매크로 임포트 | `<code>{% from 'macros.html' import input %}</code>` |
 | `{% with %}`     | 로컬 변수 설정     | `<code>{% with total = sum %}{{ total }}{% endwith %}</code>` |
-| `{% autoescape %}` | 자동 이스케이프  | `<code>{% autoescape true %}{{ trusted_html|safe }}{% endautoescape %}</code>` |
+| `{% autoescape %}` | 자동 이스케이프  | `<code>{% autoescape true %}{{ trusted_html }}{% endautoescape %}</code>` |
 | `{% do %}`       | 출력 없는 실행     | `<code>{% do mylist.append(3) %}</code>`      |
 
 ---
