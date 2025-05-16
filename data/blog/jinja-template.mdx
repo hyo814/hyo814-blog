@@ -92,15 +92,15 @@ summary: '장고에서 템플릿을 어떻게 사용 해야할지에 대한 정�
 
 | 필터             | 설명               | 예시                               |
 | ---------------- | ------------------ | ---------------------------------- |
-| `length`         | 길이              | `<code>{{ items|length }}</code>`   |
-| `upper`, `lower` | 대/소문자 변환    | `<code>{{ name|upper }}</code>`     |
-| `replace`        | 문자열 치환        | `<code>{{ text|replace('old','new') }}</code>` |
-| `default`        | 기본값 설정       | `<code>{{ name|default('이름 없음') }}</code>` |
-| `safe`           | HTML 안전 출력    | `<code>{{ html_code|safe }}</code>`  |
-| `truncate`       | 잘라내기          | `<code>{{ content|truncate(30) }}</code>` |
-| `int`, `float`   | 타입 변환         | `<code>{{ price|float }}</code>`     |
-| `join`           | 리스트 합치기     | `<code>{{ items|join(', ') }}</code>`|
-| `striptags`      | 태그 제거         | `<code>{{ html|striptags }}</code>`  |
+| `length`         | 길이              | `<code>{{ length }}</code>`   |
+| `upper`, `lower` | 대/소문자 변환    | `<code>{{ upper }}</code>`     |
+| `replace`        | 문자열 치환        | `<code>{{ replace('old','new') }}</code>` |
+| `default`        | 기본값 설정       | `<code>{{ default('이름 없음') }}</code>` |
+| `safe`           | HTML 안전 출력    | `<code>{{ safe }}</code>`  |
+| `truncate`       | 잘라내기          | `<code>{{ truncate(30) }}</code>` |
+| `int`, `float`   | 타입 변환         | `<code>{{ float }}</code>`     |
+| `join`           | 리스트 합치기     | `<code>{{ join(', ') }}</code>`|
+| `striptags`      | 태그 제거         | `<code>{{ striptags }}</code>`  |
 
 ---
 
