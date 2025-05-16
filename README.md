@@ -1,4 +1,4 @@
-# 👩‍💻 Frontend Developer
+# 👩‍💻 dddWEB Developer
 
 ## 💚 자기소개
 

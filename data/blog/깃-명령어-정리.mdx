@@ -1,0 +1,147 @@
+---
+title: 깃 명령어 정리
+date: '2025-04-23'
+tags: [기술 노트]
+draft: false
+summary: '깃 명령어 정리'
+---
+
+# 깃 명령어 정리
+
+## 기본 설정
+
+| 목적 | 명령어 |
+| --- | --- |
+| 사용자 이름 설정 | `git config --global user.name "이름"` |
+| 사용자 이메일 설정 | `git config --global user.email "이메일"` |
+| 설정 확인 | `git config --list` |
+
+---
+
+## 저장소 초기화 & 클론
+
+| 목적 | 명령어 |
+| --- | --- |
+| Git 저장소 초기화 | `git init` |
+| 원격 저장소 클론 | `git clone <url>` |
+
+---
+
+## 작업 & 커밋
+
+| 목적 | 명령어 |
+| --- | --- |
+| 변경 사항 확인 | `git status` |
+| 변경 파일 추적 시작 | `git add <파일>` |
+| 전체 파일 추가 | `git add .` |
+| 커밋 생성 | `git commit -m "메시지"` |
+| 커밋 수정 (메시지만) | `git commit --amend -m "수정된 메시지"` |
+
+---
+
+## 브랜치
+
+| 목적 | 명령어 |
+| --- | --- |
+| 브랜치 목록 확인 | `git branch` |
+| 브랜치 생성 | `git branch <브랜치명>` |
+| 브랜치 이동 | `git checkout <브랜치명>` |
+| 브랜치 생성+이동 | `git checkout -b <브랜치명>` |
+| 브랜치 삭제 | `git branch -d <브랜치명>` |
+
+---
+
+## 병합(Merge) & 충돌
+
+| 목적 | 명령어 |
+| --- | --- |
+| 브랜치 병합 | `git merge <브랜치명>` |
+| 병합 충돌 시 파일 수정 후 커밋 | `git add <파일>` → `git commit` |
+
+---
+
+## 원격 저장소 연결 & 동기화
+
+| 목적 | 명령어 |
+| --- | --- |
+| 원격 저장소 추가 | `git remote add origin <url>` |
+| 원격 저장소 확인 | `git remote -v` |
+| 푸시 | `git push origin <브랜치명>` |
+| 풀 | `git pull origin <브랜치명>` |
+| 기본 브랜치 설정 | `git push -u origin <브랜치명>` |
+
+---
+
+## 되돌리기 & 리셋
+
+| 목적 | 명령어 |
+| --- | --- |
+| 마지막 커밋만 취소 (변경사항은 보존) | `git reset --soft HEAD~1` |
+| 마지막 커밋+변경사항 되돌리기 | `git reset --hard HEAD~1` |
+| 특정 파일 이전 상태로 복원 | `git checkout HEAD <파일>` |
+| 특정 커밋으로 되돌림 (되돌린 커밋 추가됨) | `git revert <커밋ID>` |
+
+---
+
+## 로그 & 기록
+
+| 목적 | 명령어 |
+| --- | --- |
+| 커밋 로그 확인 | `git log` |
+| 간단 로그 | `git log --oneline` |
+| 브랜치 그래프 보기 | `git log --oneline --graph --all` |
+
+---
+
+## 정리 및 기타
+
+| 목적 | 명령어 |
+| --- | --- |
+| 캐시된 파일 제거 | `git rm --cached <파일>` |
+| .gitignore 반영 | `git rm -r --cached .` → `git add .` → `git commit -m ".gitignore 적용"` |
+| 임시 저장 (stash) | `git stash` |
+| 임시 저장 복원 | `git stash pop` |
+
+---
+
+### 실무에서 자주 쓰는 Git 명령어 TOP 10
+
+1. **`git status`**
+
+→ 지금 상태가 어떤지 확인하는 기본 중의 기본.
+
+2. **`git add .` + `git commit -m "메시지"`**
+
+→ 변경사항을 저장할 때. (자동화에서도 백그라운드로 항상 쓰이는 조합)
+
+3. **`git log --oneline --graph --all`**
+
+→ 브랜치가 꼬였나? 병합 어떻게 됐지? 시각적으로 확인할 수 있는 명령어.
+
+4. **`git checkout -b <브랜치명>`**
+
+→ 브랜치 새로 만들고 바로 이동.
+
+5. **`git merge <브랜치명>`**
+
+→ 작업 끝난 브랜치 병합할 때. 충돌 발생 여부도 여기서 나옴.
+
+6. **`git pull origin <브랜치명>`**
+
+→ 팀원 작업 최신 코드 가져올 때.
+
+7. **`git push origin <브랜치명>`**
+
+→ 내 작업을 원격으로 올릴 때.
+
+8. **`git reset --hard HEAD~1`**
+
+→ 잘못 커밋했을 때 **되돌리기**. 위험하지만 강력해.
+
+9. **`git stash` + `git stash pop`**
+
+→ 갑자기 다른 브랜치로 갈 일 있을 때, 변경사항 임시 저장.
+
+10. **`git revert <커밋ID>`**
+
+→ 실수로 올린 커밋 되돌릴 때, 이건 기록 남기면서 안전하게 되돌림.

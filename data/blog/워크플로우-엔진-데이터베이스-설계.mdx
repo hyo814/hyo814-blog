@@ -1,0 +1,159 @@
+---
+title: 워크플로우 엔진 데이터베이스 설계 정리 (Exception Not Found 시리즈 기반)
+date: '2025-04-24'
+tags: [경력기술서]
+draft: false
+summary: '워크플로우 엔진 데이터 베이스 설계 정리'
+---
+
+# 워크플로우 엔진 데이터베이스 설계 정리 (Exception Not Found 시리즈 기반)
+
+참고한 문서 :
+
+[https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-1-introduction-and-purpose/](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-1-introduction-and-purpose/)
+
+- part 1 : [**Designing a Workflow Engine Database**](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-1-introduction-and-purpose/)
+- Part 2: [The Process Table and Users](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-2-the-process-table-and-users/)
+- Part 3: [Request Details and Data](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-3-request-details-and-data/)
+- Part 4: [States and Transitions](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-4-states-and-transitions/)
+- Part 5: [Actions and Activities](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-5-actions-and-activities/)
+- Part 6: [Groups and Targets](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-6-groups-and-targets/)
+- Part 7: [Request Actions](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-7-request-actions/)
+- Part 8: [Complete Schema and Shortcomings](https://www.exceptionnotfound.net/designing-a-workflow-engine-database-part-8-complete-schema-and-shortcomings/)
+
+![image.png](image.png)
+
+---
+
+## 1. 워크플로우란?
+
+- 정의: 특정 요청에 대해 여러 사람이 순차적으로 내리는 결정들의 집합.
+- 예: 등록 신청 → 심사 → 반려/승인 → 완료
+
+---
+
+## 2. 주요 참여자 예시 (사용자 흐름)
+
+1. John이 요청 제출
+2. Victoria(상사)가 승인
+3. Nate(개발 리더)가 검토 및 승인
+4. Jenna(코디네이터)가 리서치
+5. 개발 진행 → QA(Charles) → 최종 승인(John)
+
+---
+
+## 3. 공통 요소 정리 (Lots of Similarity)
+
+- Request: 검토/승인 대상 요청 객체
+- Request Data: 요청별로 유동적인 사용자 정의 필드
+- Process: 요청이 따라야 할 승인 절차 정의
+- Notifications: 특정 시점마다 사용자에게 알림 전송
+- Process Owners: 프로세스를 설정/관리하는 소수 관리자
+
+---
+
+## 4. 핵심 테이블 설계
+
+### Process
+
+- 프로세스 정의 단위
+- 필드: ProcessID, Name
+
+### Users
+
+- 앱에 로그인 가능한 사용자
+- 필드: UserID, FirstName, LastName, DateOfBirth
+
+### Requests
+
+- 요청 객체 (하나의 프로세스에만 소속)
+- 필드: RequestID, Title, CreatedBy, CreatedDate, CurrentStateID, ProcessID
+
+### RequestData (Name-Value Pair)
+
+- 유연한 요청별 데이터 확장
+- 필드: RequestDataID, RequestID, Name, Value
+
+### Stakeholders (다대다 관계)
+
+- 필드: RequestID, UserID
+
+### Notes
+
+- 사용자 주석 저장
+- 필드: NoteID, RequestID, UserID, NoteText, CreatedAt
+
+### RequestFiles
+
+- 요청에 첨부된 바이너리 파일 저장
+- 필드: FileID, RequestID, FileName, MimeType, FileContent
+
+---
+
+## 5. 상태 및 전이
+
+### StateTypes
+
+- 미리 정의된 상태 종류 (Start, Normal, Complete, Denied, Cancelled)
+
+### States
+
+- Process별 요청이 가질 수 있는 상태 목록
+- 필드: StateID, ProcessID, Name, StateTypeID
+
+### Transitions
+
+- 상태 간 이동 정의
+- 필드: TransitionID, ProcessID, FromStateID, ToStateID
+
+---
+
+## 6. 사용자 동작과 시스템 반응
+
+### ActionTypes
+
+- 사용자 입력 종류 (Approve, Deny, Cancel, Restart, Resolve)
+
+### Actions
+
+- 요청에 대해 사용자가 직접 수행하는 작업
+- 필드: ActionID, Name, ActionTypeID
+
+### Activities
+
+- 상태/전이 변경 시 시스템이 자동으로 수행하는 작업
+- 예: 상태 변경 시 이메일 발송
+
+### RequestActions
+
+- 특정 요청에서 실행 가능한 액션 추적
+- 필드: RequestID, ActionID, TargetID, IsActive, IsCompleted
+- 모든 필수 Action 완료 시 Transition이 실행됨
+
+---
+
+## 7. 그룹 및 대상
+
+### Groups
+
+- 역할 기반 사용자 집합
+- 필드: GroupID, Name, ProcessID
+
+### GroupMembers
+
+- 그룹-사용자 관계
+- 필드: GroupID, UserID
+
+### Targets
+
+- 액션 수행자 또는 알림 수신자 지정
+- 값 예시: RequestCreator, Stakeholders, GroupMembers, ProcessAdmins
+
+---
+
+## 8. 설계의 한계점
+
+- 시간 기반 전이 미지원
+- 상태/전이 삭제 처리 없음
+- RequestFiles에 직접 저장 → 성능 저하 가능
+- 특정 개인 지정 기능 부족
