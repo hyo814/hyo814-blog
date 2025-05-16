@@ -1,0 +1,227 @@
+---
+title: waitMe 사용법
+date: '2025-04-22'
+tags: [기술 노트]
+draft: false
+summary: 'waitMe에 대한 정리를 하고 이해 하도록 노력 하기'
+---
+
+# waitMe
+
+공식 문서 : https://vadimsva.github.io/waitMe/
+
+`waitMe`는 jQuery 기반의 **로딩 애니메이션 플러그인**
+
+어떤 DOM 요소든지 로딩 중임을 시각적으로 표시
+
+예를 들어, 버튼 클릭 시 로딩 스피너를 표시하거나 전체 화면을 블로킹할 때 유용.
+
+---
+
+### 기본 사용법
+
+```html
+<!-- jQuery & waitMe 라이브러리 불러오기 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/waitme@1.19.0/waitMe.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/waitme@1.19.0/waitMe.min.js"></script>
+
+```
+
+```jsx
+// waitMe 실행
+$('#target-element').waitMe({
+  effect: 'bounce',
+  text: '로딩 중입니다...',
+  bg: 'rgba(255,255,255,0.7)',
+  color: '#000',
+  maxSize: '',
+  waitTime: -1,
+  textPos: 'vertical',
+  fontSize: '',
+  source: '',
+  onClose: function() {}
+});
+
+```
+
+```jsx
+// waitMe 종료
+$('#target-element').waitMe('hide');
+
+```
+
+---
+
+### 지원하는 로딩 애니메이션 효과
+
+- bounce
+- rotateplane
+- stretch
+- orbit
+- roundBounce
+- win8
+- timer
+- pulse
+- facebook
+- rotation
+- none 등
+
+> 효과는 effect 옵션에 문자열로 지정
+>
+
+---
+
+### 전체 화면에 로딩 표시
+
+```jsx
+$('body').waitMe({
+  effect: 'bounce',
+  text: '페이지 로딩 중...',
+  bg: 'rgba(0,0,0,0.4)',
+  color: '#fff',
+});
+
+```
+
+```jsx
+// 일정 시간 후 자동 종료
+setTimeout(() => {
+  $('body').waitMe('hide');
+}, 3000);
+
+```
+
+---
+
+### 주요 옵션 설명
+
+| 옵션 | 설명 |
+| --- | --- |
+| `effect` | 로딩 애니메이션 종류 |
+| `text` | 표시할 텍스트 |
+| `bg` | 배경 색상 (투명도 포함) |
+| `color` | 로딩 아이콘 색상 |
+| `maxSize` | 아이콘 최대 크기 |
+| `waitTime` | 자동 종료 시간 (ms). -1이면 무제한 |
+| `textPos` | 텍스트 위치: vertical/horizontal |
+| `fontSize` | 텍스트 크기 |
+| `onClose` | hide될 때 호출할 콜백 |
+
+---
+
+### 예제 - 버튼 클릭 시 로딩
+
+```html
+<button id="loadBtn">불러오기</button>
+<div id="contentBox"></div>
+
+<script>
+  $('#loadBtn').on('click', function() {
+    $('#contentBox').waitMe({
+      effect: 'stretch',
+      text: '데이터 불러오는 중...',
+      bg: 'rgba(255,255,255,0.7)',
+      color: '#000'
+    });
+
+    // 예시: 2초 후 로딩 종료
+    setTimeout(() => {
+      $('#contentBox').waitMe('hide');
+    }, 2000);
+  });
+</script>
+
+```
+
+---
+
+## 실무에서 자주 놓치는 포인트 정리
+
+### 1. **`waitMe`는 jQuery 기반**
+
+- **jQuery가 필수**
+
+프로젝트가 React, Vue, Next.js 기반이면 그냥 쓸 수 없음.
+👉 `$(...)` 구문 자체가 없기 때문.
+
+- 해결 방법:
+  - jQuery를 별도로 로드하거나,
+  - `waitMe` 대신 Vanilla JS 기반의 로딩 라이브러리를 사용하는 것이 더 선호
+(예: [Spin.js](https://spin.js.org/), CSS 로딩 컴포넌트 등).
+
+---
+
+### 2. **중복 호출 시 로딩이 꼬임**
+
+```
+// 잘못된 사용 - 연속 호출 시 기존 waitMe 안 꺼짐
+$('#target').waitMe(...);
+$('#target').waitMe(...);
+
+```
+
+- 해결 방법:
+
+  ```
+  $('#target').waitMe('hide'); // 먼저 닫고
+  $('#target').waitMe({...}); // 다시 실행
+
+    ```
+
+
+---
+
+### 3. **hide는 명시적으로 호출해야 함**
+
+- `waitTime` 옵션을 쓰지 않으면 자동 종료되지 않음.
+- 무조건 `.waitMe('hide')`를 호출해서 로딩을 꺼줘야 함.
+
+---
+
+### 4. **`onClose` 콜백은 `hide`할 때만 실행됨**
+
+```
+$('#target').waitMe({
+  onClose: function() {
+    console.log('로딩 종료됨');
+  }
+});
+
+```
+
+> 위 콜백은 로딩 시작할 때가 아니라, hide가 호출된 후에만 실행됨
+>
+
+---
+
+### 5. **전체 화면 로딩 시 `body` 외에도 `html` 같이 스타일 지정 필요할 수 있음**
+
+- waitMe는 `position: relative`가 설정된 부모 요소 위에 붙기 때문에,
+body에 적용할 때는 **CSS로 보완**이 필요할 수 있음.
+
+```css
+html, body {
+  height: 100%;
+  position: relative;
+}
+
+```
+
+---
+
+### 6. **Next.js 등 SSR 환경에서는 주의 필요**
+
+- `document`나 `$`가 없기 때문에 클라이언트 사이드에서만 사용해야 함.
+- 해결 방법:
+
+  ```
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('waitme').then(() => {
+        // waitMe 사용 코드
+      });
+    }
+  }, []);
+
+    ```

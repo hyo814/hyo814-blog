@@ -1,0 +1,190 @@
+---
+title: 'JINJA TEMPLATE에 대한 정리 하기! 사전 조사 (4월 3주차 때 진행)'
+date: '2025-04-21'
+tags: [기술노트]
+draft: false
+summary: '장고에서 템플릿을 어떻게 사용 해야할지에 대한 정리 모음!'
+---
+
+# JINJA TEMPLATE
+
+공식 문서 : https://jinja.palletsprojects.com/en/stable/templates/
+
+---
+
+## Jinja 템플릿이란?
+
+- **Jinja**는 HTML, XML, CSV 등 텍스트 기반 파일을 **동적으로 생성**할 수 있게 도와주는 템플릿 엔진.
+- 주로 **웹 페이지의 HTML**을 생성할 때 자주 사용.
+
+**기본 구조 예시**
+
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <title>{{ title }}</title>
+</head>
+<body>
+    {% for user in users %}
+        <p>{{ user.name }}</p>
+    {% endfor %}
+</body>
+</html>
+```
+
+| 구분자                  | 용도                         |
+| ----------------------- | ---------------------------- |
+| `{{ ... }}`             | 변수 또는 표현식을 출력      |
+| `{% ... %}`             | 조건문, 반복문 등 로직 처리  |
+| `{# ... #}`             | 주석 (출력되지 않음)         |
+
+---
+
+## **기본 문법**
+
+| 문법           | 설명           | 예시                             |
+| -------------- | -------------- | -------------------------------- |
+| `{{ 변수 }}`   | 변수 출력      | `<code>{{ user.username }}</code>` |
+| `{% if %}`     | 조건문 처리    | `<code>{% if user.is_authenticated %}</code>` |
+| `{% for %}`    | 반복문 처리    | `<code>{% for item in items %}</code>` |
+| `{# 주석 #}`   | 주석 처리      | `<code>{# 출력되지 않습니다. #}</code>` |
+
+**예시**
+
+```jinja
+{% if user.is_admin %}
+  관리자입니다.
+{% else %}
+  일반 사용자입니다.
+{% endif %}
+```
+
+```jinja
+{% for post in posts %}
+  <li>{{ post.title }}</li>
+{% else %}
+  게시물이 없습니다.
+{% endfor %}
+```
+
+---
+
+## **심화 문법**
+
+| 문법             | 설명               | 예시                                           |
+| ---------------- | ------------------ | ---------------------------------------------- |
+| `{% set %}`      | 변수 생성          | `<code>{% set total = price * count %}</code>` |
+| `{% include %}`  | 템플릿 포함        | `<code>{% include 'header.html' %}</code>`     |
+| `{% extends %}`  | 템플릿 상속        | `<code>{% extends 'base.html' %}</code>`       |
+| `{% block %}`    | 블록 정의/재정의   | `<code>{% block content %}내용{% endblock %}</code>` |
+| `{% macro %}`    | 매크로 정의        | `<code>{% macro input(name) %}<input>{{ name }}{% endmacro %}</code>` |
+| `{% call %}`     | 매크로 호출        | `<code>{% call box() %}내용{% endcall %}</code>` |
+| `{% import %}`   | 매크로 임포트      | `<code>{% import 'macros.html' as m %}</code>` |
+| `{% from %}`     | 특정 매크로 임포트 | `<code>{% from 'macros.html' import input %}</code>` |
+| `{% with %}`     | 로컬 변수 설정     | `<code>{% with total = sum %}{{ total }}{% endwith %}</code>` |
+| `{% autoescape %}` | 자동 이스케이프  | `<code>{% autoescape true %}{{ trusted_html|safe }}{% endautoescape %}</code>` |
+| `{% do %}`       | 출력 없는 실행     | `<code>{% do mylist.append(3) %}</code>`      |
+
+---
+
+## **자주 쓰이는 필터 (Filters)**
+
+| 필터             | 설명               | 예시                               |
+| ---------------- | ------------------ | ---------------------------------- |
+| `length`         | 길이              | `<code>{{ items|length }}</code>`   |
+| `upper`, `lower` | 대/소문자 변환    | `<code>{{ name|upper }}</code>`     |
+| `replace`        | 문자열 치환        | `<code>{{ text|replace('old','new') }}</code>` |
+| `default`        | 기본값 설정       | `<code>{{ name|default('이름 없음') }}</code>` |
+| `safe`           | HTML 안전 출력    | `<code>{{ html_code|safe }}</code>`  |
+| `truncate`       | 잘라내기          | `<code>{{ content|truncate(30) }}</code>` |
+| `int`, `float`   | 타입 변환         | `<code>{{ price|float }}</code>`     |
+| `join`           | 리스트 합치기     | `<code>{{ items|join(', ') }}</code>`|
+| `striptags`      | 태그 제거         | `<code>{{ html|striptags }}</code>`  |
+
+---
+
+## **템플릿 상속**
+
+**base.html**
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{% block title %}기본 제목{% endblock %}</title>
+</head>
+<body>
+  {% block content %}{% endblock %}
+</body>
+</html>
+```
+
+**child.html**
+
+```jinja
+{% extends 'base.html' %}
+{% block title %}홈페이지{% endblock %}
+{% block content %}
+  <h1>환영합니다!</h1>
+{% endblock %}
+```
+
+---
+
+## **Include 와 Import**
+
+```jinja
+{% include 'partials/header.html' %}
+{% import 'forms.html' as forms %}
+{{ forms.input('username') }}
+```
+
+---
+
+## **매크로**
+
+```jinja
+{% macro input(name, type='text') %}
+<input name="{{ name }}" type="{{ type }}">
+{% endmacro %}
+{{ input('email','email') }}
+```
+
+---
+
+## **자동 이스케이프**
+
+```jinja
+{% autoescape true %}
+  {{ user_input }}
+{% endautoescape %}
+```
+
+---
+
+## **공백 제어**
+
+```jinja
+<ul>
+{%- for item in items -%}
+  <li>{{ item }}</li>
+{%- endfor -%}
+</ul>
+```
+
+---
+
+## **추가: 루프 특수 변수**
+
+```jinja
+{% for user in users %}
+  {{ loop.index }}. {{ user.name }}
+  {% if loop.first %}(첫){% endif %}
+  {% if loop.last %}(마지막){% endif %}
+{% endfor %}
+```
+
+---
+
+정리 템플릿: https://github.com/hyo814/jinja-template-study
