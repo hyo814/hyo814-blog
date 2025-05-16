@@ -1,0 +1,257 @@
+---
+title: JSTREE 기본 사용법
+date: '2025-04-23'
+tags: [기술 노트]
+draft: false
+summary: 'JSTREE에 대한 정리를 하고 이해 하도록 노력 하기'
+---
+
+# JSTREE
+
+## JSTREE
+
+jsTree는 **트리 구조(Tree Structure)**를 웹에서 표현할 수 있게 도와주는 **jQuery 기반 플러그인**.
+
+→ 폴더 구조, 조직도, 카테고리 계층 같은 걸 시각적으로 보여줄 때 사용
+
+---
+
+### 주요 특징
+
+| 기능 | 설명 |
+| --- | --- |
+| **트리 구조 표현** | 계층적인 데이터 구조를 트리 형태로 렌더링 |
+| **노드 추가/삭제/이동** | 유저 인터랙션으로 노드를 실시간 수정 가능 |
+| **드래그 & 드롭** | 노드 간 드래그로 위치 변경 가능 |
+| **컨텍스트 메뉴** | 우클릭 메뉴 구성 가능 |
+| **AJAX 로딩** | 노드 데이터를 서버에서 동적으로 불러올 수 있음 |
+| **플러그인 방식** | `checkbox`, `search`, `contextmenu` 등 여러 기능을 플러그인으로 확장 가능 |
+
+---
+
+### 1. `checkbox`: 체크박스 트리
+
+```
+$('#tree-checkbox').jstree({
+  "plugins": ["checkbox"],
+  "core": {
+    "data": [
+      { "text": "문서", "children": [
+          { "text": "계약서.docx" },
+          { "text": "견적서.xlsx" }
+        ]
+      },
+      { "text": "사진", "children": [
+          { "text": "여행사진.jpg" }
+        ]
+      }
+    ]
+  }
+});
+```
+
+체크된 항목 가져오기:
+
+```
+var checkedNodes = $('#tree-checkbox').jstree('get_checked', true);
+console.log(checkedNodes);
+```
+
+---
+
+### 2. `search`: 검색 기능
+
+```
+<input type="text" id="tree-search" placeholder="노드 검색..." />
+<div id="tree-searchable"></div>
+
+<script>
+  $('#tree-searchable').jstree({
+    "plugins": ["search"],
+    "core": {
+      "data": [
+        { "text": "HTML" },
+        { "text": "CSS" },
+        { "text": "JavaScript" }
+      ]
+    }
+  });
+
+  $('#tree-search').on('keyup', function () {
+    var keyword = $(this).val();
+    $('#tree-searchable').jstree('search', keyword);
+  });
+</script>
+```
+
+---
+
+### 3. `contextmenu`: 우클릭 메뉴
+
+```
+$('#tree-context').jstree({
+  "plugins": ["contextmenu"],
+  "core": {
+    "data": [
+      { "text": "사용자" },
+      { "text": "관리자" }
+    ]
+  },
+  "contextmenu": {
+    "items": function (node) {
+      return {
+        "Create": {
+          "label": "노드 추가",
+          "action": function () {
+            alert("노드 추가!");
+          }
+        },
+        "Delete": {
+          "label": "노드 삭제",
+          "action": function () {
+            $('#tree-context').jstree('delete_node', node);
+          }
+        }
+      };
+    }
+  }
+});
+```
+
+---
+
+### 4. `dnd`: 드래그 & 드롭
+
+```
+$('#tree-dnd').jstree({
+  "plugins": ["dnd"],
+  "core": {
+    "check_callback": true,
+    "data": [
+      { "text": "폴더 A", "children": [
+          { "text": "파일 A1" }
+        ]
+      },
+      { "text": "폴더 B" }
+    ]
+  }
+});
+```
+
+---
+
+### 플러그인 종류 (실무 필수 위주)
+
+| 플러그인 | 설명 |
+| --- | --- |
+| `checkbox` | 트리 노드에 체크박스 표시 |
+| `contextmenu` | 우클릭 메뉴 추가 |
+| `dnd` | 드래그 앤 드롭 지원 |
+| `search` | 노드 검색 기능 |
+| `sort` | 알파벳 순으로 자동 정렬 |
+| `state` | 열고 닫은 상태를 기억함 (localStorage 사용) |
+| `types` | 아이콘/노드 타입 지정 가능 (ex: 폴더/파일) |
+| `unique` | 중복 노드 방지 |
+| `wholerow` | 전체 행 클릭 가능하게 만들기 (행 강조) |
+
+---
+
+### 주요 API 함수들
+
+```
+const tree = $('#myTree').jstree(true);
+```
+
+| 함수 | 설명 |
+| --- | --- |
+| `open_node(node)` | 특정 노드 열기 |
+| `close_node(node)` | 특정 노드 닫기 |
+| `create_node(parent, data)` | 새 노드 생성 |
+| `rename_node(node, new_name)` | 노드 이름 변경 |
+| `delete_node(node)` | 노드 삭제 |
+| `get_selected()` | 선택된 노드 ID 목록 반환 |
+| `get_node(node_id)` | 특정 노드 객체 반환 |
+| `select_node(node)` | 노드 선택 |
+| `deselect_all()` | 선택 해제 |
+
+---
+
+### 주요 이벤트
+
+```
+$('#myTree').on('event명', function (e, data) {
+  console.log(data.node);
+});
+```
+
+| 이벤트 | 설명 |
+| --- | --- |
+| `ready.jstree` | 트리 초기화 완료 |
+| `changed.jstree` | 선택된 노드 변경됨 |
+| `select_node.jstree` | 노드가 선택될 때 |
+| `open_node.jstree` | 노드가 열릴 때 |
+| `close_node.jstree` | 노드가 닫힐 때 |
+| `rename_node.jstree` | 노드 이름이 바뀔 때 |
+| `move_node.jstree` | 노드가 다른 곳으로 이동할 때 (dnd 포함) |
+
+---
+
+### `types` 플러그인 예제
+
+```
+$('#tree-types').jstree({
+  "plugins": ["types"],
+  "types": {
+    "default": { "icon": "fa fa-folder" },
+    "file": { "icon": "fa fa-file" }
+  },
+  "core": {
+    "data": [
+      { "text": "문서", "type": "default", "children": [
+        { "text": "이력서.docx", "type": "file" }
+      ]}
+    ]
+  }
+});
+```
+
+---
+
+### 고급 플러그인 예시
+
+- `state`: 사용자 열림/선택 상태 기억
+- `unique`: 동일한 노드 이름 중복 방지
+- `contextmenu`: 메뉴 커스터마이징 가능
+- `themes`: 커스텀 CSS로 외형 수정 가능
+
+---
+
+### 서버와 연동 (AJAX 방식으로 노드 로딩)
+
+```
+$('#myTree').jstree({
+  'core': {
+    'data': {
+      'url': '/get/nodes/',
+      'data': function (node) {
+        return { 'id': node.id };
+      }
+    }
+  }
+});
+```
+
+---
+
+### 실무 대응 정리
+
+| 실무 요구사항 | 필요한 플러그인 |
+| --- | --- |
+| 트리 구조 보여주기 | 기본 + `types` |
+| 체크박스 선택 | `checkbox` |
+| 검색 기능 | `search` |
+| 노드 우클릭 메뉴 | `contextmenu` |
+| 드래그 위치 이동 | `dnd` |
+| 트리 상태 기억 | `state` |
+| 중복 방지 | `unique` |
+| 아이콘 스타일 수정 | `types`, `themes` |

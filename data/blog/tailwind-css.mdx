@@ -1,0 +1,500 @@
+---
+title: Tailwind CSS
+date: '2025-04-22'
+tags: [기술 노트]
+draft: false
+summary: 'Tailwind CSS를 정리 해본다...'
+---
+
+# Tailwind CSS
+
+공식 문서 : https://tailwindcss.com/docs/installation/using-vite
+
+https://www.creative-tim.com/twcomponents/cheatsheet
+
+https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
+
+[[필독]_Tailwind_CSS_잘_하기_위한_필독_사항_&_핵심이론.pdf](%ED%95%84%EB%8F%85_Tailwind_CSS_%EC%9E%98_%ED%95%98%EA%B8%B0_%EC%9C%84%ED%95%9C_%ED%95%84%EB%8F%85_%EC%82%AC%ED%95%AD__%ED%95%B5%EC%8B%AC%EC%9D%B4%EB%A1%A0.pdf)
+
+---
+
+### 0. Tailwind CSS IntelliSense 설정 (VS Code)
+
+Tailwind CSS를 VS Code에서 효율적으로 사용하려면, 공식 확장 프로그램인 [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss)를 설치. 이 확장 프로그램은 자동 완성, 문법 강조, 클래스 추천 기능을 제공.
+→ 확장 면에서는 인텔리 제이보다는 VSC가 완성도는 더 높다고 보는 편
+
+---
+
+### 1. Tailwind CSS 장단점
+
+### **장점**
+
+| 항목 | 설명 |
+| --- | --- |
+| **빠른 UI 구성** | CSS 클래스만으로 바로 스타일 지정 가능 → 별도 CSS 작성 없이 빠르게 화면 구성 가능 |
+| **일관된 디자인 유지** | 디자인 시스템(폰트, 컬러, 여백 등)이 설정되어 있어 일관된 UI 유지에 유리 |
+| **컴포넌트화와 궁합 좋음** | React, Vue 등의 컴포넌트 기반 프레임워크와 잘 어울림 |
+| **클래스 이름 고민 없음** | BEM처럼 이름을 지을 필요 없이 역할에 맞는 유틸리티 클래스 사용 |
+| **불필요한 CSS 제거 가능** | `purge` 기능으로 사용하지 않는 클래스는 빌드시 제거 → 결과물 용량 작음 |
+| **반응형 쉽게 처리** | `sm:`, `md:` 등의 접두사로 반응형 레이아웃 작성 간편 |
+| **커스터마이징 쉬움** | `tailwind.config.js`로 테마, 컬러, 브레이크포인트 등 자유롭게 설정 가능 |
+
+### **단점**
+
+| 항목 | 설명 |
+| --- | --- |
+| **HTML이 지저분해짐** | 클래스가 너무 많아져서 마크업이 길어지고 가독성이 떨어질 수 있음 |
+| **초반 러닝커브** | 처음에는 `mt-4`, `text-gray-500` 같은 클래스 의미를 익히는 데 시간이 걸림 |
+| **디자인 시스템 이해 필요** | 커스터마이징이나 팀 협업 시, Tailwind의 디자인 토큰 구조를 이해해야 함 |
+| **기존 CSS 지식 활용 제한** | 유틸리티 클래스만 쓰다 보면 SCSS, BEM 같은 구조적 CSS 작성이 줄어듬 |
+| **로직과 스타일이 뒤섞임** | JSX에 너무 많은 클래스가 들어가면 코드 관리가 어려워질 수 있음 |
+| **스타일 재사용 어려움** | 똑같은 스타일을 여러 곳에서 쓰려면 클래스 복붙이 많아지고, 중복 발생 가능 |
+
+---
+
+## 2. rem 단위 & 비율 단위
+
+Tailwind CSS는 기본적으로 `rem` 단위를 사용. 이는 루트 요소의 폰트 크기를 기준,
+
+일반적으로 1rem은 16px
+
+이러한 단위 사용은 반응형 디자인에 유리
+
+디자인 패턴을 만드는데 디자이너와 쉽게 협업 가능해짐
+
+| Tailwind 단위 | 실제 px |
+| --- | --- |
+| `mt-1` | 4px (0.25rem) |
+| `mt-2` | 8px (0.5rem) |
+| `w-1/2` | 50% |
+
+```html
+<div class="mt-4 w-1/2 p-2">박스</div>
+
+```
+
+---
+
+## 3. 색상 체계 ([https://tailwindcss.com/docs/colors](https://tailwindcss.com/docs/colors))
+
+Tailwind CSS는 색상을 이름과 숫자 조합으로 관리
+
+- 22종 색상(`blue`, `gray`, `rose`, 등)
+- 명도: `50` ~ `950`
+- 커스텀: `bg-[#123456]`
+
+```html
+<p class="text-red-600 bg-yellow-100">강조 텍스트</p>
+
+```
+
+---
+
+## 4. 방향별 클래스 네임
+
+- `pt-4`: 위쪽 padding
+- `px-6`: 좌우 padding
+- `mx-4`: 좌우 margin
+
+```html
+<div class="px-6 py-2 mt-4">여백 처리</div>
+
+```
+
+---
+
+## 5. 글자 서식 & 색상
+
+- `text-xl`, `font-bold`, `italic`, `truncate`
+- `line-clamp-2`, `tracking-wide`, `leading-6`
+
+```html
+<p class="text-lg font-semibold tracking-wide line-clamp-2">
+  너무 긴 문장은 이렇게 잘립니다.
+</p>
+
+```
+
+---
+
+## 6. 보더(Border)
+
+- `border`, `border-2`, `rounded-lg`
+- `border-blue-500`, `rounded-t-lg`, `border-dashed`
+
+```html
+<div class="border border-gray-300 rounded-md p-4">카드</div>
+
+```
+
+---
+
+## 7. 간격, 크기, 여백
+
+- `p-*`, `m-*`: 패딩, 마진
+- `w-[300px]`, `h-full`, `size-[100px]`: 크기
+- `min-w-*`, `max-h-*`: 제약
+
+```html
+<div class="p-4 w-[200px] h-[100px]">사이즈</div>
+
+```
+
+---
+
+## 8. 배경색 & 이미지
+
+- `bg-*`, `bg-gradient-to-r`, `bg-[url()]`
+- `bg-cover`, `bg-no-repeat`, `bg-center`
+
+```html
+<div class="bg-gradient-to-r from-pink-400 to-yellow-300 text-white p-4">
+  그라디언트 배경
+</div>
+
+```
+
+---
+
+## 9. 레이아웃 & 위치
+
+- `relative`, `absolute`, `top-0`, `left-[50%]`
+- `z-10`, `invisible`, `aspect-video`
+
+```html
+<div class="relative">
+  <div class="absolute top-2 left-2">떠 있는 요소</div>
+</div>
+
+```
+
+---
+
+## 10. 그림자(Shadow)
+
+- `shadow`, `shadow-md`, `shadow-inner`
+- 커스텀: `shadow-[rgba(0,0,0,0.2)]`
+
+```html
+<div class="shadow-lg p-4">그림자 있는 박스</div>
+
+```
+
+---
+
+## 11. 트랜스폼 / 변형
+
+- `scale-110`, `rotate-[45deg]`, `translate-x-[10px]`
+
+```html
+<div class="hover:scale-105 rotate-2 transition-all duration-300">
+  마우스 올리면 변형
+</div>
+
+```
+
+---
+
+## 12. 플렉스 (Flex)
+
+Flexbox는 "부모 요소에 display: flex를 선언"하고, 자식 요소의 **가로/세로 배치, 정렬, 간격**을 쉽게 조절하는 방식.
+
+**기본 방향은 가로(row)**이고, 반응형 구현에도 가장 많이 쓰임.
+
+```html
+<div class="flex justify-between items-center p-4 bg-gray-100">
+  <div class="w-1/4">왼쪽</div>
+  <div class="w-1/2 text-center">중앙</div>
+  <div class="w-1/4 text-right">오른쪽</div>
+</div>
+
+```
+
+| 속성 | 설명 |
+| --- | --- |
+| `flex`, `flex-col` | 기본 방향 지정 |
+| `justify-*` | 가로 정렬 |
+| `items-*` | 세로 정렬 |
+| `gap-*` | 자식 간격 |
+| `flex-1`, `basis-1/2` | 자식 크기 지정 |
+
+---
+
+## 13. 그리드 (Grid)
+
+Grid는 "2차원 배치"가 가능.
+
+Flex는 한 방향(가로 or 세로)이지만, Grid는 **행과 열을 동시에 정의** 해서**복잡한 레이아웃도 간단하게 구현.**
+
+```html
+<div class="grid grid-cols-3 gap-4 p-4">
+  <div class="col-span-2 bg-blue-200">2칸</div>
+  <div class="bg-yellow-200">1칸</div>
+  <div class="col-span-3 bg-green-200">전체 너비</div>
+</div>
+
+```
+
+| 속성 | 설명 |
+| --- | --- |
+| `grid-cols-*` | 열 개수 |
+| `gap-*` | 간격 |
+| `col-span-*` | 열 병합 |
+| `row-span-*` | 행 병합 |
+
+---
+
+## 14. 자식/자손 선택자
+
+Tailwind는 기본적으로 `CSS selector`를 지원하지 않지만, **[&] 문법**을 통해 특정 조건의 자식, 자손을 지정 가능.
+
+```html
+<div class="[&>p]:text-blue-600 [&>p:hover]:underline">
+  <p>자식 텍스트</p>
+</div>
+
+```
+
+- `[&>태그]:스타일`: 자식에만 적용
+- `[&>*]:text-sm`: 모든 자식 적용
+- `[&:nth-child(odd)]`: 조건 선택
+
+---
+
+## 15. 가상 클래스 (hover, focus, group, peer)
+
+```html
+<a class="group">
+  <h3 class="group-hover:text-pink-500">타이틀</h3>
+  <p class="hidden group-hover:block">설명</p>
+</a>
+
+<input class="peer border" />
+<p class="hidden peer-focus:block text-red-500">필수 입력</p>
+
+```
+
+| 상태 | 예시 |
+| --- | --- |
+| `hover:` | 마우스 올림 |
+| `focus:` | 포커스 상태 |
+| `active:` | 클릭 상태 |
+| `group-*` | 부모에 적용 |
+| `peer-*` | 형제에 적용 |
+
+---
+
+## 16. 반응형 레이아웃 ⇒ “ 모바일 퍼스트”
+
+```html
+<div class="flex flex-col md:flex-row gap-4">
+  <div class="w-full md:w-1/2 bg-gray-100">왼쪽</div>
+  <div class="w-full md:w-1/2 bg-gray-200">오른쪽</div>
+</div>
+
+```
+
+| 접두사 | 최소 너비 |
+| --- | --- |
+| `sm:` | 640px |
+| `md:` | 768px |
+| `lg:` | 1024px |
+| `xl:` | 1280px |
+- 기본은 모바일
+- 상위 해상도에서 덮어쓰기
+
+---
+
+## `@apply` 예제 — 반복 스타일 재사용
+
+### 상황
+
+로그인 버튼, 회원가입 버튼 등에서 자주 쓰는 스타일을 공통 클래스로 정리하고 싶을 때.
+
+### CSS (예: `src/styles/components.css`)
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.btn {
+  @apply px-4 py-2 rounded-lg text-white font-semibold;
+}
+
+.btn-primary {
+  @apply btn bg-blue-600 hover:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply btn bg-gray-500 hover:bg-gray-600;
+}
+
+```
+
+### 사용 예시 (JSX)
+
+```jsx
+<button className="btn-primary">로그인</button>
+<button className="btn-secondary">회원가입</button>
+
+```
+
+---
+
+## `tailwind.config.js` 커스터마이징
+
+### 상황
+
+디자인 시스템에서 사용하는 고정 색상, 폰트, 간격 등을 Tailwind에 반영.
+
+### tailwind.config.js
+
+```
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./src/**/*.{js,jsx,ts,tsx,html}"],
+  theme: {
+    extend: {
+      colors: {
+        primary: "#1F6FEB",
+        secondary: "#64748B",
+        "gray-soft": "#F1F5F9"
+      },
+      fontFamily: {
+        sans: ["Noto Sans KR", "sans-serif"],
+        display: ["Montserrat", "sans-serif"],
+      },
+      spacing: {
+        "72": "18rem",
+        "84": "21rem",
+        "96": "24rem"
+      },
+    },
+  },
+  plugins: [],
+}
+
+```
+
+### 사용 예시 (JSX)
+
+```jsx
+<h1 className="text-primary font-display text-2xl">제목</h1>
+<div className="bg-gray-soft p-6 w-96">커스텀 spacing 사용</div>
+
+```
+
+## Tailwind CSS 실무 중복/우선순위 가이드
+
+### 1. **기본 원칙**
+
+| 규칙 | 설명 | 예시 |
+| --- | --- | --- |
+| **같은 CSS 속성** → 마지막 것이 우선 | `font-size`, `width`, `text-align` 등 동일 속성은 가장 나중에 선언된 클래스가 적용 | `text-sm text-lg` → ✅ `text-lg` |
+| **서로 다른 속성** → 모두 적용 | 서로 다른 속성끼리는 중복 없이 적용됨 | `flex flex-col` → ✅ 둘 다 적용 |
+| **반응형 / 상태 기반 클래스는 별도로 동작** | `hover:`, `md:` 등은 조건에 따라 각각 적용됨 | `text-sm md:text-lg` |
+| **중복된 상태/조건에서도 마지막 클래스가 우선** | 같은 상태 조건에서는 순서에 따라 우선순위 결정 | `hover:bg-red-500 hover:bg-blue-500` → ✅ `hover:bg-blue-500` |
+| **`!`(important) 클래스가 최우선** | 일반 클래스보다 무조건 우선 적용됨 | `text-red-500 !text-blue-500` → ✅ `!text-blue-500` |
+
+---
+
+### 2. **자주 겹치는 유틸리티 우선순위 정리**
+
+| 속성 그룹 | 유틸리티 예시 | 우선 적용될 것 |
+| --- | --- | --- |
+| `display` | `hidden block` | `block` |
+| `font-size` | `text-sm text-lg` | `text-lg` |
+| `text-align` | `text-left text-center` | `text-center` |
+| `width/height` | `w-full w-1/2`, `h-screen h-fit` | 마지막 클래스 |
+| `padding` | `p-4 px-2` | 좌우는 `px-2`, 위아래는 `p-4` 유지 |
+| `margin` | `m-2 ml-0` | 왼쪽은 `ml-0`, 나머지는 `m-2` 유지 |
+| `border` | `border border-0` | `border-0` (border 제거됨) |
+| `flex-direction` | `flex-row flex-col` | `flex-col` |
+| `position` | `absolute relative` | `relative` |
+| `z-index` | `z-10 z-50` | `z-50` |
+| `box-shadow` | `shadow shadow-lg` | `shadow-lg` |
+
+---
+
+### 3. **실전 적용 시 체크리스트**
+
+| 체크 항목 | 설명 |
+| --- | --- |
+| ✅ **겹치는 속성 있는지 확인** | 같은 그룹에서 중복된 유틸리티 사용 여부 확인 (`text-`, `w-`, `p-` 등) |
+| ✅ **위/아래 방향 분리 유틸리티인지 확인** | `p-4` vs. `px-2`, `py-1`처럼 세분화된 유틸리티는 **부분 덮어씀** |
+| ✅ **상태/반응형 별도 처리** | `hover:`, `md:`는 **일반 클래스와 충돌 안 함**, 의도된 반응 확인 |
+| ✅ **강제 적용이 필요한가?** | 스타일이 의도대로 안 먹힐 때는 `!` 붙인 `!text-blue-500` 형태 고려 |
+| ✅ **우선순위 충돌 디버깅은 브라우저 DevTools에서 확인** | DevTools에서 적용된 실제 CSS 확인해보기 (중복 확인 빠름) |
+
+---
+
+### 4. 실무 예제: 중복 적용 케이스
+
+```html
+<!-- 예시: 프로필 카드 -->
+<div class="p-4 px-6 text-sm text-center text-gray-500 hover:text-black md:text-lg !text-blue-500">
+  사용자 프로필
+</div>
+
+```
+
+- ✅ `padding`
+
+→ `p-4` + `px-6` → 좌우는 1.5rem(px-6), 상하만 1rem 유지
+
+- ✅ `text-sm`, `md:text-lg`
+
+→ 모바일은 `0.875rem`, `md` 이상은 `1.125rem`
+
+- ✅ `text-center`
+
+→ `text-align: center`
+
+- ✅ `hover:text-black`
+
+→ 마우스 올리면 검정색
+
+- ✅ `!text-blue-500`
+
+→ 무조건 `파란색 글자` → `hover:text-black`도 **무시됨**
+
+
+---
+
+### 중복 클래스 적용 여부 (예시)
+
+| 클래스 조합 예시 | 속성 그룹 | 어떤 게 적용됨? | 이유 설명 |
+| --- | --- | --- | --- |
+| `text-sm text-lg` | `font-size` | ✅ `text-lg` 적용됨 | 같은 속성(`font-size`) → **뒤에 있는 게 덮어씀** |
+| `flex flex-col` | `display`, `flex-direction` | ✅ 둘 다 적용됨 | 서로 **다른 속성** → 중복 아님 |
+| `flex-row flex-col` | `flex-direction` | ✅ `flex-col` 적용됨 | 같은 속성(`flex-direction`) → **뒤에 있는 게 우선** |
+| `bg-red-500 bg-blue-500` | `background-color` | ✅ `bg-blue-500` 적용됨 | **같은 속성**, 뒤에 나온 값으로 덮어씀 |
+| `p-2 p-4` | `padding` | ✅ `p-4` 적용됨 | `p-*`는 모든 방향 padding → 완전히 덮어씀 |
+| `p-4 px-2` | `padding` | ✅ `px-2`이 가로(padding-left/right)만 덮어씀 | `p-4`은 전체, `px-2`는 좌우 → **가로는 px-2, 세로는 p-4 유지** |
+| `rounded-md rounded-full` | `border-radius` | ✅ `rounded-full` 적용됨 | 같은 속성(`border-radius`) → 마지막 게 우선 |
+| `hidden block` | `display` | ✅ `block` 적용됨 | `display` 속성이 겹침 → 마지막인 `block`으로 덮어짐 |
+| `text-gray-500 hover:text-black` | `color` + pseudo-class | ✅ 기본은 `gray`, 호버 시 `black` 적용 | 서로 다른 조건 (기본 vs. hover) → **둘 다 적용** |
+| `text-sm md:text-lg` | `font-size` + responsive | ✅ 모바일은 `sm`, md 이상에서 `lg` 적용 | **조건이 다름** (media query) → 병행 적용 |
+
+| 클래스 조합 예시 | 관련 속성 | 적용 결과 | 설명 |
+| --- | --- | --- | --- |
+| `p-4 px-2` | padding (전체 vs 가로만) | ⬅ `padding-top/bottom: 1rem`, `padding-left/right: 0.5rem` | `p-4`는 전체, `px-2`는 가로 → **가로만 덮어씀** |
+| `text-left text-center` | `text-align` | ⬅ `text-center` 적용 | 같은 속성 → 마지막으로 적용된 `text-center`가 우선 |
+| `w-full w-1/2` | `width` | ⬅ `w-1/2` 적용 | 같은 속성 덮어쓰기 |
+| `border border-0` | `border` | ⬅ `border: none` 적용 | `border`는 기본 적용, `border-0`로 제거됨 → **완전히 덮어쓰기** |
+| `shadow shadow-lg` | `box-shadow` | ⬅ `shadow-lg` 적용 | 같은 속성 → 마지막으로 적용됨 |
+| `uppercase lowercase` | `text-transform` | ⬅ `lowercase` 적용 | 같은 속성, 마지막으로 적용됨 |
+| `overflow-auto overflow-hidden` | `overflow` | ⬅ `overflow: hidden` 적용 | 같은 속성, 마지막 적용 우선 |
+| `z-10 z-50` | `z-index` | ⬅ `z-50` 적용 | 단순 값 중복, 마지막 우선 |
+| `absolute relative` | `position` | ⬅ `relative` 적용 | `position` 중복 → 마지막 우선 |
+| `flex-row md:flex-col` | `flex-direction` + media | ⬅ 모바일: `row`, md 이상: `column` | 반응형 조건이 다르기 때문에 병행 적용됨 |
+| `text-gray-600 hover:text-black` | `color` + 상태 | ⬅ 기본: `gray`, hover 시: `black` | 상태(pseudo-class) 다름 → 병행 적용 |
+| `hover:bg-red-500 hover:bg-blue-500` | `background-color` (hover) | ⬅ `hover:bg-blue-500` 적용 | 같은 상태, 같은 속성 → 마지막 우선 |
+| `sm:text-sm md:text-md lg:text-lg` | `font-size` + 반응형 | ⬅ 브레이크포인트마다 다른 크기 적용 | 서로 다른 조건이므로 병행 적용 |
+| `bg-white dark:bg-black` | `background-color` + 다크모드 | ⬅ 라이트: 흰색, 다크: 검정 | 조건이 다르므로 병행 적용 가능 |
+| `text-red-500 !text-blue-500` | `color` + `!important` | ⬅ `!text-blue-500` 적용됨 | `!` 우선순위가 일반 클래스보다 높음 |
+
+---
+
+정리 템플릿 :  https://github.com/hyo814/tailwind-css-study

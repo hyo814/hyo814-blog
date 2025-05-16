@@ -1,0 +1,171 @@
+---
+title: Django ORM (Object-Relational Mapping)
+date: '2025-04-25'
+tags: [기술노트]
+draft: false
+summary: 'Django ORM'
+---
+
+# Django ORM (Object-Relational Mapping)
+
+## ORM이란?
+
+- ORM (Object-Relational Mapping)은 파이썬 객체와 관계형 데이터베이스(MySQL, PostgreSQL, SQLite 등)의 데이터를 **자동으로 매핑해주는 기술**.
+
+Django에서는 ORM을 통해 **SQL 없이** 데이터베이스를 제어.
+
+```
+✔ SQL 직접 작성 ❌
+✔ 객체지향 방식으로 DB 처리 ⭕
+✔ 모델 정의 → 쿼리 자동 생성 ⭕
+
+```
+
+---
+
+## Django ORM의 핵심 원리
+
+| 원리 | 설명 |
+| --- | --- |
+| 모델 기반 설계 | `models.Model`을 기반으로 DB 테이블 정의 |
+| SQL 자동 생성 | `.save()`, `.filter()` 등 ORM 메서드 사용 시 내부적으로 SQL 자동 생성 |
+| 지연 평가 (Lazy) | 실제 쿼리는 `for`, `list()`, `print()` 등에서 **필요할 때만 실행됨** |
+| DB 이식성 | 같은 파이썬 코드로 다양한 데이터베이스(MySQL, SQLite 등)에 적용 가능 |
+
+---
+
+## 장점과 단점
+
+### 장점
+
+- SQL을 몰라도 DB 다루기 가능 (학습 비용 ↓)
+- 코드 가독성과 생산성 향상
+- 다양한 DB 지원 (이식성)
+- `select_related()`, `prefetch_related()`로 성능 최적화 가능
+
+### 단점
+
+- 복잡한 쿼리 작성이 어려움
+- ORM이 비효율적인 SQL 생성 가능성 있음
+- ORM 동작 원리를 이해하지 않으면 **불필요한 쿼리 폭주** 발생 가능
+
+---
+
+## 기본 ORM 명령어
+
+| 목적 | 메서드 / 설명 | 예시 |
+| --- | --- | --- |
+| 조회 | `all()` - 전체 조회 | `User.objects.all()` |
+| 단일 조회 | `get()` - 단일 조건 | `User.objects.get(id=1)` |
+| 조건 조회 | `filter()`, `exclude()` | `User.objects.filter(name='kim')User.objects.exclude(active=False)` |
+| 정렬 | `order_by()` | `User.objects.order_by('name')` |
+| 선택 필드 | `values()`, `values_list()` | `User.objects.values('name')` |
+| 생성 | `create()` | `User.objects.create(name='kim')` |
+| 수정 | `save()`, `update()` | `user.name = 'lee'; user.save()User.objects.filter(id=1).update(name='lee')` |
+| 삭제 | `delete()` | `user.delete()User.objects.filter(...).delete()` |
+
+---
+
+## 실무에서 자주 쓰는 고급 ORM 기능
+
+### select_related / prefetch_related
+
+- 관계형 모델에서 성능 개선
+
+```python
+Post.objects.select_related('author')  # JOIN
+Post.objects.prefetch_related('tags')  # 별도 쿼리
+
+```
+
+### distinct()
+
+- 중복 제거
+
+```python
+User.objects.values('email').distinct()
+
+```
+
+### exists()
+
+- 존재 여부 빠르게 확인 (성능 우수)
+
+```python
+User.objects.filter(email='test@example.com').exists()
+
+```
+
+### Q 객체
+
+- OR, AND, NOT 등 복합 조건
+
+```python
+from django.db.models import Q
+User.objects.filter(Q(name='kim') | Q(email='test@example.com'))
+
+```
+
+### F 객체
+
+- 필드 간 연산
+
+```python
+from django.db.models import F
+Product.objects.update(price=F('price') * 1.1)
+
+```
+
+### annotate / aggregate
+
+- 집계, 그룹 통계
+
+```python
+from django.db.models import Count
+User.objects.annotate(post_count=Count('posts'))
+
+```
+
+### bulk_create / bulk_update
+
+- 대량 데이터 처리 시 성능 최적화
+
+```python
+User.objects.bulk_create([
+    User(name='kim'), User(name='lee')
+])
+
+```
+
+### only(), defer()
+
+- 일부 필드만 로딩하여 메모리/속도 최적화
+
+```python
+User.objects.only('username')
+User.objects.defer('profile_picture')
+
+```
+
+---
+
+## ORM vs SQL
+
+| 상황 | ORM | SQL |
+| --- | --- | --- |
+| 단순 CRUD | 생산성, 가독성 우수 | 불필요한 코드 작성 가능성 낮음 |
+| 복잡한 JOIN/서브쿼리 | 한계 존재 (복잡해질 수 있음) | SQL이 더 자유롭고 세밀하게 제어 가능 |
+| 성능 최적화 필요 시 | ORM은 내부 쿼리 최적화 한계 존재 | Index 활용, 서브쿼리 구조 등 적극 사용 가능 |
+
+---
+
+## Jinja와의 연동
+
+ORM으로 조회한 결과는 진자 템플릿에서 이렇게 사용:
+
+```html
+{% for user in users %}
+  <p>{{ user.first_name }} {{ user.last_name }}</p>
+{% endfor %}
+
+```
