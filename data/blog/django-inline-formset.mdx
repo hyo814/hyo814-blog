@@ -1,0 +1,156 @@
+---
+title: Django Formset과 Inline Formset 이해하기
+date: '2025-08-21'
+tags: [기술노트]
+draft: false
+summary: 'Django에서 여러 폼을 한 페이지에서 처리하는 Formset과 부모-자식 관계를 함께 처리하는 Inline Formset의 차이와 사용법을 정리합니다.'
+---
+
+# Django Formset과 Inline Formset 이해하기
+
+Django **Formset**은 동일한 폼을 한 페이지에서 여러 개 편집할 수 있게 해주는 기능입니다. 예를 들어 게시글 하나에 여러 개의 태그를 동시에 입력하거나, 주문서에 여러 상품 항목을 한 번에 추가하는 경우에 사용합니다.
+
+---
+
+## Formset vs Inline Formset
+
+| 구분 | Formset | Inline Formset |
+|------|---------|----------------|
+| 관계 | 독립적인 여러 객체 | 부모-자식 FK 관계 |
+| 팩토리 | `modelformset_factory` | `inlineformset_factory` |
+| FK 연결 | 수동으로 설정 | 부모 instance 전달 시 자동 |
+| 사용 예 | 태그 일괄 등록 | 주문-상품 항목, 게시글-첨부파일 |
+
+---
+
+## Formset — 독립적인 여러 객체
+
+```python
+from django.forms import modelformset_factory
+from .models import Tag
+
+# 폼셋 팩토리 생성
+TagFormSet = modelformset_factory(Tag, fields=('name',), extra=3)
+
+# 뷰에서 사용
+def tag_create(request):
+    if request.method == 'POST':
+        formset = TagFormSet(request.POST)
+        if formset.is_valid():
+            formset.save()
+    else:
+        formset = TagFormSet(queryset=Tag.objects.filter(active=True))
+    return render(request, 'tags.html', {'formset': formset})
+```
+
+- `extra=3`: 빈 폼을 3개 추가로 렌더링
+- `queryset`: 초기값으로 보여줄 데이터
+
+---
+
+## Inline Formset — 부모-자식 관계
+
+```python
+from django.forms import inlineformset_factory
+from .models import Dataset, DatasetDetail
+
+# 부모(Dataset) → 자식(DatasetDetail) 관계
+DatasetDetailFormSet = inlineformset_factory(
+    Dataset,        # 부모 모델
+    DatasetDetail,  # 자식 모델
+    fields=('name', 'value'),
+    extra=3,
+    can_delete=True  # 삭제 체크박스 포함
+)
+```
+
+### 뷰에서 사용
+
+```python
+def dataset_edit(request, pk):
+    dataset = get_object_or_404(Dataset, pk=pk)
+
+    if request.method == 'POST':
+        formset = DatasetDetailFormSet(request.POST, instance=dataset)
+        if formset.is_valid():
+            instances = formset.save(commit=False)
+            for obj in instances:
+                obj.dataset = dataset
+                obj.save()
+            formset.save_m2m()
+            return redirect('dataset_detail', pk=pk)
+    else:
+        formset = DatasetDetailFormSet(instance=dataset)
+
+    return render(request, 'dataset_edit.html', {
+        'dataset': dataset,
+        'formset': formset
+    })
+```
+
+핵심은 `instance=dataset`을 전달하면 **FK가 자동으로 연결**된다는 점입니다.
+
+---
+
+## 템플릿
+
+```django
+<form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}  {# 반드시 포함 #}
+
+    {% for form in formset %}
+        <div class="form-row">
+            {{ form.as_p }}
+        </div>
+    {% endfor %}
+
+    <button type="submit">저장</button>
+</form>
+```
+
+> `management_form`은 formset의 총 개수, 초기 개수 등 메타 정보를 담고 있습니다. 누락 시 `ManagementForm data is missing` 오류가 발생합니다.
+
+---
+
+## 주요 옵션 정리
+
+| 옵션 | 설명 | 기본값 |
+|------|------|--------|
+| `extra` | 추가 빈 폼 개수 | 1 |
+| `max_num` | 최대 폼 개수 | 제한 없음 |
+| `min_num` | 최소 폼 개수 | 0 |
+| `can_delete` | 삭제 체크박스 포함 | `False` |
+| `can_order` | 순서 변경 필드 포함 | `False` |
+| `fields` | 포함할 필드 목록 | 모든 필드 |
+| `exclude` | 제외할 필드 목록 | — |
+
+---
+
+## 동적으로 폼 추가하기 (JavaScript)
+
+기본 Formset은 서버에서 렌더링된 폼 수가 고정됩니다. 사용자가 버튼으로 폼을 동적으로 추가하려면 `TOTAL_FORM_COUNT`를 JavaScript로 업데이트해야 합니다.
+
+```javascript
+let formCount = parseInt(document.getElementById('id_form-TOTAL_FORMS').value);
+
+document.getElementById('add-form').addEventListener('click', function () {
+    const newForm = document.querySelector('.form-row').cloneNode(true);
+    // 인덱스 교체
+    newForm.innerHTML = newForm.innerHTML.replace(/form-\d+/g, `form-${formCount}`);
+    document.getElementById('formset-container').appendChild(newForm);
+    formCount++;
+    document.getElementById('id_form-TOTAL_FORMS').value = formCount;
+});
+```
+
+라이브러리를 쓰고 싶다면 [django-fancy-formset](https://github.com/radiac/django-fancy-formset)이나 [django-crispy-forms](https://github.com/django-crispy-forms/django-crispy-forms)를 활용할 수 있습니다.
+
+---
+
+## 언제 무엇을 쓸까?
+
+- **Formset**: 독립적인 여러 객체를 한 번에 처리할 때 (태그 일괄 등록, 설문 답변 일괄 저장)
+- **Inline Formset**: 부모와 자식 관계가 명확할 때 (주문-상품, 게시글-첨부파일, 데이터셋-세부항목)
+
+Inline Formset은 `instance`만 넘기면 FK 연결을 알아서 처리해주기 때문에, 부모-자식 관계라면 Inline Formset이 훨씬 간편합니다.
