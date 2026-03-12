@@ -1,0 +1,135 @@
+---
+title: Django RunPython으로 수동 마이그레이션 다루기
+date: '2026-03-12'
+tags: [기술노트]
+draft: false
+summary: 'Django 마이그레이션에서 RunPython을 사용해 필드 추가 후 데이터를 채우는 방법과 수동 마이그레이션 시 주의할 점을 정리합니다.'
+---
+
+# Django RunPython으로 수동 마이그레이션 다루기
+
+Django 마이그레이션은 대부분 `makemigrations` → `migrate`로 자동 처리되지만, **기존 데이터를 변환하거나 파생 필드를 채워야 할 때**는 `RunPython`을 직접 작성해야 합니다.
+
+---
+
+## RunPython이란?
+
+`migrations.RunPython`은 마이그레이션 파일 안에서 **임의의 Python 함수를 실행**할 수 있게 해주는 오퍼레이션입니다.
+
+```python
+migrations.RunPython(forward_func, reverse_func)
+```
+
+- `forward_func`: `migrate` 시 실행
+- `reverse_func`: `migrate --fake` 또는 롤백 시 실행. 롤백이 필요 없으면 `migrations.RunPython.noop` 사용
+
+---
+
+## 실전 예시: 해시 필드 추가 후 기존 데이터 채우기
+
+### 상황
+
+`User` 모델에 `name_hash` 필드(SHA-256)를 추가하되, 기존 사용자의 `name` 값을 해시 처리해서 채워야 합니다.
+
+### 1단계: 필드 추가 + 데이터 채우기 (null 허용)
+
+```python
+from django.db import migrations, models
+from utils.common import sha256
+
+
+def create_name_hash(apps, schema_editor):
+    User = apps.get_model("user_group", "User")
+    for user in User.objects.all():
+        user.name_hash = sha256(user.name.lower())
+        user.save(update_fields=["name_hash"])
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("user_group", "0001_initial"),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="user",
+            name="name_hash",
+            field=models.CharField(editable=False, max_length=64, null=True),
+        ),
+        migrations.RunPython(create_name_hash, migrations.RunPython.noop),
+    ]
+```
+
+> **핵심**: 먼저 `null=True`로 필드를 추가한 뒤, `RunPython`으로 데이터를 채웁니다. 처음부터 `null=False, unique=True`로 추가하면 기존 행에 값이 없어 오류가 발생합니다.
+
+### 2단계: null 허용 해제 + unique 제약 추가
+
+```python
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("user_group", "0005_add_name_hash"),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name="user",
+            name="name_hash",
+            field=models.CharField(editable=False, max_length=64, unique=True),
+        ),
+    ]
+```
+
+---
+
+## RunPython 함수 작성 시 주의사항
+
+### `apps.get_model()` 사용
+
+마이그레이션 함수 안에서는 실제 모델 클래스가 아닌 **마이그레이션 시점의 모델 스냅샷**을 사용해야 합니다.
+
+```python
+# ✅ 올바른 방법
+User = apps.get_model("user_group", "User")
+
+# ❌ 잘못된 방법 — 현재 모델 상태와 다를 수 있음
+from user_group.models import User
+```
+
+### 대용량 데이터는 배치 처리
+
+```python
+def create_name_hash(apps, schema_editor):
+    User = apps.get_model("user_group", "User")
+    batch = []
+    for user in User.objects.all().iterator():
+        user.name_hash = sha256(user.name.lower())
+        batch.append(user)
+        if len(batch) >= 1000:
+            User.objects.bulk_update(batch, ['name_hash'])
+            batch.clear()
+    if batch:
+        User.objects.bulk_update(batch, ['name_hash'])
+```
+
+---
+
+## 수동 마이그레이션 시 팁
+
+실무에서 마이그레이션 문제를 만났을 때 도움이 된 접근 방식입니다:
+
+1. **테이블에 문제가 있을 때 무조건 삭제하기 전에** — 수동으로 상태를 확인한다
+2. **연관 관계를 먼저 파악** — 외래 키가 걸린 테이블은 순서가 중요하다
+3. **이미 존재하는 마이그레이션 파일과 충돌 시** — 파일 이름(번호)을 바꿔서 의존성을 재정렬한다
+4. **`--fake`와 `--fake-initial`** — 이미 DB에 반영된 마이그레이션을 건너뛸 때 사용하되, 남용하면 실제 상태와 기록이 어긋날 수 있다
+
+---
+
+## 마무리
+
+`RunPython`은 단순한 스키마 변경을 넘어 **데이터 변환 로직을 마이그레이션 히스토리에 포함**시킬 수 있는 강력한 도구입니다.
+
+- 필드 추가 → 데이터 채우기 → 제약 추가의 **3단계 패턴**을 기억하세요
+- 반드시 `apps.get_model()`로 스냅샷 모델을 사용하세요
+- 대용량이라면 `bulk_update`로 성능을 챙기세요

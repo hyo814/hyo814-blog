@@ -1,0 +1,250 @@
+---
+title: JSTree 플러그인 활용과 사용자 정의 컨텍스트 메뉴
+date: '2026-03-12'
+tags: [기술노트]
+draft: false
+summary: 'JSTree의 주요 플러그인 설정 방법과 contextmenu 플러그인으로 사용자 정의 우클릭 메뉴(추가/편집/삭제/복사)를 구현하는 방법을 정리합니다.'
+---
+
+# JSTree 플러그인 활용과 사용자 정의 컨텍스트 메뉴
+
+JSTree 기본 초기화에서 한 단계 더 나아가, **플러그인을 조합**하고 **컨텍스트 메뉴를 직접 정의**하는 방법을 정리합니다.
+
+---
+
+## 플러그인 종류와 역할
+
+```javascript
+$('#tree').jstree({
+    plugins: [
+        'checkbox',       // 노드에 체크박스 추가
+        'contextmenu',    // 우클릭 메뉴
+        'dnd',            // 드래그 앤 드롭
+        'massload',       // 대용량 데이터 지연 로딩
+        'search',         // 노드 검색
+        'sort',           // 자동 정렬
+        'state',          // 열림/닫힘 상태 저장
+        'types',          // 노드 타입별 아이콘/규칙 설정
+        'unique',         // 같은 부모 아래 중복 이름 방지
+        'wholerow',       // 행 전체 선택 영역
+        'changed',        // 변경된 노드 추적
+        'conditionalselect' // 조건부 선택 허용/차단
+    ]
+});
+```
+
+| 플러그인 | 주요 용도 |
+|----------|-----------|
+| `checkbox` | 다중 선택 체크박스 |
+| `contextmenu` | 우클릭 메뉴 커스터마이징 |
+| `dnd` | 노드 드래그로 위치 변경 |
+| `search` | 노드 텍스트 검색 |
+| `state` | 페이지 새로고침 후에도 트리 상태 유지 |
+| `types` | 노드 타입별 아이콘, 허용 자식 타입 등 규칙 |
+| `unique` | 같은 레벨에서 이름 중복 방지 |
+| `wholerow` | 클릭 영역을 행 전체로 확장 |
+| `conditionalselect` | 특정 노드 선택 비활성화 |
+
+---
+
+## contextmenu 플러그인으로 우클릭 메뉴 구성
+
+기본 contextmenu는 이름 변경/생성/삭제만 제공합니다. 실무에서는 **추가/편집/삭제/복사/붙여넣기** 등을 직접 정의해야 합니다.
+
+```javascript
+$('#tree').jstree({
+    plugins: ['contextmenu'],
+    contextmenu: {
+        items: function (node) {
+            return {
+                create: {
+                    label: '추가',
+                    icon: 'fa fa-plus',
+                    action: function (data) {
+                        const inst = $.jstree.reference(data.reference);
+                        inst.create_node(node, {}, 'last', function (new_node) {
+                            inst.edit(new_node);
+                        });
+                    }
+                },
+                rename: {
+                    label: '편집',
+                    icon: 'fa fa-edit',
+                    action: function (data) {
+                        const inst = $.jstree.reference(data.reference);
+                        inst.edit(node);
+                    }
+                },
+                copy: {
+                    label: '복사',
+                    icon: 'fa fa-copy',
+                    action: function (data) {
+                        const inst = $.jstree.reference(data.reference);
+                        inst.copy(node);
+                    }
+                },
+                paste: {
+                    label: '붙여넣기',
+                    icon: 'fa fa-paste',
+                    action: function (data) {
+                        const inst = $.jstree.reference(data.reference);
+                        inst.paste(node);
+                    },
+                    // 클립보드에 항목이 있을 때만 활성화
+                    _disabled: function () {
+                        return !$.jstree.reference('#tree').can_paste();
+                    }
+                },
+                remove: {
+                    label: '삭제',
+                    icon: 'fa fa-trash',
+                    action: function (data) {
+                        const inst = $.jstree.reference(data.reference);
+                        inst.delete_node(node);
+                    },
+                    separator_before: true
+                }
+            };
+        }
+    }
+});
+```
+
+---
+
+## 컨텍스트 메뉴에서 모달 띄우기
+
+단순 인라인 편집 대신 **모달로 상세 입력**을 받아야 할 때:
+
+```javascript
+contextmenu: {
+    items: function (node) {
+        return {
+            edit: {
+                label: '편집',
+                action: function () {
+                    // 선택된 노드 데이터를 모달에 채움
+                    const nodeData = node.original || {};
+                    $('#modal-name').val(node.text);
+                    $('#modal-id').val(node.id);
+                    $('#editModal').modal('show');
+                }
+            },
+            create: {
+                label: '하위 노드 추가',
+                action: function () {
+                    $('#parent-id').val(node.id);
+                    $('#createModal').modal('show');
+                }
+            }
+        };
+    }
+}
+```
+
+모달 저장 버튼에서 AJAX로 서버에 전송 후 트리를 갱신:
+
+```javascript
+$('#saveEdit').on('click', function () {
+    const id = $('#modal-id').val();
+    const name = $('#modal-name').val();
+
+    $.ajax({
+        url: `/api/nodes/${id}/`,
+        method: 'PATCH',
+        data: JSON.stringify({ name }),
+        contentType: 'application/json',
+        success: function () {
+            $('#tree').jstree('rename_node', id, name);
+            $('#editModal').modal('hide');
+        }
+    });
+});
+```
+
+---
+
+## dnd 플러그인 — 드래그로 노드 이동
+
+```javascript
+$('#tree').jstree({
+    plugins: ['dnd'],
+    // dnd 이벤트로 이동 후 서버에 반영
+});
+
+$('#tree').on('move_node.jstree', function (e, data) {
+    const nodeId = data.node.id;
+    const newParentId = data.parent;
+    const position = data.position;
+
+    $.ajax({
+        url: `/api/nodes/${nodeId}/move/`,
+        method: 'POST',
+        data: JSON.stringify({ parent: newParentId, position }),
+        contentType: 'application/json'
+    });
+});
+```
+
+---
+
+## types 플러그인 — 노드 타입별 규칙
+
+루트, 폴더, 파일처럼 타입마다 다른 아이콘과 허용 동작을 지정할 수 있습니다:
+
+```javascript
+$('#tree').jstree({
+    plugins: ['types'],
+    types: {
+        root: {
+            icon: 'fa fa-home',
+            valid_children: ['folder']
+        },
+        folder: {
+            icon: 'fa fa-folder',
+            valid_children: ['folder', 'file']
+        },
+        file: {
+            icon: 'fa fa-file',
+            valid_children: []  // 자식 추가 불가
+        }
+    }
+});
+```
+
+---
+
+## 이벤트 목록 (주요)
+
+```javascript
+// 노드 선택
+$('#tree').on('select_node.jstree', function (e, data) {
+    console.log(data.node.id, data.node.text);
+});
+
+// 노드 생성 후
+$('#tree').on('create_node.jstree', function (e, data) {
+    // 서버에 새 노드 등록
+});
+
+// 노드 삭제 전
+$('#tree').on('delete_node.jstree', function (e, data) {
+    // 서버에서 삭제 요청
+});
+
+// 이름 변경 후
+$('#tree').on('rename_node.jstree', function (e, data) {
+    // 서버에 이름 수정 요청
+});
+```
+
+---
+
+## 정리
+
+JSTree의 핵심은 **플러그인 조합**과 **이벤트 처리**입니다.
+
+- 기본 CRUD는 `contextmenu` 플러그인의 `items`를 오버라이드
+- 상세 입력이 필요하면 모달을 띄우고 AJAX로 서버 연동
+- 드래그 이동은 `move_node.jstree` 이벤트에서 처리
+- 노드 타입별 규칙은 `types` 플러그인으로 제어

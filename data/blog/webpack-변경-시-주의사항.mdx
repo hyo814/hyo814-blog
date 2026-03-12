@@ -1,0 +1,163 @@
+---
+title: 웹팩 설정 변경 시 주의해야 할 것들
+date: '2026-03-12'
+tags: [기술노트]
+draft: false
+summary: '기존 프로젝트의 웹팩 설정을 변경할 때 자주 마주치는 문제들과 체크리스트를 정리합니다.'
+---
+
+# 웹팩 설정 변경 시 주의해야 할 것들
+
+웹팩 개념을 이해하는 것과 **기존 프로젝트의 웹팩 설정을 실제로 변경하는 것**은 다른 일입니다. 변경 시 예상치 못한 문제가 생기기 쉬운 포인트들을 정리합니다.
+
+---
+
+## 1. 서버 사이드에서 내려주던 데이터를 프론트로 이전할 때
+
+기존에 Django/Flask 같은 백엔드에서 템플릿 컨텍스트로 내려주던 데이터를 웹팩 빌드 환경으로 옮기면, **환경 변수 주입 방식**이 달라집니다.
+
+### Before — Django 템플릿에서 직접 주입
+
+```django
+<script>
+    const BASE_INFO = {{ base_info | safe }};
+</script>
+```
+
+### After — 웹팩 `DefinePlugin`으로 주입
+
+```javascript
+// webpack.config.js
+const webpack = require('webpack');
+
+module.exports = {
+    plugins: [
+        new webpack.DefinePlugin({
+            'process.env.API_BASE': JSON.stringify(process.env.API_BASE),
+        })
+    ]
+};
+```
+
+**주의**: `DefinePlugin`은 빌드 시점에 문자열을 직접 치환합니다. 런타임에 동적으로 바뀌는 값(사용자별 데이터)은 이 방식으로 주입할 수 없으니, 여전히 API 호출이나 별도 script 태그를 활용해야 합니다.
+
+---
+
+## 2. 추가 버튼(extra_button) 같은 동적 UI 처리
+
+백엔드 템플릿에서 조건부로 렌더링하던 버튼/UI를 웹팩 번들 쪽으로 옮기면 **렌더링 타이밍 문제**가 생길 수 있습니다.
+
+```javascript
+// ❌ DOM이 준비되기 전에 접근
+const btn = document.getElementById('extra-button');
+btn.addEventListener('click', handler);  // null 에러 발생 가능
+
+// ✅ DOMContentLoaded 또는 모듈 진입점에서 처리
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('extra-button');
+    if (btn) {
+        btn.addEventListener('click', handler);
+    }
+});
+```
+
+특히 `entry` 포인트가 여러 개인 경우, 어느 번들이 어느 DOM에 접근하는지 명확히 정리해두어야 합니다.
+
+---
+
+## 3. 로딩 인디케이터 교체
+
+`waitMe`나 `NProgress` 같은 로딩 라이브러리를 웹팩으로 번들링하면 **CSS import 순서**와 **로더 설정**에 주의해야 합니다.
+
+```javascript
+// webpack.config.js — CSS 로더 설정
+module.exports = {
+    module: {
+        rules: [
+            {
+                test: /\.css$/,
+                use: [
+                    MiniCssExtractPlugin.loader,  // CSS를 파일로 분리
+                    'css-loader'
+                ]
+            }
+        ]
+    }
+};
+```
+
+```javascript
+// 진입점에서 import 순서 중요
+import 'waitme/waitMe.css';   // 라이브러리 CSS 먼저
+import './styles/main.css';   // 프로젝트 CSS 나중에
+```
+
+CSS import 순서가 바뀌면 스타일 우선순위가 달라져서 레이아웃이 깨질 수 있습니다.
+
+---
+
+## 4. 트리 구조를 직접 구현할 때
+
+JSTree, FancyTree 같은 외부 라이브러리 대신 직접 트리를 구현하는 경우, 웹팩 번들 환경에서의 **jQuery 의존성 처리**가 복잡해집니다.
+
+```javascript
+// webpack.config.js — jQuery를 전역으로 노출
+const webpack = require('webpack');
+
+module.exports = {
+    plugins: [
+        new webpack.ProvidePlugin({
+            $: 'jquery',
+            jQuery: 'jquery',
+            'window.jQuery': 'jquery'
+        })
+    ]
+};
+```
+
+`ProvidePlugin` 없이 jQuery 플러그인을 import하면 `$ is not defined` 에러가 발생합니다.
+
+---
+
+## 웹팩 설정 변경 전 체크리스트
+
+```
+□ 변경 전 개발 빌드와 프로덕션 빌드 모두 정상 작동하는지 확인
+□ 백엔드에서 주입하던 동적 데이터를 어떻게 대체할지 설계
+□ CSS import 순서 및 스타일 충돌 여부 확인
+□ jQuery / 전역 변수를 사용하는 레거시 코드 파악 (ProvidePlugin 필요 여부)
+□ entry 포인트와 각 번들이 접근하는 DOM 범위 정리
+□ HMR(Hot Module Replacement) 작동 여부 확인 (개발 서버)
+□ 빌드 결과물 파일명이 바뀌는 경우 HTML 참조 경로 업데이트
+□ source map 설정 — 개발: eval-source-map, 프로덕션: hidden-source-map
+```
+
+---
+
+## 빌드 결과물 파일명 변경 주의
+
+해시 기반 파일명을 사용할 경우:
+
+```javascript
+// webpack.config.js
+output: {
+    filename: '[name].[contenthash].js',
+    clean: true  // 이전 빌드 결과물 자동 정리
+}
+```
+
+Django 등 백엔드에서 정적 파일을 직접 참조하고 있다면, **`webpack-manifest-plugin`** 또는 **`webpack-bundle-tracker`**로 파일명을 추적해야 합니다:
+
+```javascript
+const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
+
+plugins: [
+    new WebpackManifestPlugin({ fileName: 'manifest.json' })
+]
+```
+
+---
+
+## 정리
+
+웹팩 설정 변경은 작은 수정이라도 빌드 파이프라인 전체에 영향을 줄 수 있습니다. 특히 **레거시 백엔드와 혼용하는 환경**에서는 데이터 주입 방식, jQuery 전역 노출, CSS 로딩 순서 세 가지가 가장 자주 문제가 됩니다. 변경 전에 체크리스트를 따라 영향 범위를 파악하고 진행하는 것을 권장합니다.
