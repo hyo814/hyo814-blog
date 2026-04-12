@@ -1,0 +1,196 @@
+---
+title: Django context processor로 쪽지 미열람 카운트 전역 주입 — 언제 쓰고 언제 쓰지 말아야 하는가
+date: '2026-04-12'
+tags: [기술노트]
+draft: false
+summary: '헤더에 "쪽지 N개"를 띄우기 위해 모든 뷰에서 카운트를 넘기는 대신, context processor로 전역 주입한 경험과 그 함정을 정리합니다.'
+---
+
+# Django context processor로 쪽지 미열람 카운트 전역 주입 — 언제 쓰고 언제 쓰지 말아야 하는가
+
+Django context processor는 편리하지만 함정이 있는 기능입니다. 이번에 쪽지(note) 앱에서 **헤더에 미열람 개수 뱃지**를 띄우려고 쓰면서 발견한 쓸모와 주의점을 정리합니다.
+
+---
+
+## 1. 문제 — 모든 뷰에서 카운트를 넘기고 싶진 않다
+
+요구사항은 단순합니다. 로그인한 사용자의 **모든 페이지 헤더**에 "쪽지 🔴 3" 같은 뱃지를 띄우고 싶습니다.
+
+가장 순진한 접근:
+
+```python
+def board_list(request):
+    unread_count = Note.objects.filter(
+        receiver=request.user, is_read=False
+    ).count() if request.user.is_authenticated else 0
+    return render(request, 'board_list.html', {
+        'posts': ...,
+        'unread_count': unread_count,
+    })
+```
+
+이걸 **모든 뷰**에 넣는 건 미친 짓입니다. 게시판, 카페 상세, 쪽지함, 마이페이지… 전부 쓸 거니까요. DRY 위반이자, 한 뷰가 빠지면 그 페이지만 뱃지가 사라지는 버그가 생깁니다.
+
+---
+
+## 2. context processor — 템플릿 렌더링마다 자동 주입
+
+Django의 context processor는 `render()`가 호출될 때마다 자동으로 템플릿 컨텍스트에 값을 주입해 주는 함수입니다. **한 군데 등록해 두면 모든 템플릿에서 그 변수를 쓸 수 있습니다.**
+
+```python
+# note/context_processors.py
+from .models import Note
+
+
+def unread_note_count(request):
+    if not request.user.is_authenticated:
+        return {'unread_note_count': 0}
+    return {
+        'unread_note_count': Note.objects.filter(
+            receiver=request.user, is_read=False
+        ).count()
+    }
+```
+
+등록은 `settings.py`의 `TEMPLATES` 설정에 한 줄 추가.
+
+```python
+# settings.py
+TEMPLATES = [{
+    ...
+    'OPTIONS': {
+        'context_processors': [
+            'django.template.context_processors.debug',
+            'django.template.context_processors.request',
+            'django.contrib.auth.context_processors.auth',
+            'django.contrib.messages.context_processors.messages',
+            'note.context_processors.unread_note_count',  # 추가
+        ],
+    },
+}]
+```
+
+템플릿에서는 어디서든 변수로 접근합니다.
+
+```html
+{% if user.is_authenticated %}
+  <a href="{% url 'note:inbox' %}" class="badge-wrap">
+    쪽지
+    {% if unread_note_count > 0 %}
+      <span class="badge bg-danger">{{ unread_note_count }}</span>
+    {% endif %}
+  </a>
+{% endif %}
+```
+
+뷰 코드는 단 한 줄도 건드리지 않았습니다.
+
+---
+
+## 3. 함정 1 — 모든 요청에서 DB 쿼리가 돈다
+
+이게 context processor의 가장 큰 함정입니다. **이미지, 정적 파일을 제외한 거의 모든 요청**에서 이 함수가 호출됩니다. 쪽지 카운트라는 단순한 작업이라도, 트래픽이 많으면 부담이 됩니다.
+
+대응:
+
+### 3.1 비로그인 유저는 빠르게 탈출
+
+이미 했죠. `request.user.is_authenticated` 체크로 익명 유저에 대해서는 DB를 건드리지 않습니다.
+
+### 3.2 `count()` 쿼리가 정말 필요한지 점검
+
+`count()`는 `SELECT COUNT(*)` 쿼리가 나갑니다. 한 요청당 한 번이면 감당되지만, 거슬린다면 캐시를 씌웁니다.
+
+```python
+from django.core.cache import cache
+
+def unread_note_count(request):
+    if not request.user.is_authenticated:
+        return {'unread_note_count': 0}
+
+    cache_key = f'unread_note_count:{request.user.id}'
+    count = cache.get(cache_key)
+    if count is None:
+        count = Note.objects.filter(
+            receiver=request.user, is_read=False
+        ).count()
+        cache.set(cache_key, count, timeout=60)
+    return {'unread_note_count': count}
+```
+
+쪽지 수신/읽음 처리하는 뷰에서 `cache.delete(f'unread_note_count:{user.id}')` 로 무효화합니다. 이번 프로젝트에서는 트래픽이 낮아 캐시까지는 안 걸었지만, 운영에서는 반드시 검토할 포인트입니다.
+
+---
+
+## 4. 함정 2 — 템플릿에 쓰이지 않는 페이지에서도 실행된다
+
+JSON API 응답, 파일 다운로드 뷰처럼 **템플릿을 렌더링하지 않는 요청**에서도 context processor는 의미가 있는지 살펴봐야 합니다. 다행히 context processor는 `render()` 호출 시에만 실행되므로, `JsonResponse` 만 돌리는 뷰에서는 실행되지 않습니다. 하지만 **DRF `TemplateHTMLRenderer`** 를 쓰는 경우 돌아갑니다.
+
+정리하면: **"이 context processor가 돌아가야 하는 조건"** 을 머릿속에 명확히 해두고 등록합니다. 예컨대 쪽지 카운트는 "로그인 + HTML 렌더링" 조건에서만 의미 있고, 그 외엔 낭비입니다.
+
+---
+
+## 5. 함정 3 — 예외가 나면 모든 페이지가 터진다
+
+context processor에서 `DoesNotExist`, DB 연결 오류 같은 게 터지면 **모든 템플릿 렌더링이 500으로 죽습니다**. 단순 카운트 함수라도 방어 코드를 둬야 합니다.
+
+```python
+def unread_note_count(request):
+    try:
+        if not request.user.is_authenticated:
+            return {'unread_note_count': 0}
+        return {
+            'unread_note_count': Note.objects.filter(
+                receiver=request.user, is_read=False
+            ).count()
+        }
+    except Exception:
+        # 뱃지 하나 때문에 전체 페이지가 터지면 안 됨
+        return {'unread_note_count': 0}
+```
+
+이 코드에 `logging` 을 얹어서 실패 시 기록은 남기되 응답은 죽이지 않는 게 실무에서는 표준입니다.
+
+---
+
+## 6. 언제 context processor를 써야 하는가 / 쓰지 말아야 하는가
+
+정리하면 다음 기준으로 판단합니다.
+
+### 쓰는 게 맞을 때
+
+- **거의 모든 페이지**에서 필요한 값 (예: 헤더 뱃지, 사이트 공통 설정)
+- 유저 단위로 **캐시하기 쉬운** 값
+- 실패해도 **그냥 0/빈값으로 폴백**해도 되는 값
+
+### 쓰지 말아야 할 때
+
+- **특정 페이지 한두 곳**에서만 필요한 값 → 해당 뷰의 context에 직접 넣는 게 명시적
+- **무거운 쿼리** (JOIN, aggregate, 외부 API 호출) → 모든 요청마다 돌면 병목
+- 실패 시 **명확히 알려야 하는** 값 → 조용히 폴백되면 버그가 숨음
+
+이번 쪽지 카운트는 세 가지 긍정 조건을 전부 만족해서 context processor가 적절했습니다. 반대로 예전에 "모든 페이지에서 현재 사용자의 권한 레벨을 계산해서 주입하자" 같은 걸 context processor로 밀어넣은 적이 있는데, 권한 테이블이 커지면서 `N+1` 쿼리가 전역적으로 터져서 고생했습니다. 그 값은 뷰에서 필요할 때만 꺼내 쓰는 게 맞았습니다.
+
+---
+
+## 7. 대안들 — Middleware, Template tag, HTMX
+
+context processor 외에 같은 목적으로 쓸 수 있는 도구들:
+
+| 방법 | 언제 적합 | 단점 |
+|------|---------|------|
+| **Context processor** | 모든 HTML 페이지에 공통 값 주입 | 매 렌더링마다 실행 |
+| **Middleware로 `request`에 붙이기** | 뷰에서도 쓰고 싶을 때 | 템플릿에서 직접 접근 불편 |
+| **Custom template tag** | 특정 영역에서만 계산 | 호출하는 템플릿에서 `{% load %}` 필요 |
+| **HTMX/Ajax polling** | 실시간성이 필요할 때 | 구현이 더 복잡, 트래픽 증가 |
+
+이번처럼 "헤더에 단순 카운트 뱃지" 라면 context processor가 제일 싸고 단순합니다. 실시간으로 올라가야 한다면 HTMX의 `hx-trigger="every 30s"` 같은 걸로 별도 엔드포인트를 만드는 게 낫습니다.
+
+---
+
+## 정리
+
+- context processor는 **모든 템플릿에 공통 값을 주입**하는 가장 단순한 수단
+- 하지만 **모든 요청에서 실행** 된다는 점이 함정
+- 예외는 폴백으로 막고, 무거운 쿼리는 캐시나 다른 방법으로
+- 적합한 건 "가벼움 + 전역 필요 + 폴백 가능" 세 조건이 맞을 때
