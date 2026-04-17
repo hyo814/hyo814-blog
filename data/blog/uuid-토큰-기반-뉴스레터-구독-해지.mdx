@@ -1,0 +1,242 @@
+---
+title: UUID 토큰 기반 뉴스레터 구독/해지 시스템
+date: '2026-04-17'
+tags: [기술노트]
+draft: false
+summary: '로그인 없이 이메일 한 줄로 구독하고, 발송 메일의 고유 링크로 해지할 수 있는 뉴스레터 시스템을 Django + DRF로 설계한 기록입니다.'
+---
+
+# UUID 토큰 기반 뉴스레터 구독/해지 시스템
+
+뉴스레터 서비스의 UX 기본값은 **"가입 없이 이메일만으로"** 입니다. 로그인 시스템을 만들 필요도, 비밀번호를 관리할 필요도 없지만, 대신 해지를 안전하게 할 수 있어야 합니다. 남의 이메일을 마음대로 해지할 수 있으면 곤란하고, 본인이 해지하려는데 비밀번호를 요구하는 것도 이상합니다.
+
+[PyNews](https://github.com/hyo814/python-news)에서는 **UUID 토큰**을 구독자마다 발급하고, 그 토큰을 해지의 유일한 키로 사용하는 방식을 택했습니다.
+
+---
+
+## 1. 모델 — 4개 필드로 충분
+
+```python
+class Subscriber(models.Model):
+    email = models.EmailField(unique=True)
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.email
+```
+
+각 필드의 역할:
+
+- **`email`** (`unique=True`): 같은 이메일로 중복 구독 방지.
+- **`token`** (`UUIDField`, `default=uuid.uuid4`, `unique=True`): 해지 시 본인 확인용. **비밀번호 대체물**.
+- **`is_active`**: 해지 시 레코드를 **삭제하지 않고 플래그만 내림**. 재구독, 통계, 법적 기록 보존에 유리.
+- **`created_at`** (`auto_now_add=True`): 최초 구독 시각.
+
+비밀번호, 이름, 프로필 같은 건 없습니다. 뉴스레터에 정확히 필요한 정보만 남기고, **추후 삭제 요청이 왔을 때도 지울 것이 명확**합니다(GDPR/개인정보 관점).
+
+---
+
+## 2. 왜 UUID인가 — 자동 증가 ID가 안 되는 이유
+
+해지 링크를 만들려면 URL 파라미터로 식별자를 넘겨야 합니다. 가장 쉬운 방법은 pk를 쓰는 것:
+
+```
+❌ https://pynews.example/unsubscribe?id=42
+```
+
+그런데 이렇게 하면 **"?id=43, ?id=44..."** 순차로 돌리면 전체 구독자를 해지시킬 수 있습니다. 그냥 재앙입니다.
+
+UUID는 128비트 난수라 **추측 불가능**합니다.
+
+```
+✅ https://pynews.example/unsubscribe?token=3f7a2c4e-9b1d-4e2a-8c6f-1e3b5d7f9a2c
+```
+
+같은 장점을 얻는 다른 선택지도 있습니다 — `secrets.token_urlsafe(32)`로 만든 문자열 토큰, 서명된 URL(`django.core.signing`) 등. UUID를 고른 이유는:
+
+- Django에 `UUIDField`가 기본 내장.
+- `default=uuid.uuid4`로 자동 생성되어 **모델이 추가 훅 없이 자기완결**.
+- PostgreSQL에서는 네이티브 UUID 타입으로 인덱스 효율도 좋음.
+
+---
+
+## 3. 구독 API — `SubscribeView`
+
+```python
+class SubscribeView(APIView):
+    def post(self, request):
+        serializer = SubscribeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "구독이 완료되었습니다!"},
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+```
+
+```python
+# serializers.py
+class SubscribeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscriber
+        fields = ["email"]
+```
+
+- 클라이언트는 **이메일만** 보냅니다.
+- `token`은 모델의 `default=uuid.uuid4`로 **서버에서 자동 생성**. 프론트에 노출되지 않습니다.
+- 이메일은 `unique=True`라 중복 시 serializer에서 자동 `400` 반환.
+
+직렬화 스펙을 일부러 좁게 잡아서, 악의적인 클라이언트가 `is_active: false`나 `token: ...`을 같이 보내도 무시되도록 했습니다.
+
+---
+
+## 4. 해지 API — `UnsubscribeView`
+
+```python
+class UnsubscribeView(APIView):
+    def post(self, request):
+        token = request.data.get("token")
+        try:
+            subscriber = Subscriber.objects.get(token=token)
+            subscriber.is_active = False
+            subscriber.save()
+            return Response({"message": "구독이 해지되었습니다."})
+        except Subscriber.DoesNotExist:
+            return Response(
+                {"error": "유효하지 않은 토큰입니다."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+```
+
+두 가지가 포인트입니다.
+
+### (1) 레코드를 지우지 않고 `is_active=False`
+
+```python
+subscriber.is_active = False
+subscriber.save()
+```
+
+`delete()`를 쓰지 않는 이유:
+
+- **재구독 시 이력 복원 가능** — 같은 사람이 다시 구독하면 기존 레코드를 다시 `True`로 올리면 됩니다.
+- **통계 유지** — 이탈률, 기간별 순구독자 수 같은 지표를 뽑을 때 soft-delete가 편합니다.
+- **법적 요구사항** — 수신동의/거부 이력을 일정 기간 보관해야 하는 경우가 많습니다.
+
+단, **완전 삭제 요청(GDPR "잊혀질 권리" 등)** 이 들어오면 별도 경로로 하드 삭제해야 합니다. 이건 `is_active=False`와 다른 레이어의 기능입니다.
+
+### (2) 발송 목록 필터
+
+`send_newsletter` 명령에서는 이 플래그로 필터링합니다.
+
+```python
+subscribers = Subscriber.objects.filter(is_active=True)
+```
+
+해지된 구독자는 자동으로 발송 대상에서 빠집니다.
+
+---
+
+## 5. 메일 본문에 개인화된 해지 링크 붙이기
+
+`send_newsletter`에서 각 메시지마다 해지 토큰을 꼬리에 붙입니다.
+
+```python
+for sub in subscribers:
+    unsub_note = f"\n\n---\n구독 해지: 토큰 {sub.token}"
+    messages.append((subject, body + unsub_note, None, [sub.email]))
+
+send_mass_mail(messages, fail_silently=True)
+```
+
+실제 프로덕션이라면 이 토큰을 **클릭 가능한 링크**로 만드는 게 자연스럽습니다.
+
+```python
+unsub_url = f"https://python-news.vercel.app/unsubscribe?token={sub.token}"
+unsub_note = f"\n\n---\n구독 해지: {unsub_url}"
+```
+
+프론트 쪽 `/unsubscribe` 페이지에서 `token` 쿼리스트링을 읽어 `UnsubscribeView`로 POST를 보내면, 사용자는 **한 번의 클릭으로 해지**됩니다. 로그인 절차가 전혀 필요 없습니다.
+
+---
+
+## 6. 보안 고려사항
+
+UUID 기반 토큰은 충분히 강력하지만, 몇 가지 디테일을 챙겨야 합니다.
+
+### (1) 메일 본문 노출 최소화
+
+이메일은 평문이 많고, 발신 로그 등에 본문이 남을 수 있습니다. 토큰 그 자체를 본문에 노출하기보다 **URL에 담고, 사용자가 클릭할 때만 드러나게** 하는 편이 안전합니다.
+
+### (2) 유출 시 대응
+
+토큰이 유출돼도 **해지 외의 권한은 없습니다**. 최악의 경우 누군가가 대신 해지하는 수준이고, 재구독은 원 소유자가 다시 할 수 있습니다. 그래도 토큰을 회전(rotate)하고 싶다면:
+
+```python
+# 재발급 로직 예시
+subscriber.token = uuid.uuid4()
+subscriber.save(update_fields=["token"])
+```
+
+보내는 모든 메일에 새 토큰을 담는 식으로 운영할 수 있지만, PyNews는 그 정도 민감도가 아니라 고정 토큰을 유지합니다.
+
+### (3) CSRF / Rate limit
+
+`UnsubscribeView`는 DRF `APIView`이므로 기본적으로 CSRF 보호를 받지 않지만(stateless), **브루트 포스 방어**를 위해서는 rate limit이 필요합니다. UUID 충돌 가능성은 무시 가능하지만 애초에 시도 자체를 제한하는 편이 낫습니다.
+
+```python
+# settings.py — DRF throttle 예시
+REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {"anon": "30/minute"},
+}
+```
+
+---
+
+## 7. URL 패턴
+
+```python
+# news/urls.py
+urlpatterns = [
+    path("subscribe/", views.SubscribeView.as_view(), name="subscribe"),
+    path("unsubscribe/", views.UnsubscribeView.as_view(), name="unsubscribe"),
+    # ...
+]
+```
+
+두 엔드포인트 모두 `POST` 단일 메서드입니다. `GET /unsubscribe/?token=...`로도 받고 싶다면 뷰를 분기하거나 프론트에서 POST로 변환해 보내는 방식을 씁니다. 후자가 멱등성 관점에서 더 깔끔합니다.
+
+---
+
+## 8. 전체 플로우 요약
+
+```
+[구독]
+사용자 → POST /subscribe {email}
+      → Subscriber(email, token=uuid4(), is_active=True) 생성
+      → 201 응답
+
+[주간 발송]
+크론 → send_newsletter
+    → Subscriber.filter(is_active=True) 순회
+    → 각자 메일에 고유 token 삽입
+    → send_mass_mail() 일괄 발송
+
+[해지]
+사용자 → 메일 속 해지 링크 클릭
+      → POST /unsubscribe {token}
+      → is_active = False (레코드는 유지)
+      → 200 응답
+```
+
+---
+
+## 정리
+
+뉴스레터의 구독/해지는 **"로그인 없는 인증"** 문제입니다. UUID 토큰을 비밀번호 대체물로 쓰고, `is_active` 플래그로 soft-delete 하면 이 패턴을 간단하게 풀 수 있습니다. Django 기본 기능(`UUIDField`, `APIView`, `send_mass_mail`)만으로 구현 가능해서, 작은 프로젝트부터 프로덕션 뉴스레터까지 스케일하기 좋은 구조입니다.
+
+다음 글에서는 이 시스템이 올려두는 **`Post` 테이블의 editorial/crawled 구분 모델**을 어떻게 설계했는지 다루겠습니다.
