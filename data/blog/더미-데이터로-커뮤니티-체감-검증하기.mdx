@@ -1,0 +1,178 @@
+---
+title: 더미 데이터로 커뮤니티 체감 검증하기 — 카테고리·작성자 분산 회고
+date: '2026-04-09'
+tags: [기술노트]
+draft: false
+summary: '포트폴리오용 커뮤니티 서비스에서 "비어 보이지 않게, 가짜 같지 않게" 더미 데이터를 만든 과정을 정리합니다. 페이지네이션 검증과 작성자 분산이 핵심이었습니다.'
+---
+
+# 더미 데이터로 커뮤니티 체감 검증하기 — 카테고리·작성자 분산 회고
+
+포트폴리오용 커뮤니티 서비스를 만들 때 가장 무시받는 작업이 **더미 데이터**입니다. 기능은 다 되는데 화면을 켜보면 "글 3개, 전부 admin 작성" 이라서, 실제 쓰이는 서비스처럼 보이지 않습니다. 이번 카페 커뮤니티에서 더미 데이터 때문에 고생한 회고를 남깁니다.
+
+---
+
+## 1. 처음 만든 더미 데이터 — 뭐가 문제였나
+
+처음에는 단순하게 접근했습니다.
+
+```python
+for i in range(30):
+    Post.objects.create(
+        title=f'샘플 글 {i}',
+        content='...',
+        author=admin_user,
+    )
+```
+
+이 데이터로 화면을 열었을 때 발견한 문제:
+
+1. **게시판이 8개인데 글이 "자유게시판" 한 곳에 몰림** → 다른 카테고리 들어가면 텅 빈 페이지
+2. **작성자가 전부 `admin`** → 커뮤니티처럼 안 보이고 혼자 떠드는 블로그 같음
+3. **날짜가 전부 현재 시각** → 정렬/시간 포맷 검증 불가능
+4. **글 내용이 "샘플 글 1" 같은 단조로운 문자열** → 페이지네이션 UI에서 줄바꿈·말줄임이 제대로 보이는지 판단 안 됨
+
+기능 테스트는 통과하는데 **시각적인 품질**이 전혀 안 맞았습니다.
+
+---
+
+## 2. 기준 1 — 카테고리별로 20개 이상 분산
+
+페이지네이션을 한 페이지 10개로 잡았으니, 적어도 **2페이지 이상 넘어가는 분량**이 있어야 페이지네이션 UI가 말이 됩니다. "1페이지만 있으면 숫자만 보이고 이전/다음이 비활성화" 상태라 실전 검증이 안 됩니다.
+
+```python
+# board/management/commands/populate_dummy_posts.py
+CATEGORY_CODES = [
+    'free', 'review', 'job', 'ticket',
+    'creative', 'suggest', 'tip', 'online',
+]
+
+for code in CATEGORY_CODES:
+    for i in range(25):  # 카테고리별 25개
+        Post.objects.create(
+            category=code,
+            title=TITLES[code][i % len(TITLES[code])],
+            ...
+        )
+```
+
+처음에는 "전체 200개 뿌려지면 적당히 섞이겠지" 라고 생각했는데, 카테고리 필터를 걸면 **해당 카테고리의 글 수**만 나타나는 걸 잊고 있었습니다. 총량이 아니라 **카테고리별 하한선**이 기준입니다.
+
+---
+
+## 3. 기준 2 — 작성자를 5~10명으로 분산
+
+작성자가 admin 하나면 커뮤니티가 아니라 공지사항입니다. 더미 유저를 미리 만들어 두고, 글마다 랜덤하게 배정했습니다.
+
+```python
+# board/management/commands/populate_dummy_posts.py
+import random
+from accounts.models import User
+
+DUMMY_NICKS = ['방탈출러버', '추리광', '강남토박이', '주말러너', ...]
+
+def ensure_dummy_users():
+    users = []
+    for nick in DUMMY_NICKS:
+        user, _ = User.objects.get_or_create(
+            username=f'dummy_{nick}',
+            defaults={'nickname': nick},
+        )
+        users.append(user)
+    return users
+
+
+def handle(self, *args, **options):
+    users = ensure_dummy_users()
+    for code in CATEGORY_CODES:
+        for i in range(25):
+            Post.objects.create(
+                category=code,
+                author=random.choice(users),
+                ...
+            )
+```
+
+포인트:
+
+- **닉네임을 실제 커뮤니티 톤에 맞게** 지었습니다. `user1`, `user2` 는 티가 너무 납니다.
+- `dummy_` 프리픽스를 붙여서, 나중에 "더미 유저만 지우기" 가 가능하게 했습니다.
+
+---
+
+## 4. 기준 3 — 시각을 과거로 흩뿌리기
+
+모든 글이 **오늘 작성**으로 찍히면 "3분 전, 3분 전, 3분 전…" 이 나열되어 시간 포맷 테스트가 안 됩니다.
+
+```python
+import random
+from datetime import timedelta
+from django.utils import timezone
+
+now = timezone.now()
+
+post = Post.objects.create(...)
+# 최근 90일 사이 임의 시각으로 덮어쓰기
+post.created_at = now - timedelta(
+    days=random.randint(0, 90),
+    hours=random.randint(0, 23),
+    minutes=random.randint(0, 59),
+)
+post.save(update_fields=['created_at'])
+```
+
+- `Post.objects.create` 시점에서는 `created_at`이 `auto_now_add=True` 때문에 현재 시각으로 박힙니다. 그래서 **생성 후 덮어쓰기** 가 필요합니다.
+- 2단계로 나눠 저장하는 건 약간 지저분하지만, 더미 데이터 한정이라 타협했습니다. 필드를 `auto_now_add` 대신 `default=timezone.now`로 두면 생성 시점에 직접 넣을 수 있습니다.
+
+이 덕분에 상세 페이지에서 "N분 전", "N시간 전", "YYYY-MM-DD" 같은 분기 포맷을 한 번에 시각적으로 확인할 수 있었습니다.
+
+---
+
+## 5. 기준 4 — 본문은 최소 1문단 이상의 실제 한국어
+
+"샘플 1", "샘플 2" 는 목록 화면에서 모든 행이 같은 너비라 **말줄임표(...) 테스트**가 안 됩니다. 카테고리별로 "자주 나올 법한 글 패턴"을 15~30개 정도 미리 적어두고, 로테이션으로 돌렸습니다.
+
+```python
+REVIEW_TITLES = [
+    '어제 다녀온 XX테마 후기입니다',
+    '난이도 5성짜리 추천 좀 해주세요',
+    '처음 가는 사람인데 동선 조언 부탁드립니다',
+    # ... 25개 정도
+]
+```
+
+이 작업이 가장 지겹지만, 포트폴리오를 보는 사람이 **"실제로 쓰이는 서비스처럼" 느끼는가**는 여기서 갈립니다.
+
+---
+
+## 6. 더미 데이터 전용 command로 분리
+
+더미 데이터는 **절대 운영에 나가서는 안 됩니다**. 그래서 카페 시드(`populate_cafe_data`)와 분리해서 `populate_dummy_posts`라는 별도 커맨드로 두고, Makefile에서만 묶었습니다.
+
+```make
+seed-cafe:
+	python manage.py populate_cafe_data
+	python manage.py sync_cafe_theme_seed
+
+seed-dev: seed-cafe
+	python manage.py populate_dummy_posts
+```
+
+운영 배포 스크립트는 `seed-cafe`만 호출합니다. 실수로 더미가 들어가도 `dummy_` 프리픽스 덕분에 회수할 수는 있지만, 애초에 안 들어가는 게 최선입니다.
+
+---
+
+## 7. 회고 — "기능 완성" 과 "서비스 완성" 은 다르다
+
+이번 프로젝트에서 가장 크게 배운 건, **더미 데이터 품질이 서비스 첫인상의 80%** 를 차지한다는 점입니다. 기능 체크리스트가 다 체크돼도, 화면이 비어 보이거나 가짜 같으면 완성도가 반으로 떨어집니다.
+
+몇 가지 체크리스트로 정리하면:
+
+- [ ] 카테고리별로 페이지네이션 2페이지 이상 분량
+- [ ] 작성자 최소 5명 이상 분산
+- [ ] 생성 시각을 과거로 흩뿌려 시간 포맷 분기 모두 커버
+- [ ] 제목/본문은 실제 커뮤니티 톤의 문장
+- [ ] 더미 유저/게시글은 프리픽스로 식별 가능하게
+- [ ] 운영 배포 스크립트는 시드와 더미를 분리 실행
+
+다음 프로젝트에서는 이 리스트를 그대로 들고 갈 생각입니다.

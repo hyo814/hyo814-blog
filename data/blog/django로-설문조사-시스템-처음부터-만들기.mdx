@@ -1,0 +1,265 @@
+---
+title: Django로 설문조사 시스템 처음부터 만들기 — 3-tier 재설계와 PDF 다운로드
+date: '2026-02-15'
+tags: [기술노트]
+draft: false
+summary: 'common 앱에 섞여 있던 설문조사 모델을 독립 앱으로 분리하고 3-tier 아키텍처로 재설계한 과정, 그리고 weasyprint 기반 PDF 다운로드와 개인정보 마스킹 구현을 정리합니다.'
+---
+
+# Django로 설문조사 시스템 처음부터 만들기 — 3-tier 재설계와 PDF 다운로드
+
+초기에 `common` 앱에 섞여 있던 설문조사 모델을 **독립 앱(`survey`)** 으로 분리하고, 3-tier 아키텍처를 준수하도록 재설계했습니다. 그 위에 **PDF 다운로드(전체 목록 + 개별 응답)** 와 **개인정보 마스킹**까지 얹은 과정을 한 글에 정리합니다.
+
+---
+
+## 1. 시작점 — common에 섞여 있던 문제
+
+처음에는 "설문 모델 두어 개니까 common에 넣자" 라고 시작했는데, 요구사항이 늘면서 common 앱이 비대해졌습니다.
+
+```
+common/
+  ├── models.py    # User, Notice, Survey*, Tag, ... 전부 혼재
+  ├── admin.py     # 설문 admin이 공통 모델 admin과 섞임
+```
+
+문제는 두 가지였습니다.
+
+1. **마이그레이션 충돌** — 설문 스키마가 자주 바뀌는데 common의 다른 모델 변경과 같은 마이그레이션에 딸려오면서 충돌이 잦았습니다.
+2. **책임 경계 모호** — "설문 점수 계산 로직은 common에 있어야 하나, survey 모듈이 따로 있어야 하나" 같은 논의가 반복됐습니다.
+
+---
+
+## 2. 독립 앱으로 분리 — survey 앱 신설
+
+```
+survey/
+  ├── __init__.py
+  ├── models.py
+  ├── views/
+  │   ├── admin.py       # 관리자 CRUD
+  │   └── user.py        # 사용자 응답 제출
+  ├── forms.py
+  ├── migrations/
+  └── urls.py
+```
+
+분리 자체는 단순했지만, **기존 데이터를 잃지 않고 이전**하는 게 관건이었습니다. `common/models.py`의 Survey 관련 모델을 **제거**하고, `survey/models.py`에 새로 정의한 뒤, `--fake` 마이그레이션과 `db_table` Meta 옵션을 조합해 기존 테이블을 그대로 재사용하도록 처리했습니다.
+
+```python
+# survey/models.py
+class SurveyTemplate(models.Model):
+    class Meta:
+        db_table = 'common_surveytemplate'  # 기존 테이블 유지
+```
+
+---
+
+## 3. 3-tier 모델 재설계
+
+설문 구조를 **Template → Section → Question** 3계층으로 명확히 나눴습니다.
+
+```python
+# survey/models.py
+class SurveyTemplate(models.Model):
+    """설문 템플릿 — 하나의 설문 정의"""
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    start_date = models.DateTimeField()      # 추가: 시작일
+    end_date = models.DateTimeField()        # 추가: 종료일
+    is_active = models.BooleanField(default=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)  # 소프트 삭제
+
+
+class SurveySection(models.Model):
+    """섹션 — 한 설문 내부의 논리적 그룹"""
+    template = models.ForeignKey(SurveyTemplate, on_delete=models.CASCADE, related_name='sections')
+    title = models.CharField(max_length=200)
+    order = models.PositiveIntegerField(default=0)
+
+
+class SurveyQuestion(models.Model):
+    """질문 — 실제 응답 단위"""
+    QUESTION_TYPES = [
+        ('likert', '리커트 5점'),
+        ('text', '주관식'),
+        ('single', '단일 선택'),
+        ('multi', '다중 선택'),
+    ]
+    section = models.ForeignKey(SurveySection, on_delete=models.CASCADE, related_name='questions')
+    text = models.TextField()
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
+    is_required = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    # 특정 값 선택 시 사유 필수 입력을 JSONField로 설정
+    reason_required_values = models.JSONField(default=list, blank=True)
+```
+
+### ScaleLabel — 리커트 척도의 라벨을 모델화
+
+"매우 불만족 / 불만족 / 보통 / 만족 / 매우 만족" 같은 라벨을 하드코딩하지 않고 **모델로 빼서** 설문별로 커스터마이즈 가능하게 했습니다.
+
+```python
+class ScaleLabel(models.Model):
+    template = models.ForeignKey(SurveyTemplate, on_delete=models.CASCADE, related_name='scale_labels')
+    value = models.IntegerField()           # 1~5
+    label = models.CharField(max_length=50) # "매우 만족"
+```
+
+### 응답 저장 — Response + Answer
+
+```python
+class SurveyResponse(models.Model):
+    """응답 세트 — 한 사용자의 한 번 제출"""
+    template = models.ForeignKey(SurveyTemplate, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    def calculate_score(self):
+        """리커트 응답의 평균 점수 계산"""
+        likert_answers = self.answers.filter(question__question_type='likert')
+        values = [a.value for a in likert_answers if a.value is not None]
+        return sum(values) / len(values) if values else 0
+
+
+class SurveyAnswer(models.Model):
+    response = models.ForeignKey(SurveyResponse, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(SurveyQuestion, on_delete=models.PROTECT)
+    value = models.IntegerField(null=True, blank=True)       # 리커트/선택
+    text = models.TextField(blank=True)                      # 주관식/사유
+```
+
+---
+
+## 4. 서버 검증 — 프론트를 믿지 말 것
+
+리커트 5점 척도는 프론트에서 1~5만 보낼 것처럼 생겼지만, 네트워크 조작이나 커스텀 클라이언트 가능성을 고려해 **서버에서 재검증**합니다.
+
+```python
+# survey/forms.py
+class SurveyResponseForm(forms.Form):
+    def clean(self):
+        cleaned = super().clean()
+        for question in self.template.questions.all():
+            key = f'q_{question.id}'
+            if question.question_type == 'likert':
+                val = cleaned.get(key)
+                if val is None or not (1 <= val <= 5):
+                    self.add_error(key, '1~5 사이 값만 허용됩니다.')
+            # 사유 필수 검증
+            if question.reason_required_values and cleaned.get(key) in question.reason_required_values:
+                if not cleaned.get(f'{key}_reason'):
+                    self.add_error(key, '사유를 입력해야 합니다.')
+        return cleaned
+```
+
+---
+
+## 5. PDF 다운로드 — weasyprint로 HTML을 PDF로
+
+관리자가 설문 결과를 오프라인 보고용으로 가져가야 한다는 요구가 있었습니다. `reportlab`으로 PDF 레이아웃을 직접 짜는 대신, **기존 Jinja 템플릿을 재사용**할 수 있는 `weasyprint`를 선택했습니다.
+
+```python
+# web_admin/views/survey/admin.py
+from weasyprint import HTML
+from django.template.loader import render_to_string
+
+class SurveyResponseListDownloadView(View):
+    """전체 참여자 목록 PDF"""
+    def get(self, request, template_id):
+        template = SurveyTemplate.objects.get(pk=template_id)
+        responses = template.responses.select_related('user').all()
+
+        html_string = render_to_string(
+            'web_admin/survey/survey_list_pdf_template.html.j2',
+            {'template': template, 'responses': responses}
+        )
+        pdf = HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
+
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="survey_{template.id}_list.pdf"'
+        return response
+
+
+class SurveyResponseDetailDownloadView(View):
+    """개별 응답 상세 PDF"""
+    def get(self, request, response_id):
+        survey_response = SurveyResponse.objects.prefetch_related('answers__question').get(pk=response_id)
+        html_string = render_to_string(
+            'web_admin/survey/survey_detail_pdf_template.html.j2',
+            {'response': survey_response, 'answers': survey_response.answers.all()}
+        )
+        pdf = HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
+        return HttpResponse(pdf, content_type='application/pdf', headers={
+            'Content-Disposition': f'attachment; filename="survey_response_{response_id}.pdf"'
+        })
+```
+
+**장점**: HTML/CSS로 레이아웃 수정이 가능해 디자인 반복이 빠릅니다. 한글 폰트만 `@font-face`로 주입해주면 됩니다.
+
+```css
+/* PDF 템플릿 CSS */
+@font-face {
+    font-family: 'NotoSansKR';
+    src: url('/static/fonts/NotoSansKR-Regular.ttf') format('truetype');
+}
+body { font-family: 'NotoSansKR', sans-serif; }
+```
+
+---
+
+## 6. 개인정보 마스킹
+
+응답 결과 PDF에는 이메일·이름이 그대로 찍히면 안 됩니다. 관리자 권한에 따라 **마스킹 적용 여부**를 분기했습니다.
+
+```python
+def mask_email(email):
+    if not email or '@' not in email:
+        return email
+    local, domain = email.split('@', 1)
+    if len(local) <= 2:
+        return f'{local[0]}*@{domain}'
+    return f'{local[0]}{"*" * (len(local) - 2)}{local[-1]}@{domain}'
+
+
+def mask_name(name):
+    if not name or len(name) <= 1:
+        return name
+    return f'{name[0]}{"*" * (len(name) - 1)}'
+```
+
+템플릿에서는 권한 필터와 함께 사용합니다.
+
+```jinja
+{% if request.user.has_perm('survey.view_raw_pii') %}
+    {{ response.user.email }}
+{% else %}
+    {{ response.user.email | mask_email }}
+{% endif %}
+```
+
+---
+
+## 7. 필터링 — 전체/객관식/주관식
+
+상세 PDF에서 질문 유형별로 필터링할 수 있게 했습니다.
+
+```python
+question_type = request.GET.get('type', 'all')
+answers = survey_response.answers.all()
+if question_type == 'objective':
+    answers = answers.filter(question__question_type__in=['likert', 'single', 'multi'])
+elif question_type == 'subjective':
+    answers = answers.filter(question__question_type='text')
+```
+
+---
+
+## 정리
+
+- **독립 앱 분리**의 이득은 마이그레이션 격리와 책임 경계 명확화 두 가지입니다.
+- **3-tier 모델(Template → Section → Question)** 은 설문 CRUD의 복잡도를 절반으로 줄여줍니다.
+- **리커트 라벨을 ScaleLabel 모델**로 빼면 설문별 커스터마이즈가 깔끔해집니다.
+- **PDF는 weasyprint**로 HTML/CSS 재활용이 최고 효율입니다. 한글 폰트만 신경 쓰면 됩니다.
+- **개인정보 마스킹**은 권한 필터와 묶어서 템플릿 레벨에서 일관되게 적용합니다.
+
+설문 시스템은 "겉보기에 간단해 보이지만 요구사항이 계속 붙는" 전형적 영역입니다. 초기에 **3-tier로 모델을 나눠두면** 기능 추가마다 테이블이 폭발하는 사태를 피할 수 있습니다.

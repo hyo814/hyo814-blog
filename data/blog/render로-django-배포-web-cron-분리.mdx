@@ -1,0 +1,198 @@
+---
+title: Render로 Django 배포 — web 서비스와 cron 서비스 분리하기
+date: '2026-04-10'
+tags: [기술노트]
+draft: false
+summary: 'Render의 render.yaml 하나로 Django API(web)와 주간 크롤러(cron)를 각각 다른 서비스로 띄우고, 같은 DB를 공유하도록 연결한 경험을 정리합니다.'
+---
+
+# Render로 Django 배포 — web 서비스와 cron 서비스 분리하기
+
+뉴스레터 플랫폼([PyNews](https://github.com/hyo814/python-news))을 Render에 올리면서, **API 서버**와 **주간 크롤러**를 어떻게 나눠 배포할지 고민이 있었습니다. 같은 Django 프로젝트지만 역할이 다르고, 특히 크롤러는 하루 몇 분만 돌면 되므로 web 서비스에 얹는 것은 낭비였습니다.
+
+결론부터 말하면 `render.yaml` 한 파일에서 `type: web`과 `type: cron`을 분리하고, `fromDatabase`로 DB 연결 문자열을 양쪽에 주입하는 구조로 갔습니다.
+
+---
+
+## 1. 왜 web과 cron을 나눴나
+
+같은 Django 프로젝트이지만 두 서비스의 특성은 완전히 다릅니다.
+
+- **web (API 서버)**: 24시간 떠 있어야 하고, 프론트엔드(Vercel)에서 들어오는 요청을 처리합니다.
+- **cron (크롤러)**: 매주 월요일 오전 한 번만 실행되면 되고, 실행 시간은 몇 분 단위입니다.
+
+크롤러를 web 서비스 안에서 `celery beat` 같은 걸로 돌릴 수도 있지만, 그러려면 워커 프로세스를 상시 띄워야 하고 Redis 같은 브로커도 필요합니다. **한 달에 4번 도는 작업**을 위해 상시 인프라를 유지하는 건 과합니다.
+
+Render에는 `type: cron` 서비스가 따로 있어서, **스케줄에 맞춰 컨테이너를 띄우고 명령이 끝나면 종료**합니다. 상시 비용 없이 스케줄 실행만 과금되는 구조라 이 케이스에 정확히 맞습니다.
+
+---
+
+## 2. `render.yaml` 전체 구조
+
+```yaml
+databases:
+  - name: pynews-db
+    plan: free
+    databaseName: pynews
+
+services:
+  - type: web
+    name: pynews-api
+    runtime: python
+    plan: free
+    buildCommand: ./build.sh
+    startCommand: gunicorn config.wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pynews-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://python-news.vercel.app,https://python-news-hyo814s-projects.vercel.app"
+
+  - type: cron
+    name: pynews-crawler
+    runtime: python
+    plan: starter
+    schedule: "0 0 * * 1"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py crawl_news --days=7
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pynews-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+```
+
+한 파일에 `databases` 블록과 `services` 블록이 있고, services 안에 web 1개 + cron 1개가 들어 있는 형태입니다.
+
+---
+
+## 3. DB 연결 — `fromDatabase`로 양쪽에 같은 문자열 주입
+
+가장 편리했던 부분입니다. `databases` 블록에 선언한 `pynews-db`를, web과 cron 양쪽의 `envVars`에서 다음처럼 참조합니다.
+
+```yaml
+envVars:
+  - key: DATABASE_URL
+    fromDatabase:
+      name: pynews-db
+      property: connectionString
+```
+
+이렇게 하면 Render가 자동으로 연결 문자열을 주입하기 때문에, **비밀번호나 호스트를 직접 복붙할 필요가 없습니다**. DB를 재생성해도 참조가 유지됩니다.
+
+Django `settings.py`에서는 `dj-database-url`로 받으면 됩니다:
+
+```python
+import dj_database_url
+
+DATABASES = {
+    "default": dj_database_url.config(
+        default=os.environ["DATABASE_URL"],
+        conn_max_age=600,
+    )
+}
+```
+
+---
+
+## 4. cron 서비스의 스케줄 — `schedule: "0 0 * * 1"`
+
+cron 표현식 그대로입니다. 여기서는 **UTC 기준 매주 월요일 00:00**, 한국 시간으로는 월요일 오전 9시가 됩니다.
+
+```yaml
+- type: cron
+  name: pynews-crawler
+  schedule: "0 0 * * 1"
+  startCommand: python manage.py crawl_news --days=7
+```
+
+주의할 점 두 가지:
+
+1. **Render cron은 UTC 기준**입니다. 한국 시간으로 사고할 때 9시간 차이를 꼭 염두에 둬야 합니다.
+2. `startCommand`는 **한 번 실행되고 끝나야 하는 명령**이어야 합니다. `runserver`처럼 상시 돌리는 명령을 넣으면 안 됩니다. 여기서는 Django management command인 `crawl_news`를 실행합니다.
+
+---
+
+## 5. plan을 다르게 설정한 이유
+
+```yaml
+- type: web
+  plan: free
+
+- type: cron
+  plan: starter
+```
+
+- web은 `free`: 트래픽이 많지 않은 개인 프로젝트라 무료 플랜으로 충분합니다. 단, free 플랜은 **일정 시간 트래픽이 없으면 슬립**에 들어가서 첫 요청이 느려집니다.
+- cron은 `starter`: free 플랜에서는 cron job이 지원되지 않아 starter 이상이 필요합니다.
+
+배포 비용을 정확히 파악하려면 Render 공식 문서의 플랜별 한도를 확인해야 합니다.
+
+---
+
+## 6. CORS — Vercel 프론트와 연결
+
+프론트엔드는 Vercel, API는 Render인 분리 배포 구조라 CORS 설정이 필수입니다.
+
+```yaml
+- key: CORS_ALLOWED_ORIGINS
+  value: "https://python-news.vercel.app,https://python-news-hyo814s-projects.vercel.app"
+```
+
+Django 쪽에서는 `django-cors-headers`로 받습니다:
+
+```python
+# settings.py
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+```
+
+Vercel은 **프로젝트 도메인 + 자동 생성 도메인**이 둘 다 생기기 때문에, 둘 다 허용 목록에 넣어두는 편이 안전합니다. PR 프리뷰 URL까지 포함하려면 정규식 기반의 `CORS_ALLOWED_ORIGIN_REGEXES`도 고려할 수 있습니다.
+
+---
+
+## 7. `build.sh` — web 서비스의 빌드 스텝
+
+web 서비스는 `buildCommand: ./build.sh`로 셸 스크립트 하나를 호출하고, 그 안에서 의존성 설치 + 마이그레이션 + 정적 파일 수집을 순서대로 처리합니다.
+
+```bash
+#!/usr/bin/env bash
+set -o errexit
+
+pip install -r requirements.txt
+python manage.py collectstatic --no-input
+python manage.py migrate
+```
+
+cron 서비스는 정적 파일이 필요 없어서 `buildCommand`에 `pip install -r requirements.txt`만 써도 충분합니다.
+
+---
+
+## 8. 배포 후 체크리스트
+
+```
+□ render.yaml 커밋 후 Render 대시보드에서 "New Blueprint" 연결
+□ 첫 배포 시 DATABASE_URL이 양쪽 서비스에 정상 주입됐는지 Logs 확인
+□ web 서비스 URL로 /admin 접속 (마이그레이션 성공 여부)
+□ cron 서비스 "Trigger Run"으로 수동 실행 → 로그에서 크롤링 결과 확인
+□ Vercel 프론트에서 API 호출 시 CORS 에러 없는지 확인
+□ cron schedule이 UTC 기준임을 재확인 (KST 변환)
+□ free 플랜 슬립 시간 확인 (첫 요청 지연 감안)
+```
+
+---
+
+## 정리
+
+Render의 `render.yaml`은 **한 파일에서 여러 타입의 서비스를 선언적으로 묶을 수 있다는 점**이 가장 큰 장점이었습니다. web과 cron을 분리해서 비용 구조를 최적화했고, DB는 `fromDatabase`로 한 번만 선언해서 양쪽에서 공유했습니다.
+
+다음 글에서는 이 cron 서비스를 만들기 전에 사용하던 **로컬 crontab 기반 `setup_cron.sh`**와 Render Cron Job을 비교해보겠습니다.

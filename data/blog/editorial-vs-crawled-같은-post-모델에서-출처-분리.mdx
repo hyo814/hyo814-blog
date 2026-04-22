@@ -1,0 +1,217 @@
+---
+title: Editorial vs Crawled — 같은 Post 모델에서 출처 분리하기
+date: '2026-04-20'
+tags: [기술노트]
+draft: false
+summary: '편집자가 직접 쓴 글과 RSS에서 수집한 글을 하나의 Post 테이블에 두되, source_type 필드로 분기하는 설계의 장단점과 어드민/쿼리 패턴을 정리합니다.'
+---
+
+# Editorial vs Crawled — 같은 Post 모델에서 출처 분리하기
+
+뉴스레터 플랫폼 [PyNews](https://github.com/hyo814/python-news)에는 두 종류의 글이 있습니다.
+
+- **editorial**: 편집자가 직접 작성한 큐레이션/에디토리얼 콘텐츠.
+- **crawled**: 11개 RSS 소스에서 자동 수집한 외부 글.
+
+처음 설계할 때 가장 고민했던 건 **"테이블을 나눌 것인가, 한 테이블로 합칠 것인가"** 였습니다. 결론은 한 테이블에 `source_type` 필드로 분기하는 방향. 이 글에서는 왜 그렇게 갔고, 그 결정이 모델/어드민/쿼리에 어떤 영향을 줬는지 정리합니다.
+
+---
+
+## 1. 왜 테이블을 나누지 않았나
+
+"editorial과 crawled는 성격이 다르니까 `EditorialPost`, `CrawledPost`로 나누면 깔끔하지 않나?"라고 처음엔 생각했습니다. 하지만 실제로 **같이 다루는 장면**이 대부분이었습니다.
+
+- **목록 페이지**: 메인에 두 종류를 섞어서 최신순으로 보여줍니다.
+- **뉴스레터 본문**: 주간 메일에 editorial + crawled를 함께 묶어 보냅니다.
+- **태그 필터링**: "Django" 태그로 검색하면 출처 관계없이 나와야 합니다.
+- **프론트 상세 페이지**: 같은 `/posts/:slug` 라우트로 두 종류 다 렌더링.
+
+두 테이블로 나누면 **매번 `UNION` 쿼리**를 쓰거나, ORM 레벨에서 두 쿼리셋을 합쳐야 합니다. 공통 필드(title, slug, tags, published_at)가 대부분인데 테이블을 나누는 건 과잉이라고 판단했습니다.
+
+---
+
+## 2. `SourceType`으로 출처 구분
+
+Django 3.0+의 `TextChoices`로 출처를 enum처럼 정의했습니다.
+
+```python
+class Post(models.Model):
+    class SourceType(models.TextChoices):
+        EDITORIAL = "editorial", "직접 작성"
+        CRAWLED = "crawled", "크롤링"
+
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    summary = models.TextField(help_text="글 요약 (목록에 표시)")
+    content = models.TextField(help_text="본문 (Markdown 지원)")
+    cover_image = models.ImageField(upload_to="covers/", blank=True, null=True)
+    tags = models.ManyToManyField(Tag, blank=True, related_name="posts")
+    author = models.CharField(max_length=100, default="PyNews 팀")
+    source_type = models.CharField(
+        max_length=10,
+        choices=SourceType.choices,
+        default=SourceType.EDITORIAL,
+    )
+    source_url = models.URLField(blank=True, help_text="원본 링크 (크롤링 글)")
+    published_at = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_featured = models.BooleanField(default=False)
+    is_curated = models.BooleanField(
+        default=False,
+        help_text="큐레이션 승인 여부 (True인 글만 프론트에 노출)",
+    )
+
+    class Meta:
+        ordering = ["-published_at"]
+```
+
+포인트는 네 가지입니다.
+
+### (1) `source_type`의 기본값은 `EDITORIAL`
+
+어드민에서 **편집자가 새 글을 쓸 때** 출처 선택을 깜빡해도 editorial로 저장됩니다. 크롤러는 항상 명시적으로 `CRAWLED`를 지정하므로 기본값이 editorial인 편이 실수 방지에 유리합니다.
+
+### (2) `source_url`은 `blank=True`
+
+crawled 글에만 필요한 필드입니다. editorial 글에는 외부 링크가 없으므로 비워두어도 되도록 `blank=True`로 설정합니다. DB 레벨의 NOT NULL 제약을 풀어두는 것도 같은 의도입니다.
+
+### (3) `is_curated` — 프론트 노출 제어
+
+두 출처 모두에 공통으로 적용되는 게이트입니다. **크롤러가 수집한 글을 일단 DB에는 넣되, 편집자의 승인(`is_curated=True`) 뒤에만 프론트에 노출**합니다. 자동 수집의 품질 리스크를 이 플래그 하나로 막습니다.
+
+### (4) `is_featured` — 피처드 슬롯
+
+"메인 상단 1~2개"처럼 특별히 강조할 글을 표시하는 독립 플래그. editorial/crawled 상관없이 선별 가능합니다.
+
+---
+
+## 3. 어드민 — 한 페이지에서 두 종류를 관리
+
+한 테이블로 두면 **Django 어드민을 그대로 쓸 수 있다**는 장점이 큽니다.
+
+```python
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    list_display = (
+        "title", "source_type", "author",
+        "published_at", "is_featured", "is_curated",
+    )
+    list_filter = (
+        "source_type", "is_curated", "tags",
+        "is_featured", "published_at",
+    )
+    list_editable = ("is_curated",)
+    search_fields = ("title", "summary", "content")
+    prepopulated_fields = {"slug": ("title",)}
+    filter_horizontal = ("tags",)
+
+    def get_changeform_initial_data(self, request):
+        return {"source_type": "editorial", "author": "PyNews 팀"}
+```
+
+이 어드민 설정의 주요 포인트:
+
+- **`list_filter`에 `source_type`과 `is_curated`**: 편집자가 "아직 승인 안 된 크롤링 글"을 빠르게 필터링할 수 있습니다.
+- **`list_editable = ("is_curated",)`**: 목록 페이지에서 체크박스로 **일괄 승인** 가능. 매주 수십 개의 크롤링 글을 한 번에 보고 is_curated만 토글하는 게 일반적인 워크플로우입니다.
+- **`get_changeform_initial_data`**: 새 글 작성 시 editorial + PyNews 팀을 기본으로. 편집자는 거의 이 조합으로 글을 쓰기 때문에 디폴트가 맞습니다.
+
+---
+
+## 4. 쿼리 패턴 — 섹션별로 분기
+
+쿼리 레벨에서 두 종류를 분리하고 싶을 때는 `source_type`으로 필터링합니다.
+
+```python
+# 메인 — 편집 픽만
+editorial = Post.objects.filter(
+    source_type=Post.SourceType.EDITORIAL,
+    is_curated=True,
+).order_by("-published_at")[:5]
+
+# 메인 — 커뮤니티 소식만
+community = Post.objects.filter(
+    source_type=Post.SourceType.CRAWLED,
+    is_curated=True,
+).order_by("-published_at")[:10]
+
+# 통합 피드 — 구분 없이
+all_posts = Post.objects.filter(
+    is_curated=True,
+).order_by("-published_at")
+```
+
+뉴스레터 본문 조립도 같은 패턴입니다.
+
+```python
+def _build_body(self, posts):
+    editorial = [p for p in posts if p.source_type == "editorial"]
+    crawled = [p for p in posts if p.source_type == "crawled"]
+    # ...
+```
+
+DB 한 번 조회 후 파이썬 쪽에서 나누거나, 섹션별로 쿼리를 두 번 날리거나 — 상황에 따라 선택하면 됩니다. 데이터가 수백 개 수준이라면 전자가 단순합니다.
+
+---
+
+## 5. 크롤러 쪽에서의 모델 사용
+
+`crawl_news` 명령이 Post를 생성할 때는 항상 `CRAWLED`를 명시합니다.
+
+```python
+Post.objects.create(
+    title=entry.title,
+    slug=slug,
+    summary=summary,
+    content=cleaned_html,
+    source_type=Post.SourceType.CRAWLED,
+    source_url=entry.link,
+    published_at=published_date,
+    is_curated=False,  # 수집 직후에는 승인 전
+)
+```
+
+- **`is_curated=False` 명시**: 크롤링된 글은 편집자 승인 전까지 프론트에 노출되지 않습니다. 스팸/관련 없는 글이 흘러 들어와도 사용자 눈에는 닿지 않습니다.
+- **`source_url`**: 크롤링 글에서만 채워지는 필드. editorial 글은 빈 문자열.
+
+editorial 글은 반대로 **어드민 UI를 통해 생성**되므로 `source_type`은 기본값(editorial)이 그대로 쓰이고, `source_url`은 입력하지 않습니다.
+
+---
+
+## 6. `is_curated` 게이트가 만드는 편집 워크플로우
+
+이 설계는 자연스럽게 **"자동 수집 → 편집 검토 → 선별 노출"** 워크플로우를 만듭니다.
+
+```
+월요일 00:00 UTC
+  ↓ crawl_news 실행
+50여 개 글 수집 (is_curated=False)
+  ↓ 편집자 어드민 접속
+list_filter로 "source_type=crawled, is_curated=False" 조회
+  ↓ 제목/요약 훑어보고 괜찮은 것만 체크
+list_editable로 is_curated=True 일괄 저장
+  ↓ 프론트 반영
+사용자에게 노출
+```
+
+**자동화 + 수동 큐레이션** 조합을 테이블 구조 위에 올리는 거라, 따로 "승인 큐" 테이블을 만들 필요가 없습니다.
+
+---
+
+## 7. 언제 테이블 분리를 고려할까
+
+지금은 한 테이블 구조가 잘 맞지만, 다음 상황이 되면 분리를 재검토하겠다고 선을 그었습니다.
+
+- **데이터가 수십만 건을 넘겨** 단일 테이블 인덱스/VACUUM 부담이 커질 때.
+- **crawled 전용 필드**(원문 언어, 크롤링 버전, 재크롤링 시각 등)가 5개 이상 늘어날 때. 그 시점엔 nullable 필드가 너무 많아져 스키마가 지저분해집니다.
+- **editorial에만 필요한 워크플로우 필드**(초안/퍼블리시 상태, 리뷰어 등)가 생길 때.
+
+이 시점이 오면 **공통 필드는 `AbstractBasePost`로 추상 모델에 두고, editorial/crawled로 상속**하는 패턴으로 가는 게 자연스럽습니다. 지금은 그럴 만큼 복잡하지 않아 단일 테이블을 유지합니다.
+
+---
+
+## 정리
+
+"editorial과 crawled를 어떻게 공존시킬 것인가"는 모델 설계의 단골 질문인데, PyNews에서는 **단일 Post 테이블 + `source_type` + `is_curated` 게이트** 조합으로 풀었습니다. 단일 테이블이 공통 쿼리/어드민/프론트 라우팅을 단순하게 유지해주고, 플래그 두 개가 편집 워크플로우를 자연스럽게 만들어줍니다. 프로젝트 초반에 가장 중요한 건 **유연성보다는 단순함**이라는 걸 이 설계에서 다시 확인했습니다.
+
+다음 글은 이 시리즈의 마지막 — **Django(API) + React 19 + Vite를 Render와 Vercel로 분리 배포**한 구조를 정리하겠습니다.

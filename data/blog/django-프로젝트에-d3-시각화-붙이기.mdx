@@ -1,0 +1,260 @@
+
+---
+title: Django 프로젝트에 D3.js 시각화 붙이기 — 워드클라우드, 히트맵, 데이터 맵
+date: '2026-04-18'
+tags: [기술노트]
+draft: false
+summary: 'jQuery 기반 Django 프로젝트에 D3.js 시각화를 도입한 경험을 정리합니다. 공통 그래프 유틸 설계, 실데이터 부재 시 샘플 폴백, 줌/중앙정렬 개선 포인트를 다룹니다.'
+---
+
+# Django 프로젝트에 D3.js 시각화 붙이기 — 워드클라우드, 히트맵, 데이터 맵
+
+jQuery + Django 템플릿 위주의 레거시 프로젝트에 **D3.js 기반 시각화**를 붙이는 작업을 했습니다. 단일 차트 하나 붙이는 정도가 아니라, 워드클라우드·데이터 맵·데이터셋 지형도(히트맵)·통계 대시보드를 **공통 유틸** 위에서 돌리도록 정리한 경험을 기록합니다.
+
+---
+
+## 1. 왜 D3인가 — Chart.js로는 부족했던 이유
+
+초기에는 Chart.js로도 충분할 줄 알았지만, 요구사항이 쌓이면서 한계에 부딪혔습니다.
+
+- **데이터셋 × 메타클래스 히트맵** — Chart.js의 matrix 플러그인은 있지만 상호작용(클릭→네비게이션)이 빈약
+- **워드클라우드** — Chart.js 기본 지원 안 됨
+- **계층형 데이터 맵(트리맵+강조)** — 줌/팬·커스텀 인터랙션이 많아 캔버스 기반으로는 한계
+
+결론은 "기존 Chart.js 페이지는 그대로 두고, 신규 시각화는 D3로" 였습니다.
+
+---
+
+## 2. 공통 그래프 유틸 설계 — d3-graph-common
+
+여러 시각화가 공유하는 로직(SVG 컨테이너 생성, 줌·팬, 레이블 렌더링, 중앙 정렬)은 하나의 공통 유틸로 뽑아냈습니다.
+
+```javascript
+// static/js/d3-graph-common.js
+window.D3GraphCommon = {
+    createContainer(selector, { width, height, margin }) {
+        const svg = d3.select(selector)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'xMidYMid meet');
+
+        const g = svg.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+
+        return { svg, g, innerWidth: width - margin.left - margin.right };
+    },
+
+    enableZoom(svg, g, { min = 0.5, max = 5 } = {}) {
+        const zoom = d3.zoom()
+            .scaleExtent([min, max])
+            .on('zoom', (event) => g.attr('transform', event.transform));
+        svg.call(zoom);
+        return zoom;
+    },
+
+    centerInitial(svg, zoom, bounds) {
+        // 그래프 경계의 중심을 viewport 중앙에 오도록 초기 transform 적용
+        const { x, y, width, height } = bounds;
+        const svgNode = svg.node();
+        const vw = svgNode.clientWidth;
+        const vh = svgNode.clientHeight;
+        const tx = vw / 2 - (x + width / 2);
+        const ty = vh / 2 - (y + height / 2);
+        svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty));
+    }
+};
+```
+
+**핵심**: `viewBox` + `preserveAspectRatio`로 **반응형 SVG**를 보장하고, 줌은 그래프별로 따로 구현하지 않도록 공통화했습니다.
+
+---
+
+## 3. 워드클라우드 — d3.layout.cloud 번들링
+
+워드클라우드는 `d3.layout.cloud` 라이브러리를 번들에 추가하고, 샘플 데이터 폴백을 함께 붙였습니다.
+
+```javascript
+// static/js/d3-wordcloud.js
+function renderWordCloud(selector, words, options = {}) {
+    const { width = 800, height = 500 } = options;
+
+    d3.layout.cloud()
+        .size([width, height])
+        .words(words.map(w => ({ text: w.term, size: 10 + w.count * 2 })))
+        .padding(5)
+        .rotate(() => (~~(Math.random() * 2)) * 90)
+        .font('Noto Sans KR')
+        .fontSize(d => d.size)
+        .on('end', draw)
+        .start();
+
+    function draw(words) {
+        const svg = d3.select(selector).append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`);
+
+        svg.append('g')
+            .attr('transform', `translate(${width / 2},${height / 2})`)
+            .selectAll('text')
+            .data(words)
+            .enter().append('text')
+            .style('font-size', d => `${d.size}px`)
+            .style('fill', (_, i) => d3.schemeTableau10[i % 10])
+            .attr('text-anchor', 'middle')
+            .attr('transform', d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
+            .text(d => d.text);
+    }
+}
+```
+
+### 실데이터 부재 시 샘플 폴백
+
+데모 환경이나 신규 배포 직후에는 실데이터가 없습니다. 서버에서 빈 배열을 내려주면 정적 JSON으로 폴백하도록 했습니다.
+
+```javascript
+async function loadWordCloudData(apiUrl) {
+    try {
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        if (!data.words || data.words.length === 0) {
+            // 실데이터 없으면 샘플 JSON으로 대체
+            const fallback = await fetch('/static/data/sample-wordcloud.json');
+            return (await fallback.json()).words;
+        }
+        return data.words;
+    } catch (e) {
+        console.warn('실데이터 로드 실패, 샘플로 폴백', e);
+        const fallback = await fetch('/static/data/sample-wordcloud.json');
+        return (await fallback.json()).words;
+    }
+}
+```
+
+---
+
+## 4. 데이터셋 지형도 — 히트맵 + 클릭 네비게이션
+
+`Dataset × Tag`, `Dataset × MetaClass` 두 축의 교차 빈도를 히트맵으로 그렸습니다.
+
+```javascript
+// static/js/datasetTopographyDashboard.js
+function renderHeatmap(selector, matrix, { rows, cols }) {
+    const cellSize = 28;
+    const { g } = D3GraphCommon.createContainer(selector, {
+        width: cols.length * cellSize + 200,
+        height: rows.length * cellSize + 100,
+        margin: { top: 80, right: 20, bottom: 20, left: 180 }
+    });
+
+    const color = d3.scaleSequential(d3.interpolateBlues)
+        .domain([0, d3.max(matrix.flat())]);
+
+    g.selectAll('rect')
+        .data(matrix.flatMap((row, i) =>
+            row.map((v, j) => ({ i, j, v }))
+        ))
+        .enter().append('rect')
+        .attr('x', d => d.j * cellSize)
+        .attr('y', d => d.i * cellSize)
+        .attr('width', cellSize - 2)
+        .attr('height', cellSize - 2)
+        .attr('fill', d => d.v > 0 ? color(d.v) : '#f5f5f5')
+        .style('cursor', d => d.v > 0 ? 'pointer' : 'default')
+        .on('click', (event, d) => {
+            if (d.v === 0) return;
+            // 셀 클릭 시 해당 조건의 데이터셋 목록 페이지로 이동
+            const url = `/std-data/datasets/?tag=${cols[d.j]}&meta=${rows[d.i]}`;
+            window.location.href = url;
+        });
+}
+```
+
+**포인트**: 셀을 단순 표시로 끝내지 않고 **클릭 네비게이션**을 붙인 순간 "단순 차트"에서 "데이터 진입 UI"로 성격이 바뀌었습니다.
+
+---
+
+## 5. 통계 대시보드 — 차트 클릭 네비게이션
+
+대시보드에서도 같은 원칙을 적용했습니다. 막대그래프를 클릭하면 해당 카테고리의 상세 리스트로 이동합니다.
+
+```javascript
+function renderBarChart(selector, data, { drilldownUrl }) {
+    const { g, innerWidth } = D3GraphCommon.createContainer(selector, {
+        width: 800, height: 400,
+        margin: { top: 20, right: 20, bottom: 60, left: 60 }
+    });
+
+    const x = d3.scaleBand().domain(data.map(d => d.label)).range([0, innerWidth]).padding(0.2);
+    const y = d3.scaleLinear().domain([0, d3.max(data, d => d.value)]).nice().range([340, 0]);
+
+    g.selectAll('rect')
+        .data(data)
+        .enter().append('rect')
+        .attr('x', d => x(d.label))
+        .attr('y', d => y(d.value))
+        .attr('width', x.bandwidth())
+        .attr('height', d => 340 - y(d.value))
+        .style('cursor', 'pointer')
+        .on('click', (_, d) => {
+            window.location.href = drilldownUrl.replace(':key', d.key);
+        });
+}
+```
+
+---
+
+## 6. 초기 중앙 정렬 — 생각보다 까다로운 포인트
+
+줌을 적용한 SVG에서 **처음 화면에 그래프가 예쁘게 보이도록** 하는 게 의외로 까다로웠습니다. 데이터 크기에 따라 그래프가 viewport 밖에 그려지거나 구석에 몰려 있는 일이 잦았습니다.
+
+해결은 "렌더링 직후 그래프 경계를 측정해서 viewport 중앙으로 이동"입니다.
+
+```javascript
+// 렌더링 후 실제 그려진 영역의 경계를 측정
+const bounds = g.node().getBBox();
+D3GraphCommon.centerInitial(svg, zoom, bounds);
+```
+
+`getBBox()`는 SVG가 DOM에 삽입된 후에만 정확한 값을 반환합니다. `requestAnimationFrame` 또는 `setTimeout(0)`으로 한 틱 기다린 뒤 호출하면 안정적입니다.
+
+---
+
+## 7. 레거시 jQuery 환경과의 공존
+
+Django 템플릿 곳곳에 jQuery가 박혀 있는 환경이라, D3 스크립트도 jQuery 이벤트와 충돌하지 않도록 격리했습니다.
+
+```javascript
+// 시각화 전용 네임스페이스로 분리
+(function (global) {
+    const Viz = global.Viz = global.Viz || {};
+
+    Viz.renderDashboard = function ({ container, apiUrl }) {
+        // jQuery와 독립적으로 fetch + d3 사용
+        fetch(apiUrl).then(r => r.json()).then(data => {
+            renderBarChart(container, data.bars, { ... });
+        });
+    };
+})(window);
+```
+
+템플릿에서는:
+
+```jinja
+<div id="chart-container"></div>
+<script>
+    Viz.renderDashboard({
+        container: '#chart-container',
+        apiUrl: '{{ url("std_data:api_stats") }}'
+    });
+</script>
+```
+
+---
+
+## 정리
+
+- **공통 유틸(d3-graph-common)을 먼저 만들고** 시각화를 얹으면, 신규 차트 추가 비용이 급격히 떨어집니다.
+- **실데이터 부재 시 샘플 폴백**은 데모·초기 배포 환경에서 필수입니다.
+- **차트 자체보다 차트 클릭 → 상세 진입** 경로가 사용자 가치를 결정합니다.
+- **초기 중앙 정렬**은 `getBBox()` + `zoom.transform`으로 렌더링 후 보정이 답입니다.
+
+Chart.js로 시작해서 D3로 넘어갈지 고민 중이라면, **"인터랙션이 핵심이냐"** 를 기준으로 판단하면 명확합니다. 단순 표시면 Chart.js, 사용자가 차트를 "조작"해야 하면 D3가 맞습니다.

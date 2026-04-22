@@ -1,0 +1,236 @@
+---
+title: Django 커스텀 User + 카카오 OAuth 2.0 — 일반 회원가입과 공존시키기
+date: '2026-04-05'
+tags: [기술노트]
+draft: false
+summary: 'AbstractUser를 확장한 커스텀 User 모델에 카카오 OAuth 2.0을 얹어, 일반 이메일 가입과 소셜 로그인을 한 테이블에서 공존시키는 과정을 정리합니다.'
+---
+
+# Django 커스텀 User + 카카오 OAuth 2.0 — 일반 회원가입과 공존시키기
+
+카카오 로그인 연동 글은 이미 차고 넘치지만, 막상 기존 일반 회원가입과 같이 돌리려고 하면 생각보다 자잘한 지점에서 막힙니다. 이번 이스케이프룸 카페 커뮤니티 프로젝트에서는 **같은 User 테이블**에 일반 가입 유저와 카카오 유저를 함께 담고 싶었고, 그 과정을 정리합니다.
+
+---
+
+## 1. 요구사항 — 두 가지 가입 경로를 하나의 테이블로
+
+- 일반 가입: 이메일/비밀번호로 직접 가입
+- 카카오 가입: 카카오 OAuth로 최초 로그인 시 자동 생성
+- 로그인된 사용자는 **가입 경로와 무관**하게 동일한 방식으로 글쓰기, 쪽지, 프로필 편집을 사용
+
+즉 "카카오 유저용 별도 모델"을 만드는 건 선택지에서 제외했습니다. 게시글 작성자 FK가 두 곳으로 쪼개지는 순간 뷰/템플릿이 모두 분기 처리 지옥이 됩니다.
+
+---
+
+## 2. 커스텀 User 모델 — AbstractUser 확장
+
+`AbstractUser`를 상속받아서 카카오 식별자와 프로필 필드만 추가합니다.
+
+```python
+# accounts/models.py
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+
+class User(AbstractUser):
+    kakao_id = models.BigIntegerField(null=True, blank=True, unique=True)
+    nickname = models.CharField(max_length=50, blank=True)
+    profile_image = models.URLField(blank=True)
+
+    def __str__(self):
+        return self.nickname or self.username
+```
+
+포인트:
+
+- `kakao_id`는 **nullable + unique**. 일반 가입자는 null, 카카오 가입자는 고유값을 가집니다. `unique=True`는 null을 중복으로 치지 않으므로 안전합니다.
+- `profile_image`는 카카오에서 받은 CDN URL을 그대로 저장합니다. 직접 다운로드해서 저장할 수도 있지만, 카카오가 준 이미지는 변동성이 크지 않아 URL 저장으로 충분했습니다.
+- `username` 필드는 그대로 둡니다. 카카오 전용 username을 따로 만들지 않고 `kakao_{kakao_id}` 패턴으로 자동 채워 넣었습니다.
+
+```python
+# settings.py
+AUTH_USER_MODEL = 'accounts.User'
+```
+
+이 한 줄을 **최초 마이그레이션 전에** 넣어야 한다는 점을 매번 까먹습니다.
+
+---
+
+## 3. OAuth 2.0 플로우 — authorization code → access token → 프로필
+
+카카오 로그인의 흐름은 표준적인 OAuth 2.0 Authorization Code Grant입니다.
+
+```
+[브라우저] --(1)-- /accounts/kakao/login/ --> [내 서버]
+[내 서버] --(2) redirect--> https://kauth.kakao.com/oauth/authorize
+[카카오]  --(3) 사용자 동의 후 code로 redirect--> /accounts/kakao/callback/?code=...
+[내 서버] --(4) code + client_secret으로 access_token 요청--> [카카오 토큰 서버]
+[내 서버] --(5) access_token으로 프로필 조회--> [카카오 API]
+[내 서버] --(6) User 생성/조회 후 login()--> [브라우저]
+```
+
+각 단계가 어디서 실패할 수 있는지 감을 잡는 게 중요합니다. 특히 (4), (5)는 외부 호출이라 네트워크·토큰 만료·필수 동의 누락 등에서 에러가 납니다.
+
+---
+
+## 4. 인가 요청 — `kakao_login` 뷰
+
+1단계에서 하는 일은 사실상 **카카오 인가 페이지로 리다이렉트**뿐입니다.
+
+```python
+# accounts/views.py
+from django.conf import settings
+from django.shortcuts import redirect
+from urllib.parse import urlencode
+
+
+def kakao_login(request):
+    params = {
+        'client_id': settings.KAKAO_REST_API_KEY,
+        'redirect_uri': settings.KAKAO_REDIRECT_URI,
+        'response_type': 'code',
+    }
+    url = f'https://kauth.kakao.com/oauth/authorize?{urlencode(params)}'
+    return redirect(url)
+```
+
+- `KAKAO_REDIRECT_URI`는 카카오 디벨로퍼 콘솔에 등록한 값과 **완전히 동일**해야 합니다. 끝 슬래시 한 개 차이로 `KOE006` 에러가 납니다.
+- `scope`는 필요한 경우에만 명시합니다. 기본 동의항목(닉네임, 프로필 이미지)만 쓸 거라면 생략해도 됩니다.
+
+---
+
+## 5. 콜백 — `kakao_callback` 뷰
+
+핵심은 이 뷰 하나입니다. 토큰 교환 → 프로필 조회 → 유저 조회/생성 → 세션 로그인까지 한 번에 처리합니다.
+
+```python
+# accounts/views.py
+import requests
+from django.contrib.auth import login
+from django.shortcuts import redirect
+from django.conf import settings
+
+from .models import User
+
+
+def kakao_callback(request):
+    code = request.GET.get('code')
+    if not code:
+        return redirect('accounts:login')
+
+    # (4) access_token 교환
+    token_res = requests.post(
+        'https://kauth.kakao.com/oauth/token',
+        data={
+            'grant_type': 'authorization_code',
+            'client_id': settings.KAKAO_REST_API_KEY,
+            'client_secret': settings.KAKAO_CLIENT_SECRET,
+            'redirect_uri': settings.KAKAO_REDIRECT_URI,
+            'code': code,
+        },
+        timeout=5,
+    )
+    token_res.raise_for_status()
+    access_token = token_res.json()['access_token']
+
+    # (5) 프로필 조회
+    profile_res = requests.get(
+        'https://kapi.kakao.com/v2/user/me',
+        headers={'Authorization': f'Bearer {access_token}'},
+        timeout=5,
+    )
+    profile_res.raise_for_status()
+    profile = profile_res.json()
+
+    kakao_id = profile['id']
+    kakao_account = profile.get('kakao_account', {})
+    kakao_profile = kakao_account.get('profile', {})
+    nickname = kakao_profile.get('nickname', '')
+    profile_image = kakao_profile.get('profile_image_url', '')
+
+    # (6) 유저 조회/생성
+    user, created = User.objects.get_or_create(
+        kakao_id=kakao_id,
+        defaults={
+            'username': f'kakao_{kakao_id}',
+            'nickname': nickname,
+            'profile_image': profile_image,
+        },
+    )
+    if not created:
+        # 닉네임/프로필 이미지가 바뀌었을 수도 있으니 갱신
+        user.nickname = nickname
+        user.profile_image = profile_image
+        user.save(update_fields=['nickname', 'profile_image'])
+
+    login(request, user)
+    return redirect('cafe:list')
+```
+
+실무에서 막혔던 포인트 몇 가지:
+
+- **`client_secret` 사용 여부**는 카카오 앱 설정의 "보안" 탭에 `ON`으로 되어 있을 때만 필요합니다. 꺼져 있으면 파라미터 자체를 넘기지 말아야 합니다.
+- **`kakao_account.profile`이 없는 경우**가 있습니다. 사용자가 프로필 동의를 거부했을 때입니다. 이걸 500으로 튕기지 말고, 닉네임 빈 값으로 생성한 뒤 프로필 편집 페이지로 보내는 쪽이 UX가 낫습니다.
+- **`timeout`을 반드시 지정합니다.** 외부 API 호출은 default timeout이 없으면 무한히 기다릴 수 있습니다.
+
+---
+
+## 6. 일반 가입과의 공존 — `username` vs `kakao_id`
+
+같은 User 테이블에 두 경로가 섞이면서 신경 써야 하는 지점이 두 가지 있습니다.
+
+### 6.1 로그인 폼에서 카카오 유저는 막기
+
+일반 로그인 폼은 username/비밀번호로 인증하는데, 카카오 유저에게는 비밀번호가 없습니다(실제로는 `set_unusable_password()`가 걸린 상태). 폼 `clean()`에서 걸러 줍니다.
+
+```python
+# accounts/forms.py
+class LoginForm(forms.Form):
+    username = forms.CharField()
+    password = forms.CharField(widget=forms.PasswordInput)
+
+    def clean(self):
+        data = super().clean()
+        user = authenticate(
+            username=data.get('username'),
+            password=data.get('password'),
+        )
+        if user is None:
+            # 카카오 유저는 username에 'kakao_' 프리픽스가 있어서
+            # 여기서 혼란스럽지 않게 안내를 분리
+            try:
+                u = User.objects.get(username=data.get('username'))
+                if u.kakao_id:
+                    raise forms.ValidationError('카카오 로그인으로 가입된 계정입니다.')
+            except User.DoesNotExist:
+                pass
+            raise forms.ValidationError('아이디 또는 비밀번호가 올바르지 않습니다.')
+        data['user'] = user
+        return data
+```
+
+### 6.2 회원가입 시 `kakao_` 프리픽스는 금지
+
+일반 가입 username이 우연히 `kakao_12345` 같은 값이 되면, 나중에 실제 카카오 유저가 들어왔을 때 username 충돌이 납니다. `RegisterForm.clean_username()`에서 prefix 체크로 막습니다.
+
+---
+
+## 7. 회고 — OAuth 라이브러리를 안 쓴 이유
+
+`django-allauth`나 `social-auth-app-django`를 쓰면 훨씬 짧게 끝납니다. 그럼에도 직접 구현한 이유:
+
+1. **플로우를 설명할 수 있어야 했습니다.** 포트폴리오용 프로젝트라 "라이브러리가 처리합니다" 로 얼버무리고 싶지 않았습니다.
+2. **User 테이블 설계를 제가 쥐고 싶었습니다.** allauth는 자체 `SocialAccount` 테이블을 만드는데, 이걸 제 스키마에 섞어 넣는 것보다 직접 `kakao_id` 필드를 두는 쪽이 쿼리/리포팅 시에 편했습니다.
+3. 카카오 하나만 붙이면 되는 상황이라 추상화 레이어가 오히려 과합니다.
+
+반대로 구글·네이버까지 붙이기 시작하면 그 시점부터는 allauth가 정답입니다. 공급자가 하나 이상이 되는 순간 직접 구현은 유지보수 비용이 훨씬 큽니다.
+
+---
+
+## 정리
+
+- `AbstractUser` 확장 + `kakao_id`(nullable, unique)로 **한 테이블**에 두 경로 수용
+- OAuth 2.0 authorization code 플로우를 6단계로 쪼개 실패 지점을 명확히
+- 프로필 동의 거부 케이스를 500이 아닌 UX로 풀기
+- 일반 로그인 폼과의 충돌은 `clean()`에서 분리 안내
+- 공급자가 하나면 직접 구현, 둘 이상이면 라이브러리

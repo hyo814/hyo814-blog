@@ -1,0 +1,206 @@
+---
+title: Django management command로 시드 데이터 다루기 — data migration과의 분기점
+date: '2026-04-06'
+tags: [기술노트]
+draft: false
+summary: '시드 데이터를 data migration에 넣을지, 커스텀 management command로 뺄지. 두 방법의 차이와 실제로 언제 무엇을 택해야 하는지 정리합니다.'
+---
+
+# Django management command로 시드 데이터 다루기 — data migration과의 분기점
+
+Django 프로젝트에 "기본으로 들어가 있어야 하는 데이터" 가 생기는 순간, 다들 한 번쯤 고민합니다. **data migration에 RunPython으로 박을까, 아니면 management command로 뺄까?** 이번 카페 프로젝트에서는 둘 다 써 봤고, 상황별로 선택 기준이 꽤 명확해졌습니다.
+
+---
+
+## 1. 우리 프로젝트의 시드 데이터
+
+이스케이프룸 카페 데이터는 두 종류였습니다.
+
+- **`Cafe`**: 상호, 주소, 전화번호 등 50여 개
+- **`Theme`**: 각 카페에 속한 테마 정보 300여 개
+
+추가로 커뮤니티 체감을 위한 **더미 게시글**도 있지만, 그건 시드가 아니라 개발/데모용이라 분리했습니다(이건 다른 포스트에서).
+
+처음에는 모두 data migration에 넣었는데, 카페 목록을 수정할 때마다 새 마이그레이션이 쌓이는 게 영 불편했습니다. 그래서 **시드 성격별로 분리**했습니다.
+
+| 데이터 종류 | 처리 방법 | 이유 |
+|------------|----------|------|
+| 공지사항 카테고리 고정값 | data migration | 한 번 정하면 안 바뀜 |
+| 카페/테마 목록 | management command | 자주 갱신됨 |
+| 개발용 더미 게시글 | management command | 운영에는 실행 안 함 |
+
+---
+
+## 2. management command — `populate_cafe_data`
+
+관리 명령어는 `app/management/commands/` 아래에 파일 하나로 둡니다. 파일명이 곧 명령어 이름이 됩니다.
+
+```
+cafe/
+  management/
+    __init__.py
+    commands/
+      __init__.py
+      populate_cafe_data.py
+      sync_cafe_theme_seed.py
+```
+
+`__init__.py`를 두 군데 다 만들어야 한다는 걸 처음엔 까먹었습니다. 한 쪽만 있으면 `Unknown command` 에러가 납니다.
+
+```python
+# cafe/management/commands/populate_cafe_data.py
+from django.core.management.base import BaseCommand
+from django.db import transaction
+
+from cafe.models import Cafe
+from cafe.seed_data import CAFE_SEED
+
+
+class Command(BaseCommand):
+    help = '카페 시드 데이터를 적재합니다. 기존 데이터가 있으면 갱신합니다.'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--reset',
+            action='store_true',
+            help='기존 카페 데이터를 모두 지우고 새로 넣습니다.',
+        )
+
+    @transaction.atomic
+    def handle(self, *args, **options):
+        if options['reset']:
+            deleted, _ = Cafe.objects.all().delete()
+            self.stdout.write(self.style.WARNING(f'기존 카페 {deleted}건 삭제'))
+
+        created = updated = 0
+        for row in CAFE_SEED:
+            obj, is_created = Cafe.objects.update_or_create(
+                name=row['name'],
+                defaults=row,
+            )
+            if is_created:
+                created += 1
+            else:
+                updated += 1
+
+        self.stdout.write(self.style.SUCCESS(
+            f'완료: 생성 {created}건, 갱신 {updated}건'
+        ))
+```
+
+몇 가지 포인트:
+
+- **`@transaction.atomic`** — 중간에 깨지면 전부 롤백. 시드 데이터는 "절반만 들어간 상태" 가 가장 안 좋습니다.
+- **`update_or_create`** — 멱등성 확보. 같은 명령어를 두 번 실행해도 결과가 같아야 합니다.
+- **`--reset` 옵션** — 초기 세팅용. 운영에서는 절대 안 쓰지만 개발할 때 필요합니다.
+- **`self.stdout.write` + `self.style`** — `print`는 테스트에서 잡기 어렵습니다. 로그 스타일도 색상으로 구분돼서 실행 결과가 눈에 잘 들어옵니다.
+
+실행은 이렇게.
+
+```bash
+python manage.py populate_cafe_data
+python manage.py populate_cafe_data --reset
+```
+
+---
+
+## 3. `seed_data.py` — 데이터는 코드 옆에 둔다
+
+시드 데이터 본문을 JSON으로 둘지, 파이썬 리터럴로 둘지는 취향인데, 저는 파이썬을 택했습니다.
+
+```python
+# cafe/seed_data.py
+CAFE_SEED = [
+    {
+        'name': '키이스케이프 강남점',
+        'address': '서울특별시 강남구 ...',
+        'phone': '02-...',
+        'lat': 37.5012,
+        'lng': 127.0396,
+    },
+    # ...
+]
+```
+
+JSON이 더 "데이터답긴" 한데:
+
+- IDE 자동완성과 타입 힌트가 편함
+- 주석을 달 수 있음 (JSON은 못 달죠)
+- 파이썬 상수(`Cafe.CATEGORY_CHOICES[0]` 같은)를 바로 참조할 수 있음
+
+데이터가 수천 건 단위로 커지면 CSV/JSON이 맞지만, 수십~수백 건이면 파이썬 리터럴이 제일 편합니다.
+
+---
+
+## 4. `sync_cafe_theme_seed` — 참조 무결성을 지키는 동기화
+
+테마는 카페에 속하므로 **카페가 먼저 들어가 있어야** 합니다. 이걸 두 번째 command로 분리했습니다.
+
+```python
+# cafe/management/commands/sync_cafe_theme_seed.py
+class Command(BaseCommand):
+    help = '카페별 테마 데이터를 동기화합니다.'
+
+    @transaction.atomic
+    def handle(self, *args, **options):
+        missing = []
+        for row in THEME_SEED:
+            try:
+                cafe = Cafe.objects.get(name=row['cafe_name'])
+            except Cafe.DoesNotExist:
+                missing.append(row['cafe_name'])
+                continue
+            Theme.objects.update_or_create(
+                cafe=cafe,
+                title=row['title'],
+                defaults={
+                    'difficulty': row['difficulty'],
+                    'running_time': row['running_time'],
+                },
+            )
+        if missing:
+            self.stdout.write(self.style.WARNING(
+                f'다음 카페를 찾지 못해 건너뜀: {set(missing)}'
+            ))
+```
+
+"카페가 없으면 건너뛰고 경고" 로 처리한 이유는 **부분 실행**을 허용하기 위해서입니다. 카페 목록이 갱신된 후 테마만 다시 넣고 싶을 때 편합니다. 강하게 막고 싶으면 여기서 `CommandError` 를 던지면 됩니다.
+
+---
+
+## 5. data migration을 써야 할 때
+
+그럼 언제 `RunPython`으로 박는 게 낫냐. 저는 이런 경우만 data migration에 남겼습니다.
+
+1. **선택지(Choices)처럼 고정된 참조값** — `Role`, `Category` 같은 테이블. 스키마와 한 몸이라 같이 올라가야 합니다.
+2. **스키마 변경과 동반되는 데이터 이동** — 필드 분리, 기본값 일괄 채우기. 이건 마이그레이션 순서가 중요해서 command로 빼면 실행 순서가 불안해집니다.
+3. **운영 환경에서 자동 적용돼야 하는 값** — CI/CD가 `migrate`만 돌리고 끝난다면, 수동 command 실행을 전제로 하는 건 위험합니다.
+
+반대로 **자주 갱신되는 목록성 데이터**는 data migration에 절대 넣지 않습니다. 카페 하나 추가할 때마다 마이그레이션이 쌓이면 장기적으로 `000N_cafe_add_xxx.py` 수십 개가 생기고, 스쿼시할 때마다 지옥을 봅니다.
+
+---
+
+## 6. 운영 배포에서 실행 방법
+
+management command는 **명시적으로 누가 실행**해 줘야 합니다. 저는 Makefile 스크립트로 묶었습니다.
+
+```make
+seed-cafe:
+	python manage.py populate_cafe_data
+	python manage.py sync_cafe_theme_seed
+
+seed-dev: seed-cafe
+	python manage.py populate_dummy_posts
+```
+
+운영에서는 `seed-cafe`만, 개발에서는 `seed-dev`까지. 더미 게시글은 절대 운영에 나가면 안 됩니다.
+
+---
+
+## 정리
+
+- **고정 참조값**은 data migration, **자주 바뀌는 목록성 데이터**는 management command
+- command는 `@transaction.atomic` + `update_or_create` 로 멱등성 확보
+- `--reset` 같은 플래그는 개발 편의용으로만, 운영에서는 쓰지 않음
+- 참조 관계가 있는 시드는 command를 분리해서 **부분 실행**을 허용
+- 배포 스크립트에서 명시적으로 어떤 command를 돌릴지 고정
