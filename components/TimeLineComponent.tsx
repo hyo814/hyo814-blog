@@ -143,7 +143,7 @@ const TimeLineComponent = () => {
     {
       company: '취준 컴퍼니 22기',
       startDate: '2024-09-23',
-      endDate: '2025-04-06',
+      endDate: '2024-11-22',
       description: '취업 준비를 위한 스터디 및 커피챗 활동.',
       tags: ['스터디', '커피챗'],
     },
