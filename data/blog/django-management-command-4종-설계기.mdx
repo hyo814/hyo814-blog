@@ -1,0 +1,269 @@
+---
+title: Django management command 4종 설계기 — 크롤러, 뉴스레터, 시드, 백필
+date: '2026-04-16'
+tags: [기술노트]
+draft: false
+summary: '일회성 스크립트 대신 Django management command로 crawl_news, send_newsletter, seed_editorial, backfill_urls 네 가지를 설계하며 얻은 기준과 패턴을 정리합니다.'
+---
+
+# Django management command 4종 설계기 — 크롤러, 뉴스레터, 시드, 백필
+
+[PyNews](https://github.com/hyo814/python-news) 프로젝트에는 **Django management command**가 4개 있습니다.
+
+```
+news/management/commands/
+├── crawl_news.py        # 주간 RSS 크롤러
+├── send_newsletter.py   # 구독자에게 이메일 발송
+├── seed_editorial.py    # 샘플 편집 콘텐츠 시드
+└── backfill_urls.py     # 과거 데이터의 source_url 복구
+```
+
+"그냥 `scripts/` 디렉터리에 Python 파일 두면 되지 않나?"라고 생각하기 쉽지만, Django 프로젝트에서 **ORM과 설정을 쓰는 일회성/반복 작업**은 management command로 만드는 것이 훨씬 낫습니다. 이 글에서는 4개를 만들며 정리한 기준과 패턴을 공유합니다.
+
+---
+
+## 1. 왜 management command인가
+
+일반 Python 스크립트로 만들면 매번 이 두 줄이 필요합니다.
+
+```python
+import django
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+django.setup()
+```
+
+그리고 venv 활성화, 환경변수 로드, 작업 디렉터리 이동 같은 boilerplate가 스크립트마다 반복됩니다. management command는 이 모든 것을 **`python manage.py` 한 명령 안에 감춥니다**.
+
+덤으로 얻는 것:
+
+- `argparse`가 기본 내장 — `add_arguments()`로 옵션 정의.
+- `self.stdout.write()` / `self.style.SUCCESS()` 로 통일된 로그 스타일.
+- 크론, Render Cron Job, CI 등 **실행 주체가 달라져도 명령어 형식이 동일**.
+- Django 테스트 러너에서 `call_command()`로 호출 가능.
+
+---
+
+## 2. 네 명령의 역할과 실행 주기
+
+| 명령 | 역할 | 실행 주기 |
+| --- | --- | --- |
+| `crawl_news` | RSS 11개 소스에서 글 수집 | 매주 월요일 (cron) |
+| `send_newsletter` | 최근 N일 글을 구독자에게 메일 발송 | 매주 월요일 (cron) |
+| `seed_editorial` | 초기 편집 콘텐츠 시드 | 배포 시 1회 (수동) |
+| `backfill_urls` | 과거 Post의 `source_url` 복구 | 1회성 데이터 보정 (수동) |
+
+실행 주기가 다르다는 점이 중요합니다. **반복 실행되는 명령(`crawl_news`, `send_newsletter`)**과 **일회성 명령(`seed_editorial`, `backfill_urls`)**을 같은 위치에 두지만, 안에 들어가는 방어 로직은 다릅니다.
+
+---
+
+## 3. 반복 실행용 — `--days`, `--dry-run` 옵션 패턴
+
+`crawl_news`와 `send_newsletter`는 둘 다 같은 옵션 조합을 씁니다.
+
+```python
+def add_arguments(self, parser):
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=7,
+        help="최근 N일간의 글 대상 (기본: 7)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="실제 수행 없이 결과만 확인",
+    )
+```
+
+### `--days`
+
+크론이 매주 돌기 때문에 기본값 7로 두면 **한 주치 데이터**가 처리됩니다. 장애로 한 주를 놓쳤을 때는 `--days 14`로 호출하면 되고, 초기 데이터 백필 시에는 `--days 90` 같은 식으로 대응합니다.
+
+### `--dry-run`
+
+특히 `send_newsletter`에서 중요합니다. **이메일 발송은 되돌릴 수 없기 때문**에 먼저 dry-run으로 제목/본문/대상자 수를 찍어보는 습관이 생겼습니다.
+
+```python
+def handle(self, *args, **options):
+    dry_run = options["dry_run"]
+
+    subject = f"[PyNews] {date.today().strftime('%Y-%m-%d')} 주간 파이썬 백엔드 소식"
+    body = self._build_body(posts)
+    subscribers = Subscriber.objects.filter(is_active=True)
+
+    if dry_run:
+        self.stdout.write(f"제목: {subject}")
+        self.stdout.write(f"대상: {subscribers.count()}명")
+        self.stdout.write(body[:500])
+        return
+
+    messages = []
+    for sub in subscribers:
+        unsub_note = f"\n\n---\n구독 해지: 토큰 {sub.token}"
+        messages.append((subject, body + unsub_note, None, [sub.email]))
+
+    sent = send_mass_mail(messages, fail_silently=True)
+    self.stdout.write(self.style.SUCCESS(f"{sent}명에게 발송 완료"))
+```
+
+---
+
+## 4. `send_newsletter` — 왜 `send_mass_mail`인가
+
+뉴스레터는 구독자 수가 늘면 **SMTP 연결 비용**이 무시 못 할 수준이 됩니다. `send_mail`을 루프 안에서 호출하면 구독자 수만큼 연결을 열고 닫게 됩니다.
+
+Django는 이 문제를 위해 `send_mass_mail`을 제공합니다. **한 번의 SMTP 연결로 여러 메일을 보냅니다**.
+
+```python
+# ❌ 구독자 수만큼 SMTP 연결
+for sub in subscribers:
+    send_mail(subject, body, None, [sub.email])
+
+# ✅ 한 번의 연결로 전부 발송
+messages = [(subject, body, None, [sub.email]) for sub in subscribers]
+send_mass_mail(messages, fail_silently=True)
+```
+
+단, `send_mass_mail`은 **메시지마다 본문을 다르게 구성**하는 것이 필수입니다. 여기서는 `구독 해지: 토큰 {sub.token}` 한 줄을 각자 다르게 붙여서 해지 링크를 개인화합니다.
+
+---
+
+## 5. `send_newsletter` — `source_type`으로 섹션 분리
+
+뉴스레터 본문을 **편집 콘텐츠(editorial)** 와 **크롤링 콘텐츠(crawled)** 섹션으로 나눠 구성했습니다.
+
+```python
+def _build_body(self, posts):
+    editorial = [p for p in posts if p.source_type == "editorial"]
+    crawled = [p for p in posts if p.source_type == "crawled"]
+
+    sections = []
+    if editorial:
+        sections.append("## 📝 이번 주 편집 픽\n")
+        sections.extend(f"- [{p.title}](...) — {p.summary}" for p in editorial)
+    if crawled:
+        sections.append("\n## 🌐 커뮤니티 소식\n")
+        sections.extend(f"- [{p.title}](...) — {p.source_url}" for p in crawled)
+    return "\n".join(sections)
+```
+
+**같은 Post 테이블 안에서 `source_type` 필드 하나로 분기**하는 구조인데, 뉴스레터 본문 구성에 정확히 맞는 설계였습니다. 이 모델 분리 전략은 6편에서 자세히 다룹니다.
+
+---
+
+## 6. 일회성 명령 — `get_or_create`로 멱등성 확보
+
+`seed_editorial`은 **배포 직후 샘플 글 5개를 DB에 넣는** 용도입니다. 문제는 "실수로 두 번 실행하면 샘플 글이 2배로 생긴다"는 점입니다.
+
+해결책은 단순합니다 — `get_or_create`로 멱등(idempotent)하게 만듭니다.
+
+```python
+SAMPLES = [
+    {
+        "slug": "django-6-release-notes",
+        "title": "Django 6.0의 새로운 기능 총정리",
+        "summary": "비동기 ORM, 폼 렌더링 개편, 성능 개선 ...",
+        "is_featured": True,
+        "published_at": date(2026, 3, 1),
+    },
+    # ...
+]
+
+def handle(self, *args, **options):
+    created_count = 0
+    for data in SAMPLES:
+        post, created = Post.objects.get_or_create(
+            slug=data["slug"],
+            defaults=data,
+        )
+        if created:
+            created_count += 1
+            self.stdout.write(f"✓ {post.title}")
+    self.stdout.write(self.style.SUCCESS(f"{created_count}개 생성됨"))
+```
+
+- `slug`를 키로 잡고 나머지 필드는 `defaults`에 둡니다.
+- 이미 존재하면 **아무 것도 하지 않고** 넘어갑니다. 재실행이 안전합니다.
+- 수정이 필요하면 `update_or_create`를 쓸지 정책적으로 결정합니다. `seed_editorial`은 초기 시드용이라 그냥 `get_or_create`로 충분합니다.
+
+---
+
+## 7. 데이터 보정용 — `backfill_urls`
+
+과거에 `source_url` 없이 저장된 크롤링 글들을 RSS에서 제목으로 역매칭해서 복구하는 명령입니다.
+
+```python
+def handle(self, *args, **options):
+    # 1. 문제 있는 레코드 찾기
+    broken = Post.objects.filter(source_type="crawled", source_url="")
+    self.stdout.write(f"복구 대상: {broken.count()}개")
+
+    # 2. 모든 RSS 피드에서 title → url 맵 구성
+    title_to_url = {}
+    for feed_url in RSS_FEEDS:
+        feed = feedparser.parse(feed_url)
+        for entry in feed.entries:
+            title = entry.get("title", "").strip()
+            link = entry.get("link", "")
+            if title and link:
+                title_to_url[title] = link
+
+    # 3. 제목 매칭되는 것만 업데이트
+    fixed = 0
+    for post in broken:
+        if post.title in title_to_url:
+            post.source_url = title_to_url[post.title]
+            post.save(update_fields=["source_url"])
+            fixed += 1
+            self.stdout.write(f"✓ {post.title}")
+
+    self.stdout.write(self.style.SUCCESS(f"{fixed}/{broken.count()}개 복구"))
+```
+
+설계 포인트:
+
+- **`save(update_fields=[...])`**: 복구할 필드만 업데이트해서 다른 컬럼의 `auto_now` 같은 사이드 이펙트를 피합니다.
+- **제목 완전일치**로만 매칭: 부분 일치는 오매칭 위험이 커서, 못 찾은 글은 그냥 남겨두고 수동 처리에 맡깁니다.
+- **한 번 돌고 나면 쓸 일이 없는 명령**이지만, 지우지 않고 코드에 남겨둡니다. 유사한 케이스가 다시 생기면 복사해서 변형하기 좋습니다.
+
+---
+
+## 8. 공통적으로 지킨 4가지 규칙
+
+네 명령을 만들면서 암묵적으로 지킨 규칙이 있습니다.
+
+1. **`self.stdout.write`만 사용** — `print()`는 쓰지 않음. Django의 stdout wrapping을 활용해야 `call_command()`로 호출했을 때도 출력이 캡처됩니다.
+2. **성공/실패 요약을 마지막 줄에** — `self.style.SUCCESS()`로 강조. 크론 로그를 빠르게 스캔할 수 있어야 합니다.
+3. **사이드 이펙트가 있는 명령은 `--dry-run`** — 이메일 발송, 대량 업데이트, 삭제는 무조건 dry-run 지원.
+4. **반복 실행에 안전하게** — 중복 체크(`get_or_create`, `filter().exists()`) 필수.
+
+---
+
+## 9. 디렉터리 구조 복기
+
+Django가 management command를 인식하려면 특정 디렉터리 구조가 필요합니다.
+
+```
+news/
+├── management/
+│   ├── __init__.py
+│   └── commands/
+│       ├── __init__.py
+│       ├── crawl_news.py
+│       ├── send_newsletter.py
+│       ├── seed_editorial.py
+│       └── backfill_urls.py
+```
+
+- `management/`와 `commands/` 두 디렉터리 모두 **`__init__.py` 필수**.
+- 파일명이 그대로 명령어가 됩니다(`crawl_news.py` → `python manage.py crawl_news`).
+- 언더스코어는 명령어에서도 그대로 쓰입니다(`backfill_urls`).
+
+---
+
+## 정리
+
+Django 프로젝트에서 **ORM과 설정을 쓰는 반복/일회성 작업은 management command로 만들자**가 이 프로젝트의 주된 교훈이었습니다. 반복 실행용에는 `--days` + `--dry-run` 패턴을, 일회성에는 `get_or_create` 기반 멱등성을 원칙으로 잡으면 유지보수가 훨씬 편해집니다.
+
+다음 글에서는 이 명령들이 활용하는 **UUID 토큰 기반 구독/해지 시스템**을 어떻게 설계했는지 다뤄보겠습니다.
