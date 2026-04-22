@@ -11,7 +11,7 @@ const siteMetadata = {
   siteLogo: '/static/images/logo.png',
   socialBanner: '/static/images/logo.png',
   mastodon: '',
-  email: 'hjlim@gitsn.com',
+  email: 'ggamjge8888@naver.com',
   github: 'https://github.com/hyo814',
   x: '',
   // twitter: 'https://twitter.com/Twitter',
