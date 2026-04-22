@@ -128,9 +128,9 @@ const TimeLineComponent = () => {
     },
     {
       company: 'TripTune',
-      startDate: '2024-01-01',
-      endDate: '진행 중',
-      description: '여행 일정 플랫폼 구축 프로젝트.',
+      startDate: '2024-05-01',
+      endDate: '2025-02-28',
+      description: '협업형 여행 일정 플랫폼 구축 프로젝트.',
       tags: ['사이드프로젝트', '협업'],
     },
     {
@@ -143,9 +143,30 @@ const TimeLineComponent = () => {
     {
       company: '취준 컴퍼니 22기',
       startDate: '2024-09-23',
-      endDate: '진행 중',
+      endDate: '2025-04-06',
       description: '취업 준비를 위한 스터디 및 커피챗 활동.',
       tags: ['스터디', '커피챗'],
+    },
+    {
+      company: 'AWSKRUG (AWS Korea User Group)',
+      startDate: '2025-01-01',
+      endDate: '진행 중',
+      description: 'AWS 한국 사용자 그룹에서 클라우드·개발 관련 밋업 및 네트워킹 참여.',
+      tags: ['스터디', '커피챗'],
+    },
+    {
+      company: "서울 우먼잇츠(IT's)",
+      startDate: '2025-01-01',
+      endDate: '진행 중',
+      description: 'IT 업계 여성 개발자 커뮤니티 활동 및 교류.',
+      tags: ['스터디', '커피챗'],
+    },
+    {
+      company: '지슨(GitSN) : 웹 개발',
+      startDate: '2025-04-07',
+      endDate: '진행 중',
+      description: '보안 기술 기업에서 풀스택 웹 개발 업무 수행 — 프런트엔드·백엔드 전반 담당.',
+      tags: ['회사'],
     },
   ]
 
