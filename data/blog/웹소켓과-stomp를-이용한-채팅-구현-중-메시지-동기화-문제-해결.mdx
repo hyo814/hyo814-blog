@@ -8,13 +8,13 @@ summary: '웹소켓과 STOMP를 이용한 채팅 구현 중 메시지 동기화 
 
 ## 1. 문제 상황
 
-웹소켓(WebSocket)과 STOMP를 사용해 채팅 기능을 구현하면서 다음과 같은 문제가 발생했습니다:
+웹소켓(WebSocket)과 STOMP로 채팅 기능을 구현하다가 다음 문제가 생겼습니다.
 
 1. **처음 메시지를 전송할 때는 동기화가 잘 됨**
 2. **두 번째 메시지 전송 이후에는 동기화가 이루어지지 않음**
 3. **새로고침을 하면 전송된 메시지는 잘 가져옴 (HTTP GET 요청으로 확인 가능)**
 
-즉, 메시지가 정상적으로 전송되고 데이터베이스에도 저장되지만, **자동 동기화가 실패**하는 문제가 있었습니다.
+메시지가 정상적으로 전송되고 데이터베이스에도 저장되지만, **자동 동기화가 실패**하는 상황이었습니다.
 
 ---
 
@@ -22,7 +22,7 @@ summary: '웹소켓과 STOMP를 이용한 채팅 구현 중 메시지 동기화 
 
 ### 2.1 메시지 ID 존재 여부
 
-메시지 ID는 각 메시지를 고유하게 식별하기 위한 값으로, MongoDB에서 메시지가 저장될 때 자동으로 생성되는 값입니다. 문제는 이 메시지 ID가 프론트엔드에서 제대로 활용되지 못하면서 동기화 문제가 발생했다는 점입니다.
+메시지 ID는 각 메시지를 고유하게 식별하는 값으로, MongoDB에서 메시지가 저장될 때 자동으로 생성됩니다. 문제는 이 메시지 ID가 프론트엔드에서 제대로 활용되지 못해 동기화 문제로 이어졌다는 점입니다.
 
 ### 채팅 실행 순서
 
@@ -36,7 +36,7 @@ summary: '웹소켓과 STOMP를 이용한 채팅 구현 중 메시지 동기화 
 
 ### 2.2 프론트엔드에서 `messageId`의 역할
 
-프론트엔드에서는 React의 `key` 속성에 `messageId`를 사용하여 각 메시지를 고유하게 식별합니다. 예시는 아래와 같습니다:
+프론트엔드에서는 React의 `key` 속성에 `messageId`를 넣어 각 메시지를 고유하게 식별합니다. 예시는 아래와 같습니다.
 
 ```jsx
 <div key={msg.messageId} className={styles.userMessages}>
@@ -66,11 +66,11 @@ summary: '웹소켓과 STOMP를 이용한 채팅 구현 중 메시지 동기화 
 </div>
 ```
 
-React는 `key`를 기반으로 컴포넌트를 추적하고, 업데이트 시 변경된 항목만 다시 렌더링합니다. 하지만 `messageId` 값이 없으면 React는 메시지를 고유하게 식별할 수 없어 동기화가 제대로 이루어지지 않습니다.
+React는 `key`로 컴포넌트를 추적해 업데이트 시 변경된 항목만 다시 렌더링합니다. 하지만 `messageId` 값이 없으면 React가 메시지를 고유하게 식별하지 못해 동기화도 제대로 되지 않습니다.
 
 ### 2.3 초기 난수 설정 및 정렬 부족
 
-초기에는 `messageId`가 없는 상태에서 프론트엔드에서 난수를 임의로 생성해 설정했지만, 이를 기반으로 정렬하지 않아 메시지가 뒤섞이고 동기화가 실패했습니다. 정렬 로직은 다음과 같습니다:
+초기에는 `messageId`가 없는 상태에서 프론트엔드가 난수를 임의로 생성해 채워넣었지만, 이를 기준으로 정렬하지 않다 보니 메시지가 뒤섞이고 동기화도 실패했습니다. 정렬 로직은 다음과 같습니다.
 
 ```jsx
 setMessages((prev) => {
@@ -83,7 +83,7 @@ setMessages((prev) => {
 
 ### 2.4 백엔드에서 `messageId`를 누락한 응답 데이터
 
-백엔드에서는 메시지 저장 후 응답 데이터에 `messageId`를 포함하지 않았습니다:
+백엔드에서는 메시지 저장 후 응답 데이터에 `messageId`를 담지 않았습니다.
 
 ```java
 public ChatResponse sendChatMessage(ChatMessageRequest chatMessageRequest) {
@@ -104,7 +104,7 @@ public ChatResponse sendChatMessage(ChatMessageRequest chatMessageRequest) {
 
 ```
 
-`chatMessageRepository.save(message)`를 통해 MongoDB에 저장은 완료되지만, 저장된 후 생성된 `messageId` 값을 응답에 포함하지 않았기 때문에 프론트엔드에서 고유 식별자를 활용하지 못했습니다.
+`chatMessageRepository.save(message)`로 MongoDB에 저장은 끝나지만, 저장 후 생성된 `messageId` 값을 응답에 담지 않아 프론트엔드가 고유 식별자를 쓸 수 없었습니다.
 
 ---
 
@@ -112,7 +112,7 @@ public ChatResponse sendChatMessage(ChatMessageRequest chatMessageRequest) {
 
 ### 백엔드에서 `messageId` 값을 반환하도록 수정
 
-백엔드 로직을 아래와 같이 수정하여 저장된 메시지의 `messageId` 값을 포함하도록 했습니다:
+백엔드 로직을 아래와 같이 고쳐 저장된 메시지의 `messageId` 값을 응답에 담았습니다.
 
 ```java
 public ChatResponse sendChatMessage(ChatMessageRequest chatMessageRequest) {
@@ -132,11 +132,11 @@ public ChatResponse sendChatMessage(ChatMessageRequest chatMessageRequest) {
 
 ```
 
-`chatMessageRepository.save()` 이후 반환된 `message` 객체에는 MongoDB에서 생성한 `messageId`가 포함되므로, 이를 `ChatResponse`에 포함해 프론트엔드로 전달합니다.
+`chatMessageRepository.save()`가 반환하는 `message` 객체에는 MongoDB에서 생성한 `messageId`가 들어있고, 이를 `ChatResponse`에 담아 프론트엔드로 보냅니다.
 
 ### 프론트엔드에서 `messageId` 활용
 
-수정된 백엔드 응답 데이터를 활용하여 메시지를 고유하게 식별하고 정렬함으로써 동기화 문제를 해결했습니다:
+수정된 백엔드 응답 데이터로 메시지를 고유하게 식별하고 정렬해 동기화 문제를 풀었습니다.
 
 ```jsx
 setMessages((prev) => {
@@ -151,8 +151,8 @@ setMessages((prev) => {
 
 ## 4. 결과
 
-1. `messageId`를 활용해 React에서 각 메시지를 고유하게 식별
-2. 백엔드 응답 데이터에 `messageId`를 포함하여 동기화 문제 해결
-3. 메시지 동기화가 정상적으로 이루어지고 새로고침 없이도 실시간으로 메시지를 확인 가능
+1. `messageId`로 React에서 각 메시지를 고유하게 식별
+2. 백엔드 응답 데이터에 `messageId`를 담아 동기화 문제 해결
+3. 메시지 동기화가 정상적으로 이루어져 새로고침 없이도 실시간으로 메시지가 보임
 
-이로써 메시지 동기화 문제를 성공적으로 해결했습니다!
+이렇게 메시지 동기화 문제를 해결했습니다.
