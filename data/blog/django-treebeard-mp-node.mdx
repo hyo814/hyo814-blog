@@ -8,7 +8,7 @@ summary: 'django-treebeard의 MP_Node(Materialized Path)를 활용해 계층형 
 
 # django-treebeard MP_Node로 트리 구조 데이터 다루기
 
-Django에서 카테고리, OID, 분류체계 같은 **계층형(트리) 데이터**를 다루다 보면 재귀 쿼리나 N+1 문제에 자주 부딪힙니다. [django-treebeard](https://django-treebeard.readthedocs.io/)는 이런 문제를 세 가지 알고리즘으로 해결해줍니다. 이 글에서는 그 중 **Materialized Path(MP_Node)** 방식을 중심으로 실무 적용 패턴을 정리합니다.
+Django에서 카테고리, OID, 분류체계 같은 **계층형(트리) 데이터**를 다루다 보면 재귀 쿼리나 N+1 문제에 자주 부딪힙니다. [django-treebeard](https://django-treebeard.readthedocs.io/)는 이런 문제를 세 가지 알고리즘으로 풀어줍니다. 이 글에서는 그중 **Materialized Path(MP_Node)** 방식을 중심으로 실무 적용 패턴을 정리합니다.
 
 ---
 
@@ -106,7 +106,7 @@ Category.dump_bulk()
 
 ## 4. 실무 쿼리 최적화 패턴
 
-MP_Node의 핵심 장점은 `path` 필드를 활용해 **추가 쿼리 없이** 트리를 탐색할 수 있다는 점입니다.
+MP_Node의 핵심 장점은 `path` 필드 하나로 **추가 쿼리 없이** 트리를 탐색한다는 점입니다.
 
 ### 패턴 ①: `path__startswith`로 후손 노드 단일 쿼리 조회
 
@@ -185,7 +185,7 @@ else:
 
 ## 5. DRF Serializer와 함께 사용하기
 
-MP_Node 모델에서 `add_root()` / `add_child()`는 일반적인 `Model.objects.create()`로는 호출할 수 없기 때문에, Serializer의 `create()`를 커스터마이징해야 합니다.
+MP_Node 모델은 `add_root()` / `add_child()`를 일반 `Model.objects.create()`로 호출할 수 없어서, Serializer의 `create()`를 커스터마이징해야 합니다.
 
 ```python
 from rest_framework import serializers
@@ -218,7 +218,7 @@ class TreeModelSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 ```
 
-> **설계 포인트**: 노드 이동 시 `path`를 재계산해야 하므로 일반 update에서는 막고, 전용 엔드포인트로 분리하는 것이 안전합니다.
+> **설계 포인트**: 노드 이동 시 `path`를 재계산해야 하므로 일반 update에서는 막고, 전용 엔드포인트로 분리하는 편이 안전합니다.
 
 ---
 
@@ -260,6 +260,6 @@ class TreeModelSerializer(serializers.ModelSerializer):
 
 ## 마무리
 
-`MP_Node`는 계층형 데이터를 다루는 Django 프로젝트에서 강력한 선택지입니다. `path` 필드 하나로 조상/후손 탐색을 단일 쿼리로 처리할 수 있고, 문자열 조작으로 DB 왕복 없이 트리를 순회할 수 있습니다.
+`MP_Node`는 계층형 데이터를 다루는 Django 프로젝트에서 쓸 만한 선택지입니다. `path` 필드 하나로 조상/후손 탐색을 단일 쿼리로 처리하고, 문자열 조작만으로 DB 왕복 없이 트리를 순회합니다.
 
-카테고리, 분류 체계, 조직도처럼 읽기 빈도가 높은 트리 구조라면 `MP_Node` 도입을 적극 추천합니다.
+카테고리, 분류 체계, 조직도처럼 읽기 빈도가 높은 트리 구조라면 `MP_Node` 도입을 고려해볼 만합니다.
