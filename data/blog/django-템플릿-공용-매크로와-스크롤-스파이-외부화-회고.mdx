@@ -1,0 +1,174 @@
+---
+title: Django 템플릿에서 공용 매크로와 스크롤 스파이를 외부화한 회고
+date: '2026-05-12'
+tags: [기술노트]
+draft: false
+summary: '약관/방침 페이지와 소개·가이드 페이지에 흩어져 있던 마크업 중복을 base 템플릿 + 공용 매크로 + 외부 스크립트로 정리한 회고입니다.'
+---
+
+# Django 템플릿에서 공용 매크로와 스크롤 스파이를 외부화한 회고
+
+여러 정적 페이지(약관·방침, 소개·가이드 류)가 같은 모양·같은 동작을 갖고 있는데도 마크업과 인라인 스크립트가 페이지마다 복붙되어 있었습니다. 정리하면서 *"어디서부터 추출해야 가장 손해가 적게 끝날까"*를 다시 한 번 배웠어요.
+
+---
+
+## 1. 처음 상태 — 중복이 세 층위로 쌓여 있었음
+
+대상 페이지 분류:
+
+| 그룹 | 페이지 수 | 공통점 |
+|------|--------|--------|
+| 약관/방침 | 3개 (이용약관, 개인정보처리방침, 책임의 한계) | 좌측 목차 + 우측 본문 + 스크롤 스파이 |
+| 소개/가이드 | 5개 (서비스 소개, 사용 가이드 등) | 상단 히어로 + 단계별 카드 + 다운로드 버튼 |
+
+각 그룹 안에서 마크업이 거의 동일한데, 페이지마다 별도 `.html.j2` 파일로 복붙되어 있었습니다. 가장 안 좋았던 부분은 **각 페이지에 인라인 `<script>` 블록이 박혀 스크롤 스파이를 직접 구현**하고 있던 것.
+
+```html
+<!-- 약관 페이지 하단에 매번 들어있던 인라인 스크립트 -->
+<script>
+  document.querySelectorAll('.toc-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      // ... 스크롤 처리 ...
+    });
+  });
+  window.addEventListener('scroll', () => {
+    // ... 활성 메뉴 갱신 ...
+  });
+</script>
+```
+
+페이지마다 미세하게 다른 버전이 박혀 있어서, "어떤 버전이 진짜인가"를 가리는 것부터 일이었어요.
+
+---
+
+## 2. 정리 순서 — base → macro → JS 외부화
+
+세 단계 중 어느 것부터 손대느냐가 어렵지 않은데, 잘못 잡으면 추출이 꼬입니다. 결정한 순서는 이랬어요.
+
+### 2.1 1단계: base 템플릿 추출
+
+먼저 약관/방침 그룹에 대해 공통 base를 뽑았습니다.
+
+```jinja2
+{# templates/_base/legal_base.html.j2 #}
+{% extends "base.html.j2" %}
+
+{% block content %}
+<div class="legal-layout">
+  <aside class="legal-toc">
+    {% block toc %}{% endblock %}
+  </aside>
+  <main class="legal-body">
+    {% block legal_body %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/scroll_spy.js' %}"></script>
+{% endblock %}
+```
+
+각 페이지는 이 base를 상속해서 `toc`와 `legal_body` 블록만 채우면 됩니다.
+
+### 2.2 2단계: 매크로 추출 (소개/가이드 그룹)
+
+소개/가이드 그룹은 base만으로 정리가 안 됩니다. 각 페이지가 *카드 + 단계 + 다운로드 버튼*을 다른 조합으로 쓰기 때문에, 블록보다 매크로가 적합했어요.
+
+```jinja2
+{# templates/_macros/intro_macros.html.j2 #}
+{% macro step_card(number, title, body, icon_class='fa-circle-info') %}
+<div class="intro-card">
+  <div class="step-num">{{ number }}</div>
+  <h3>{{ title }}</h3>
+  <p>{{ body }}</p>
+  <i class="fas {{ icon_class }}"></i>
+</div>
+{% endmacro %}
+
+{% macro download_button(label, url, file_size=None) %}
+<a class="download-btn" href="{{ url }}">
+  <i class="fas fa-download"></i>
+  <span>{{ label }}</span>
+  {% if file_size %}<small>({{ file_size }})</small>{% endif %}
+</a>
+{% endmacro %}
+```
+
+페이지에서는 `{% from "_macros/intro_macros.html.j2" import step_card, download_button %}` 후 필요한 만큼 호출합니다.
+
+### 2.3 3단계: 스크롤 스파이 JS 외부화
+
+인라인 스크립트를 `static/js/scroll_spy.js`로 옮겼습니다. 옮기면서 두 가지를 정리했어요.
+
+- 어떤 페이지는 활성 메뉴 갱신을 `requestAnimationFrame` 으로 쓰고 있고, 어떤 페이지는 디바운스도 없이 매 scroll 이벤트마다 갱신하고 있었음 → 통일
+- 일부 페이지는 `.toc-link` 클래스를 쓰고 다른 페이지는 `.legal-nav a`를 쓰고 있었음 → `data-scroll-spy` 속성 기반으로 통일
+
+```js
+// static/js/scroll_spy.js
+(() => {
+  const container = document.querySelector('[data-scroll-spy]');
+  if (!container) return;
+
+  const links = container.querySelectorAll('a[href^="#"]');
+  const targets = [...links].map(a => document.querySelector(a.getAttribute('href')));
+
+  links.forEach((a, i) => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      targets[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const offset = window.scrollY + 80;
+      const activeIndex = targets.findIndex((el, i) => {
+        const next = targets[i + 1];
+        return el.offsetTop <= offset && (!next || next.offsetTop > offset);
+      });
+      links.forEach((a, i) => a.classList.toggle('active', i === activeIndex));
+      ticking = false;
+    });
+  });
+})();
+```
+
+페이지 마크업에서는 `<aside data-scroll-spy>` 만 붙이면 자동으로 동작합니다.
+
+---
+
+## 3. 추출 순서가 중요한 이유
+
+base를 먼저 뽑지 않고 매크로부터 손댔다면 어떻게 됐을까 시뮬레이션해보면 — 매크로 자리에 둬야 할지, base 블록으로 둬야 할지 모호한 조각들이 나옵니다. 그러면 매크로가 비대해지고, 결국 base에서 다시 잘라내야 해요.
+
+순서 원칙:
+
+1. **각 페이지의 외곽 구조가 같은가?** → 같으면 base 먼저
+2. **외곽은 다른데 내부 부품이 반복되는가?** → 매크로 추출
+3. **마크업에 인라인 스크립트가 박혀 있는가?** → 마크업 정리 후 JS 외부화
+
+이번엔 약관 그룹이 1번에, 소개 그룹이 2번에 해당했고, JS는 3번 단계에서 한 번에 처리했습니다.
+
+---
+
+## 4. 부수 효과
+
+- **수정 시 파급 검증이 단순해짐**: 약관 페이지 디자인이 바뀌면 base만 고침. 매크로 변경 시 호출처는 import만 따라가면 됨.
+- **새 페이지 만들기가 빨라짐**: "약관과 비슷한 신규 페이지"를 추가할 때 base 상속 한 줄로 시작
+- **스크롤 스파이 동작이 모든 페이지에서 동일**: 페이지마다 다르게 작동하던 버그가 자연 소멸
+
+---
+
+## 5. 교훈
+
+- 정적 페이지가 5개 이상 같은 모양으로 누적되기 시작하면 추출 시점이에요. 더 늦으면 어느 페이지가 정답 버전인지 가리는 데 시간이 듭니다.
+- **인라인 스크립트는 추출의 신호.** 같은 동작을 페이지마다 살짝 다르게 다시 짜고 있다면 외부화가 정답.
+- 추출 순서: base → macro → JS. 거꾸로 하면 매크로가 비대해집니다.
+- 매크로 인자는 적게 두기. 인자 수가 4개를 넘으면 슬슬 컴포넌트 분리를 고민할 신호.
+
+마크업 중복 정리는 화면에 보이는 변화가 없어서 회고하기 좋은 작업은 아닌데, 다음 신규 페이지를 만들 때 *"아 이미 다 만들어져 있네"* 하는 그 순간이 보상이라고 생각하면 들이는 시간이 아깝지 않습니다.

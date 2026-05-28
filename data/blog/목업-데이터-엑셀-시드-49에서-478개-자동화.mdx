@@ -1,0 +1,152 @@
+---
+title: 목업 데이터 49개에서 478개로 — 엑셀을 mockup 시드로 자동화한 기록
+date: '2026-05-23'
+tags: [기술노트]
+draft: false
+summary: '백엔드 개발 전 mockup 데이터가 49개라서 페이지네이션·검색·필터 검증이 빈약했던 문제를, 엑셀 파일을 입력으로 받는 시드 스크립트를 만들어 478개로 늘린 과정을 정리합니다.'
+---
+
+# 목업 데이터 49개에서 478개로 — 엑셀을 mockup 시드로 자동화한 기록
+
+용어 등록 화면을 만들면서 mockup 데이터가 49개밖에 안 돼서, 페이지네이션이나 검색·필터 동작을 제대로 검증하기 어려웠습니다. 데이터를 늘리려고 직접 손으로 만드는 대신, 운영 측에서 받은 엑셀 파일을 mockup 시드로 변환하는 작은 스크립트를 만든 이야기입니다.
+
+---
+
+## 1. 시작 — UI 검증이 빈약했다
+
+mockup 단계의 용어 데이터(`static/data/terms_mock.json`)가 49건이었습니다. 49건은:
+
+- 페이지네이션 한 페이지에 다 들어감 (페이지 이동 자체를 검증 못 함)
+- 검색해도 결과가 한 화면에 다 보임 (필터 동작이 안 보임)
+- 무한 스크롤 UI를 검증할 수 없음 (스크롤할 양이 안 됨)
+
+그러니까 "용어 등록 화면 mockup"이 시각적으로는 그럴듯해도 *"진짜 양이 들어왔을 때 어떻게 보이는지"* 는 가늠이 안 됐습니다.
+
+---
+
+## 2. 해결 후보 비교
+
+세 가지를 비교했어요.
+
+| 옵션 | 작업량 | 품질 | 회수 가치 |
+|------|--------|------|-----------|
+| ① 손으로 49 → 200~300개 추가 | 큼 (반나절~하루) | 낮음 (반복 패턴) | 다시 늘릴 때마다 반복 |
+| ② Faker 같은 라이브러리로 랜덤 생성 | 작음 | 진짜 데이터처럼 안 보임 | 매번 형태가 달라짐 |
+| ③ 운영 엑셀을 mockup 시드로 변환 | 중간 | 진짜 데이터 형태 보존 | 시드 스크립트 한 번이면 반복 사용 |
+
+**③번**으로 갔습니다. 운영 측에서 `metadata_new.xlsx`라는 진짜 도메인 데이터를 들고 있었는데, 478행이 있었어요. 이걸 mockup JSON 형식으로 변환하면 양도 충분하고 형태도 자연스러웠습니다.
+
+---
+
+## 3. 스크립트 — `scripts/seed_terms_from_xlsx.py`
+
+엑셀을 읽어 JSON으로 떨구는 단순한 변환 스크립트입니다. 핵심만 보면:
+
+```python
+# scripts/seed_terms_from_xlsx.py
+from openpyxl import load_workbook
+from pathlib import Path
+import json
+import re
+
+SRC = Path("seeds/metadata_new.xlsx")
+DST = Path("static/data/terms_mock.json")
+
+COLUMN_MAP = {
+    "용어명": "name",
+    "영문명": "en_name",
+    "정의": "definition",
+    "네임스페이스": "namespace_prefix",
+    "타입": "term_type",
+    "URI": "uri",
+}
+
+def slugify(s):
+    s = re.sub(r"[^\w\-]+", "_", s, flags=re.UNICODE).strip("_")
+    return s.lower()
+
+def main():
+    wb = load_workbook(SRC, data_only=True)
+    ws = wb.active
+    headers = [cell.value for cell in ws[1]]
+    
+    rows = []
+    for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=1):
+        if not any(row):
+            continue
+        record = {}
+        for col_idx, header in enumerate(headers):
+            key = COLUMN_MAP.get(header)
+            if key is None:
+                continue
+            value = row[col_idx]
+            if value is None:
+                continue
+            record[key] = str(value).strip()
+        
+        # 시드 식별자: mock-{n}-{slug}
+        record["id"] = f"mock-{i:04d}-{slugify(record.get('name', ''))}"
+        rows.append(record)
+    
+    DST.write_text(json.dumps(rows, ensure_ascii=False, indent=2))
+    print(f"✓ wrote {len(rows)} records → {DST}")
+
+if __name__ == "__main__":
+    main()
+```
+
+엑셀 컬럼명을 JSON 키에 매핑하는 `COLUMN_MAP` 한 곳만 잘 만들어두면, 다음에 엑셀 포맷이 바뀌어도 여기만 손대면 됩니다.
+
+---
+
+## 4. 의도적인 결정들
+
+### 4.1 ID에 슬러그 포함
+
+`mock-0001`이 아니라 `mock-0001-위치_좌표`처럼 슬러그를 붙였습니다. 화면에서 디버깅할 때 *"이 ID가 어떤 용어를 가리키는지"* 가 한눈에 보여요. 진짜 DB가 들어오면 어차피 시퀀스 ID로 교체될 거라 큰 비용이 아닙니다.
+
+### 4.2 빈 값을 키 자체로 누락시킴
+
+엑셀 셀이 비어 있으면 그 키를 JSON record에 아예 안 넣었습니다. 화면 측 코드가 `term.uri` 같은 접근에서 *"빈 문자열인지 누락인지"* 를 구별할 수 있도록.
+
+### 4.3 결정론적 출력
+
+같은 엑셀을 두 번 돌리면 같은 JSON이 나오게 했어요. 매번 다른 순서로 들어가거나, 새 ID가 부여되면 git diff에 무의미한 변경이 잔뜩 잡힙니다. 정렬도, ID도 입력 순서대로.
+
+---
+
+## 5. 사용 흐름
+
+```bash
+# 엑셀이 갱신되면
+python scripts/seed_terms_from_xlsx.py
+
+# git diff 로 변경 확인
+git diff static/data/terms_mock.json
+
+# 필요하면 commit
+```
+
+엑셀 자체는 `seeds/` 폴더에 보관. 진짜 데이터가 일부 포함될 수 있어서 `seeds/` 는 `.gitignore`에 추가했고, 대신 `metadata_new.example.xlsx` 같은 샘플 파일을 두어 *"이런 컬럼 구성을 기대한다"* 를 알 수 있게 했습니다.
+
+---
+
+## 6. 결과
+
+- mockup 데이터가 49 → 478개로 증가
+- 페이지네이션 UI 검증 가능 (한 페이지 20개 × 24페이지)
+- 검색/필터 동작 시각 확인 가능
+- 새 데이터가 더 필요하면 엑셀에 행 추가 후 스크립트 한 줄 실행
+
+**누가 봐도 진짜 같은 데이터** 라는 점이 mockup의 신뢰도를 크게 끌어올렸어요. Faker로 만들었으면 *"용어1, 용어2..."* 같은 더미 느낌이 났을 텐데, 운영 도메인의 단어들이 들어가니까 디자인 리뷰에서도 *"실제로 이런 양과 형태가 들어왔을 때 화면이 견디는가"* 를 평가할 수 있게 됐습니다.
+
+---
+
+## 7. 교훈
+
+- **목업 데이터도 시드 스크립트로 만들어 두면 향후 작업이 단순해진다.** 손으로 만들기 시작하면 늘 부족함.
+- **진짜 데이터의 형태**가 목업 품질의 8할. 진짜 데이터를 한 번 시드로 가져올 수 있으면 그게 가장 좋다.
+- **결정론적 출력**은 시드 스크립트의 기본기. 입력이 같으면 출력도 항상 같게.
+- 시드 데이터 파일은 가능하면 `.gitignore`에 — 진짜 데이터가 포함될 수 있는 파일은 저장소에 두지 않기.
+
+작은 도구지만, 한 번 만들어두고 나니 *"데이터 좀 더 늘려보자"* 가 1분 작업이 됐어요. 도구 만드는 데 든 시간을 그 자체로 회수한 셈입니다.

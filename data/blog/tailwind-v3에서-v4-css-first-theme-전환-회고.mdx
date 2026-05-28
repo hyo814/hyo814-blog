@@ -1,0 +1,156 @@
+---
+title: Tailwind v3에서 v4 CSS-first @theme로 전환하면서 깨지고 다시 메운 기록
+date: '2026-05-10'
+tags: [기술노트]
+draft: false
+summary: 'tailwind.config.js 기반 v3에서 CSS 안에서 @theme로 토큰을 정의하는 v4로 전환하면서 발생한 회귀와 패치 과정을 정리한 회고입니다.'
+---
+
+# Tailwind v3에서 v4 CSS-first `@theme`로 전환하면서 깨지고 다시 메운 기록
+
+Tailwind v4가 안정화되면서 v3에서 v4로 넘어갔습니다. v4의 가장 큰 변화는 **JS 기반 `tailwind.config.js`가 사실상 사라지고, CSS 안의 `@theme` 블록으로 토큰을 정의**한다는 점입니다. 큰 변화인 만큼 회귀가 따라왔고, 그걸 어떻게 메웠는지 기록합니다.
+
+---
+
+## 1. 왜 옮겼는가
+
+가장 큰 이유는 **빌드 속도**였습니다. v4는 Rust 기반 엔진(Oxide)으로 다시 작성돼서 v3 대비 풀빌드가 눈에 띄게 빨라요.
+
+부수적으로:
+
+- 토큰을 CSS-first로 정의하니까 디자인 시스템 변수가 곧 CSS variable이 됩니다. 즉 런타임 테마 전환이 자연스러워짐.
+- v3는 `tailwind.config.js`가 빌드 타임 외부 설정이라 IDE 자동 보완이 미묘했는데, v4는 CSS 안에 정의된 토큰이 그대로 클래스 자동완성에 잡혀요.
+
+---
+
+## 2. 1단계 — `config bridge` 모드로 일단 살리기
+
+v4는 마이그레이션을 위해 *config bridge*를 지원합니다. 기존 `tailwind.config.js`를 v4 엔진이 읽어서 그대로 굴리는 모드예요.
+
+```css
+/* app.css */
+@import "tailwindcss";
+@config "../tailwind.config.js";
+```
+
+이렇게만 해두면 v4 엔진을 쓰면서 v3 설정을 그대로 가져갈 수 있습니다. 1차 마이그레이션 PR은 여기까지였어요. 빌드 속도는 이미 이 시점에서 절반 이하로 떨어졌고, 시각적 회귀는 거의 없었습니다.
+
+---
+
+## 3. 2단계 — CSS-first `@theme`로 본격 전환
+
+config bridge는 임시 단계라, 결국 토큰을 `@theme`로 옮겨야 했습니다. v3 설정의 `theme.extend` 블록을 보면서 한 줄씩 CSS로 옮겼어요.
+
+```js
+// 기존 tailwind.config.js (v3)
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50: "#eef2ff",
+          500: "#2a4dd0",
+          900: "#0d1a4d",
+        },
+      },
+      fontFamily: {
+        sans: ["Pretendard", "system-ui", "sans-serif"],
+      },
+      spacing: {
+        '18': '4.5rem',
+      },
+    },
+  },
+};
+```
+
+```css
+/* 변경 후 app.css (v4) */
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef2ff;
+  --color-brand-500: #2a4dd0;
+  --color-brand-900: #0d1a4d;
+
+  --font-sans: "Pretendard", system-ui, sans-serif;
+
+  --spacing-18: 4.5rem;
+}
+```
+
+명명 규칙이 단순합니다. v3 객체 키를 `--<category>-<name>`로 평탄화한 거예요. 토큰을 CSS variable로 그대로 노출시키기 때문에 런타임 접근이 가능하다는 점이 장점이고요.
+
+---
+
+## 4. 깨졌던 부분과 회귀 패치
+
+옮기고 나서 회귀가 줄지어 나왔습니다. 시각적 침묵 깨짐이 가장 까다로웠어요.
+
+### 4.1 일부 클래스가 적용 안 됨 — `space-y-*`, `divide-*`
+
+v4는 일부 유틸리티의 *selector*를 v3와 다르게 생성합니다. `space-y-*`는 이제 `:not(:last-child)` 대신 `:not(:first-child)`를 쓰는데, 우리 마크업 일부가 `:first-child`에 margin이 박혀 있어서 시각적으로 어색해졌어요.
+
+해결: 영향을 받은 컴포넌트의 마크업을 손보고, 의도적으로 `:first-child`를 노리던 CSS를 제거.
+
+### 4.2 `@apply`가 plugin 클래스에 안 통하는 경우
+
+v3에서는 `@apply btn-primary` 같이 plugin이 만든 클래스를 `@apply`로 다시 조합할 수 있었습니다. v4는 이걸 엄격하게 검증해서, 일부 plugin 클래스에는 `@apply`가 막혔어요.
+
+해결: 해당 위치에선 그냥 클래스를 마크업에 직접 박거나, `@utility` 블록으로 custom utility를 정의해서 다시 받아 쓰는 식으로 우회.
+
+```css
+@utility btn-primary {
+  background: var(--color-brand-500);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+}
+```
+
+### 4.3 `dualMultiSelect`에서 깨진 클래스 정리
+
+특정 컴포넌트(`dualMultiSelect`)에서 v3 시절에 임시로 끼워 넣은 클래스가 v4 빌더에서 매칭 실패로 무시되고 있었습니다. 시각적으로는 "왠지 칸이 좁아 보이는데?" 정도였는데, 원인은 클래스 자체가 안 먹는 거였어요.
+
+해결: 깨진 클래스 문자열을 찾아 일관된 sdms 브랜드 톤(`--color-brand-500` 계열)으로 정리. 이게 `fix(dualMultiSelect): 깨진 tailwind 클래스 정리 및 sdms 브랜드 톤 정렬` 커밋이 된 작업이었습니다.
+
+### 4.4 input/textarea/select 배경색 회귀
+
+v4는 form 요소의 기본 배경을 더 엄격하게 다룹니다. v3에서는 브라우저 기본값이 적용되던 부분이 v4에서는 투명하게 보이는 케이스가 있었어요.
+
+해결: 명시적으로 흰색을 박아 두기.
+
+```css
+@layer base {
+  input,
+  textarea,
+  select {
+    background-color: white;
+  }
+}
+```
+
+`fix(css): input/textarea/select 배경색 흰색 명시` 커밋.
+
+---
+
+## 5. 회귀 점검 흐름
+
+회귀가 줄지어 나오니까, 끝낼 시점을 가늠하기 어려웠습니다. 임시로 만들어 둔 흐름은 이랬어요.
+
+1. **시각 회귀 시드 페이지 리스트** — 디자인이 가장 정교한 페이지 10개를 추려서 매번 확인
+2. **자동 캡쳐 스크립트** — 같은 페이지를 Playwright로 자동 캡쳐 (별도 글에서 다룸)
+3. **diff 비교** — 변경 전후 PNG를 시각적으로 훑기
+
+자동 캡쳐는 시각 회귀를 줄여주는 1차 방어선이었습니다. 클래스가 침묵 깨질 때 이걸로 잡힌 게 두세 건은 됩니다.
+
+---
+
+## 6. 교훈
+
+- **메이저 마이그레이션은 config bridge 같은 호환 모드를 활용해 단계를 쪼개기.** 한 번에 옮기지 않고 "엔진 먼저, 토큰 나중에" 단계로.
+- **시각적 침묵 깨짐을 잡는 자동 캡쳐 한 줄을 미리 만들기.** 이게 없으면 회귀 점검이 운에 맡겨집니다.
+- **`@apply` 의존을 줄이기.** v4에서 엄격해진 부분이고, 다음 버전에서도 비슷한 변화가 있을 가능성.
+- **plugin 의존도 점검.** v3 plugin 중 v4 호환이 안 된 것이 일부 있어 대체나 제거를 검토해야 했어요.
+
+CSS-first 패러다임 자체는 마음에 듭니다. 토큰이 CSS variable로 노출되니까 디자인 시스템과 런타임 테마 사이의 거리가 짧아져요. 다만 v3→v4는 "쉬운 업그레이드"는 아니었습니다. 다음 메이저 때를 위해 이번 회고를 남겨둡니다.
