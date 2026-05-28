@@ -1,0 +1,163 @@
+---
+title: 디자인 회귀를 잡으려고 페이지 자동 캡쳐 스크립트를 만들었다
+date: '2026-05-14'
+tags: [기술노트]
+draft: false
+summary: 'Tailwind 메이저 업그레이드를 앞두고 시각 회귀를 잡기 위해 Playwright 기반 페이지 캡쳐 스크립트를 만든 경위와, 그 과정에서 만난 작은 어려움들을 정리합니다.'
+---
+
+# 디자인 회귀를 잡으려고 페이지 자동 캡쳐 스크립트를 만들었다
+
+Tailwind v3 → v4 마이그레이션을 앞두고 가장 무서웠던 건 *"시각적으로 미세하게 어긋나는데 코드는 멀쩡한 회귀"* 였습니다. 그래서 메이저 작업에 들어가기 전에 페이지 자동 캡쳐 스크립트를 먼저 만들었어요.
+
+---
+
+## 1. 동기 — 침묵 깨짐을 어떻게 잡을 것인가
+
+CSS 라이브러리 메이저 업그레이드 때 가장 흔한 회귀가 **클래스가 침묵 깨지는** 경우입니다. 클래스 이름은 그대로지만 생성되는 규칙이 미묘하게 달라서 화면이 조금 어색해지는 거예요. 빌드 에러도 없고, 콘솔 경고도 없고, 테스트도 통과합니다.
+
+이런 회귀를 잡는 방법은 정해져 있어요. **변경 전/후 스크린샷을 비교**. 다만 사람이 매번 페이지를 돌며 캡쳐하는 게 비현실적이라, 자동화가 필요했습니다.
+
+---
+
+## 2. 도구 선정
+
+세 가지 후보를 비교했어요.
+
+| 도구 | 장점 | 단점 |
+|------|------|------|
+| Selenium | 익숙함 | 셋업이 무겁고 최근 트렌드와 멀어짐 |
+| Puppeteer | Chromium 한정인데 빠름 | 로그인 세션 처리에 추가 코드 필요 |
+| Playwright | 멀티 브라우저, 세션 관리/대기 기본 제공 | 처음 셋업 학습 비용 |
+
+**Playwright**로 갔습니다. 가장 큰 이유는 *"동적 콘텐츠가 안정될 때까지 자동 대기"* 가 기본 동작이라는 점. 우리 페이지는 jstree 같은 동적 렌더 컴포넌트가 많아서, naive하게 캡쳐하면 트리가 그려지기 전 빈 화면이 찍힙니다.
+
+---
+
+## 3. 구현 — `scripts/capture_pages.py`
+
+핵심은 단순합니다. URL 리스트를 받아 순회하면서 캡쳐하면 끝.
+
+```python
+# scripts/capture_pages.py
+from playwright.sync_api import sync_playwright
+from pathlib import Path
+import json
+
+OUT = Path("captures")
+OUT.mkdir(exist_ok=True)
+
+with open("scripts/capture_targets.json") as f:
+    targets = json.load(f)
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+
+    # 1) 로그인 세션 만들어두기
+    page = ctx.new_page()
+    page.goto("http://localhost:8000/login/")
+    page.fill('input[name="username"]', "admin")
+    page.fill('input[name="password"]', "***")
+    page.click('button[type="submit"]')
+    page.wait_for_url("**/dashboard/**")
+
+    # 2) 타겟 페이지 순회
+    for t in targets:
+        page.goto(t["url"])
+        # 동적 콘텐츠 안정화 대기
+        if t.get("wait_for"):
+            page.wait_for_selector(t["wait_for"])
+        page.wait_for_load_state("networkidle")
+        page.screenshot(path=OUT / f"{t['name']}.png", full_page=True)
+        print(f"✓ {t['name']}")
+
+    browser.close()
+```
+
+URL 리스트는 별도 JSON으로 둡니다.
+
+```json
+[
+  { "name": "dashboard", "url": "http://localhost:8000/dashboard/" },
+  { "name": "metaclass-list", "url": "http://localhost:8000/web-admin/std-data/meta-class/", "wait_for": "[data-tree-ready]" },
+  { "name": "term-list", "url": "http://localhost:8000/web-admin/std-data/terms/", "wait_for": ".term-row" }
+]
+```
+
+---
+
+## 4. 실제로 부딪힌 작은 어려움들
+
+### 4.1 jstree가 렌더 끝나기 전에 캡쳐가 됨
+
+`networkidle`만으로는 충분하지 않았습니다. jstree는 fetch가 끝나도 잠시 후 트리를 그리기 시작하는 컴포넌트라, *"트리가 그려진 시점"* 을 별도로 잡아야 했어요.
+
+해결: 트리 컨테이너에 렌더 완료 후 `data-tree-ready="1"` 속성을 붙이도록 jstree 초기화 콜백에서 표시. Playwright는 그 selector를 기다림.
+
+```js
+// metaClassTree.js 초기화 콜백 안에서
+$tree.on('ready.jstree', () => {
+  $tree.attr('data-tree-ready', '1');
+});
+```
+
+### 4.2 호버 메뉴 같은 인터랙션 캡쳐가 어려움
+
+기본 캡쳐는 정적 상태만 잡습니다. 호버 시 펼쳐지는 GNB 같은 건 마우스 위치를 지정해야 해요.
+
+```python
+# GNB 호버 상태 캡쳐
+page.hover('nav .menu-item:nth-child(2)')
+page.wait_for_timeout(200)  # CSS transition 대기
+page.screenshot(path=OUT / "gnb-hover.png")
+```
+
+### 4.3 폰트 로드 안 끝난 채로 캡쳐돼서 폰트가 fallback으로 그려짐
+
+이게 가장 미묘했습니다. 회귀 비교 시에 "폰트가 다르게 보이는 게 진짜 회귀인지, 단지 로드가 안 끝나서인지" 판단하기 어려워요.
+
+해결: 폰트 로드 완료를 명시적으로 기다림.
+
+```python
+page.evaluate("document.fonts.ready")
+```
+
+---
+
+## 5. 사용 흐름
+
+```bash
+# 변경 전
+git checkout main
+python scripts/capture_pages.py
+mv captures captures-before
+
+# 변경 후
+git checkout hjlim/design-refactor
+python scripts/capture_pages.py
+mv captures captures-after
+
+# 비교 (단순 파일별 diff)
+for f in captures-after/*.png; do
+  name=$(basename "$f")
+  if ! cmp -s "captures-before/$name" "$f"; then
+    echo "diff: $name"
+  fi
+done
+```
+
+이렇게 돌리면 변경된 페이지 목록이 나옵니다. 그 다음에는 사람이 직접 두 이미지를 비교해서 *"이 변화는 의도된 거다"* 인지 *"의도 안 된 회귀다"* 인지 판단해요.
+
+좀 더 본격적으로 가려면 픽셀 diff 라이브러리(`pixelmatch` 등)를 붙일 수도 있는데, 우리는 변경 페이지 목록만 줄여줘도 충분히 도움이 됐습니다.
+
+---
+
+## 6. 교훈
+
+- 시각 회귀는 **테스트로 못 잡습니다.** 스크린샷 비교가 정답이고, 자동화 비용은 한 번만 들이면 됩니다.
+- **동적 컴포넌트는 "렌더 완료 마커"를 명시적으로 박아두자.** 시간 기반 대기는 불안정.
+- 폰트 로드, CSS transition 같은 시간 의존 요소는 별도로 명시 대기.
+- 캡쳐 스크립트는 코드 한 번, 사용은 두고두고. ROI가 좋은 도구.
+
+이걸 만들어두니 Tailwind 마이그레이션 외에도 사이드 효과로 디자인 검토 회의에서 "현재 상태 캡쳐 좀 공유해 주세요" 같은 요청을 빠르게 처리할 수 있게 됐어요. 작은 도구가 의외로 자주 쓰입니다.

@@ -1,0 +1,202 @@
+---
+title: 분류체계와 메타클래스 트리 공통 로직을 헬퍼 4종으로 추출한 회고
+date: '2026-05-16'
+tags: [기술노트]
+draft: false
+summary: '두 페이지가 따로 들고 있던 jstree 옵션과 이벤트 핸들러를 비교해 차이가 거의 없음을 확인하고, 공통 헬퍼 4종으로 추출한 리팩토링 회고입니다.'
+---
+
+# 분류체계와 메타클래스 트리 공통 로직을 헬퍼 4종으로 추출한 회고
+
+`schemeTree.js`(분류체계)와 `metaClassTree.js`(메타클래스)를 들여다보다가, 두 파일이 사실상 같은 동작을 다른 코드로 두 번 작성하고 있다는 걸 발견했습니다. 추출해서 헬퍼 4종으로 모은 과정을 정리합니다.
+
+---
+
+## 1. 시작 — "비슷해 보이는데 정말 같은 건가?"
+
+분류체계 트리와 메타클래스 트리는 시각적으로 매우 비슷합니다. 둘 다 좌측에 jstree, 우측에 선택 노드의 정보를 표시하는 패널. 다만 트리에 표시하는 데이터가 다르니까 *"내부 로직도 다르겠지"* 라는 게 처음 가정이었어요.
+
+코드를 비교해보니 의외였습니다. jstree 옵션 객체부터 이벤트 핸들러까지, 차이라곤:
+
+- 데이터 fetch URL이 다름
+- 노드 클릭 시 어디로 상세를 보여줄지가 다름
+- 노드 아이콘 종류가 살짝 다름
+
+그 외 95%는 동일했습니다.
+
+```js
+// schemeTree.js (요지)
+const $tree = $('#scheme-tree').jstree({
+  core: {
+    data: { url: '/api/schemes/tree/', dataType: 'json' },
+    themes: { name: 'proton' },
+    check_callback: true,
+  },
+  plugins: ['types', 'state', 'wholerow'],
+  types: { default: { icon: 'fa fa-folder' }, leaf: { icon: 'fa fa-file' } },
+});
+
+// metaClassTree.js (요지)
+const $tree = $('#metaclass-tree').jstree({
+  core: {
+    data: { url: '/api/meta-class/tree/', dataType: 'json' },
+    themes: { name: 'proton' },
+    check_callback: true,
+  },
+  plugins: ['types', 'state', 'wholerow'],
+  types: { default: { icon: 'fa fa-folder' }, leaf: { icon: 'fa fa-file-code' } },
+});
+```
+
+거의 동일하죠. 게다가 두 파일의 이벤트 핸들러도 거의 같았습니다.
+
+```js
+$tree.on('select_node.jstree', (e, data) => {
+  const node = data.node;
+  // 패널에 정보 표시 + 트리 위치 유지
+});
+$tree.on('refresh.jstree', () => {
+  // 마지막 선택 복원
+});
+```
+
+---
+
+## 2. 추출 결정 — 헬퍼 4종
+
+비슷한 두 코드를 한 곳으로 합칠 때 *"한 함수에 옵션 객체로 다 받게"* 가 흔한 함정입니다. 그 함수는 결국 인자가 10개 이상으로 부풀어 오르고, 두 호출처 모두 가독성이 떨어지게 돼요.
+
+대신 작은 헬퍼 4개로 쪼갰습니다.
+
+### 헬퍼 1: `buildJstreeConfig(options)`
+
+jstree 옵션 객체를 만들어주는 빌더. 변하는 부분만 인자로 받습니다.
+
+```js
+// static/js/tree/treeHelpers.js
+export function buildJstreeConfig({ url, leafIcon = 'fa fa-file' }) {
+  return {
+    core: {
+      data: { url, dataType: 'json' },
+      themes: { name: 'proton' },
+      check_callback: true,
+    },
+    plugins: ['types', 'state', 'wholerow'],
+    types: {
+      default: { icon: 'fa fa-folder' },
+      leaf: { icon: leafIcon },
+    },
+  };
+}
+```
+
+호출하는 쪽은 두 줄입니다.
+
+```js
+$('#scheme-tree').jstree(buildJstreeConfig({ url: '/api/schemes/tree/' }));
+$('#metaclass-tree').jstree(
+  buildJstreeConfig({ url: '/api/meta-class/tree/', leafIcon: 'fa fa-file-code' })
+);
+```
+
+### 헬퍼 2: `bindNodeSelect(tree, onSelect)`
+
+노드 선택 이벤트 바인딩. onSelect는 트리마다 다른 동작을 받는 콜백.
+
+```js
+export function bindNodeSelect($tree, onSelect) {
+  $tree.on('select_node.jstree', (e, data) => {
+    onSelect(data.node);
+  });
+}
+```
+
+### 헬퍼 3: `refreshNode(tree, nodeId)`
+
+노드를 새로고침하면서 선택 상태를 유지. 인라인 폼에서 저장 후 호출하는 패턴.
+
+```js
+export function refreshNode($tree, nodeId) {
+  $tree.jstree(true).refresh_node(nodeId);
+  $tree.one('refresh.jstree', () => {
+    $tree.jstree('select_node', nodeId);
+  });
+}
+```
+
+### 헬퍼 4: `getSelectedPath(tree)`
+
+선택된 노드의 root-to-node 경로를 반환. 우측 패널에 breadcrumb 표시할 때 사용.
+
+```js
+export function getSelectedPath($tree) {
+  const tree = $tree.jstree(true);
+  const selected = tree.get_selected(true)[0];
+  if (!selected) return [];
+  return tree.get_path(selected, false, true).map(id => tree.get_node(id));
+}
+```
+
+---
+
+## 3. 추출 후 호출처
+
+`schemeTree.js`와 `metaClassTree.js`가 각각 150줄 → 60줄 정도로 줄었습니다. 본질에 집중된 코드만 남았어요.
+
+```js
+// schemeTree.js (after)
+import * as TreeH from './tree/treeHelpers.js';
+
+const $tree = $('#scheme-tree').jstree(
+  TreeH.buildJstreeConfig({ url: '/api/schemes/tree/' })
+);
+
+TreeH.bindNodeSelect($tree, node => {
+  // 분류체계 우측 패널에 정보 채우기
+  fillSchemePanel(node);
+});
+
+window.refreshScheme = id => TreeH.refreshNode($tree, id);
+```
+
+`metaClassTree.js` 도 거의 같은 구조. *"트리마다 다른 동작은 콜백 한 줄로 끝나야 한다"* 가 추출의 기준이었습니다.
+
+---
+
+## 4. 추출에서 의식적으로 피한 함정
+
+### 4.1 옵션 폭발
+
+옵션 객체에 모든 차이를 다 받게 하면 함수가 비대해집니다. 대신 *"콜백으로 외부에서 주입"* 으로 받게 하면 옵션이 작아져요. `bindNodeSelect(tree, onSelect)` 가 좋은 예. 노드 선택 후 무엇을 할지는 외부 책임.
+
+### 4.2 너무 일찍 일반화
+
+세 번째 트리(향후 만들 수도 있는 *카탈로그 트리* 같은)를 미리 가정하지 않았습니다. 두 호출처가 만들어진 시점의 공통점만 빼냈고, 세 번째가 나타나면 그 때 더 다듬을 생각이에요.
+
+### 4.3 상태 보관소를 헬퍼에 넣지 않기
+
+헬퍼 4종 모두 무상태(stateless)입니다. `$tree` 인스턴스를 호출자가 보관하고, 헬퍼는 받아서 처리만 함. 헬퍼 자체에 전역 상태를 넣으면 두 트리 사이 간섭이 생깁니다.
+
+---
+
+## 5. 부수 작업 — jstree 옵션 통일
+
+추출하면서 발견한 작은 차이도 같이 정리했어요.
+
+- 한쪽은 `wholerow` 플러그인이 있고, 한쪽은 없었음 → 둘 다 있도록 통일
+- 한쪽은 `state` 플러그인으로 마지막 펼침 상태 유지, 한쪽은 매번 초기화 → 양쪽 다 유지하도록
+- 자식 노드 아이콘이 한쪽은 `fa-folder-open`, 한쪽은 `fa-folder`였음 → 일관되게 `fa-folder` 통일
+
+이게 `fix: term 트리 자식 노드 아이콘을 폴더로 통일` 커밋이 된 부분입니다.
+
+---
+
+## 6. 교훈
+
+- **두 곳에서 비슷한 코드가 보이면 우선 비교를 정확히 하자.** "비슷하다"는 인상은 자주 *"거의 같다"* 와 동의어.
+- 추출은 **하나의 큰 함수보다 작은 헬퍼 여러 개**가 사용처 가독성이 더 좋다.
+- **다른 동작은 콜백으로**. 옵션 객체로 다 받으려 들면 인자가 폭발.
+- **세 번째 호출처가 나타나기 전에 일반화하지 말자.** 두 호출처 사이의 공통점만이 진짜 추출 대상.
+- 추출의 과정에서 발견된 *"왜 한쪽만 이래?"* 류의 미세 차이는 통일의 기회.
+
+리팩토링은 회고하기 좋은 작업이 아니지만, 한 번 정리해두면 향후 트리가 또 추가됐을 때 가장 빠르게 만들 수 있는 시작점이 됩니다.
