@@ -1,0 +1,135 @@
+---
+title: 여러 D3 그래프에 흩어진 줌 로직을 d3ZoomControls.js로 외부화한 회고
+date: '2026-06-12'
+tags: [기술노트]
+draft: false
+summary: '데이터 관계도·워드클라우드·트리맵마다 복붙돼 있던 줌 설정을 공용 모듈 d3ZoomControls.js로 추출하고, 확대/축소/맞춤 버튼과 "최초 1회 fit-to-view"를 표준화한 작업입니다. SVG가 100% 크기일 때 뷰포트 크기를 어떻게 구하느냐가 핵심 함정이었어요.'
+---
+
+# 여러 D3 그래프에 흩어진 줌 로직을 d3ZoomControls.js로 외부화한 회고
+
+D3 그래프가 하나둘 늘면서, 그래프마다 줌 설정 코드가 *조금씩 다르게* 복붙돼 있었습니다. 어떤 건 휠 줌만 되고, 어떤 건 맞춤 버튼이 없고, scaleExtent도 제각각이었어요. 이걸 `d3ZoomControls.js` 하나로 모아 외부화한 작업을 정리합니다.
+
+---
+
+## 1. 증상 — 같은 줌 코드가 그래프마다 조금씩 다름
+
+`createD3Graph`(공통 그래프 빌더) 안에 줌이 인라인으로 박혀 있었습니다.
+
+```javascript
+// 변경 전: 그래프 빌더 안에 줌이 박혀 있음
+const zoom = d3.zoom()
+    .scaleExtent([0.5, 3])
+    .on("zoom", (event) => {
+        const zoomContainer = svg.select(".zoom-container");
+        if (!zoomContainer.empty()) {
+            zoomContainer.attr("transform", event.transform);
+        }
+    });
+svg.call(zoom);
+```
+
+문제는 *"이 줌 동작을 다른 그래프에도 똑같이"* 가 안 됐다는 거예요. 데이터 관계도엔 맞춤(fit) 버튼이 필요했고, 워드클라우드·트리맵은 줌 범위가 달라야 했습니다. 그때마다 이 블록을 복사해서 조금씩 고치다 보니, *그래프마다 줌 UX가 미묘하게 달라지는* 부작용이 생겼어요.
+
+---
+
+## 2. 무엇을 공통화할지 — 인터페이스부터 그리기
+
+복붙을 합치기 전에, *공용 모듈이 무엇을 받고 무엇을 돌려줄지*부터 정했습니다. 그래프마다 다른 건 "어떤 `<g>`에 transform을 걸지"와 "줌 범위" 정도였고, 나머지(버튼 UI·휠/드래그 줌·맞춤 계산)는 전부 같았어요.
+
+```javascript
+const controls = attachZoomControls({
+  svg: d3.select("svg"),
+  zoomTarget: zoomContainer,   // transform 을 적용할 <g>
+  scaleExtent: [0.3, 4],        // 선택
+  container: htmlEl,            // 컨트롤을 띄울 부모 (기본: svg.parentNode)
+});
+controls.fitToView();           // 컨텐츠 bbox 에 맞춰 화면 정렬
+controls.zoomBy(1.3);           // 프로그램적 확대
+```
+
+*받는 건 "그래프마다 다른 것"만, 돌려주는 건 "조작 핸들"만.* 이렇게 좁혀두니 그래프 쪽 코드는 줌을 *호출*만 하면 됐습니다.
+
+빌더 쪽은 인라인 줌을 지우고 모듈을 부르는 한 덩어리로 바뀌었어요.
+
+```javascript
+// 변경 후: 공용 컨트롤에 위임
+const zoomControls =
+    typeof window.attachZoomControls === "function"
+        ? window.attachZoomControls({
+              svg: svg,
+              zoomTarget: zoomContainer,
+              scaleExtent: [0.3, 4],
+              container: controlsContainer,
+          })
+        : null;
+```
+
+---
+
+## 3. 함정 — SVG가 100% 크기면 width/height를 어떻게 구하나
+
+가장 애먹은 부분이 *뷰포트 크기 계산*이었습니다. 예전 코드는 `+svg.attr("width")`로 SVG 속성값을 읽었는데, 반응형으로 가면서 SVG를 width/height 100%로 두자 이 속성이 *실제 렌더 크기와 무관* 해졌어요. 맞춤(fit) 계산이 엉뚱한 크기를 기준으로 도니 그래프가 화면 밖으로 튀거나 너무 작게 잡혔습니다.
+
+그래서 *실제 렌더 크기*를 여러 소스에서 폴백 체인으로 구하도록 했어요.
+
+```javascript
+function getViewportSize() {
+  const w =
+    svgNode.clientWidth ||                       // 1순위: 실제 렌더 폭
+    +svg.attr("width") ||                         // 2순위: 속성값
+    svgNode.getBoundingClientRect().width ||      // 3순위: 레이아웃 박스
+    900;                                          // 최후 기본값
+  const h =
+    svgNode.clientHeight || +svg.attr("height") ||
+    svgNode.getBoundingClientRect().height || 560;
+  return { w, h };
+}
+```
+
+맞춤은 `getBBox()`로 컨텐츠의 실제 경계를 구해, 뷰포트에 들어가도록 scale·translate를 계산합니다. scaleExtent로 한 번 더 클램프해서 *과도하게 확대/축소되지 않게* 막았어요.
+
+```javascript
+function fitToView(padding) {
+  const pad = typeof padding === "number" ? padding : 0.9;
+  const bbox = zoomTarget.node().getBBox();
+  if (!bbox || !bbox.width || !bbox.height) return;   // 빈 그래프 가드
+  const { w, h } = getViewportSize();
+  const rawScale = pad * Math.min(w / bbox.width, h / bbox.height);
+  const scale = Math.max(scaleExtent[0], Math.min(scaleExtent[1], rawScale));
+  const tx = w / 2 - scale * (bbox.x + bbox.width / 2);
+  const ty = h / 2 - scale * (bbox.y + bbox.height / 2);
+  svg.transition().duration(300)
+     .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+```
+
+---
+
+## 4. 함정 둘째 — "맞춤"을 언제 자동으로 부를 것인가
+
+force 시뮬레이션 그래프는 처음에 노드가 흩어졌다가 점점 안정됩니다. *언제* 맞춤을 부르느냐가 애매했어요. 너무 일찍 부르면 아직 자리를 못 잡은 상태로 맞춰지고, 매번 부르면 사용자가 손으로 조정한 뷰를 덮어써요.
+
+그래서 *시뮬레이션이 끝나면 최초 1회만* 맞추도록 했습니다.
+
+```javascript
+let didInitialFit = false;
+simulation.on("end", () => {
+    if (didInitialFit || !zoomControls) return;
+    didInitialFit = true;
+    zoomControls.fitToView();   // 이후 사용자가 조정한 뷰는 건드리지 않음
+});
+```
+
+*"처음 한 번은 친절하게, 그 다음부터는 사용자 뜻대로"* 라는 원칙이었어요.
+
+---
+
+## 5. 교훈
+
+- **복붙을 합칠 땐 "그래프마다 다른 것"만 인자로 빼냅니다.** zoomTarget과 scaleExtent만 다르고 나머지는 같다는 걸 먼저 알아내니, 인터페이스가 저절로 좁아졌어요.
+- **반응형 SVG에서 `attr("width")`를 믿지 마세요.** 100% 크기면 속성값과 렌더 크기가 다릅니다. `clientWidth → getBoundingClientRect → 속성 → 기본값` 폴백 체인이 안전했어요.
+- **자동 동작은 "최초 1회"가 대체로 정답입니다.** 맞춤을 매번 부르면 사용자 조작을 덮어쓰고, 안 부르면 불친절해요. 첫 번만 돕고 빠지는 게 좋았습니다.
+- **빈 데이터 가드를 잊지 마세요.** `getBBox()`가 0이면 그냥 리턴 — 빈 그래프에서 NaN transform이 나가는 걸 막습니다.
+
+이제 새 D3 그래프를 붙일 때 줌은 `attachZoomControls` 한 줄이면 끝이에요. 흩어져 있던 UX가 한 곳으로 모이니, *"줌 동작을 바꾸려면 여기만 고치면 된다"* 는 안심이 생겼습니다.

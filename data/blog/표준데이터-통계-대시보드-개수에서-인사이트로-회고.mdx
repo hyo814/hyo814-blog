@@ -1,0 +1,115 @@
+---
+title: 표준데이터 통계 대시보드를 "개수"에서 "유지관리 인사이트"로 재정의한 회고
+date: '2026-06-06'
+tags: [기술노트]
+draft: false
+summary: '총 등록 수·상태 분포만 보여주던 통계 대시보드를, 생애주기·완성도·최근 업데이트·인기 항목 중심으로 다시 짠 작업입니다. "ACT 개수"가 아니라 "완성형(고품질) 데이터가 얼마나 되나"를 묻도록 지표를 바꾼 이야기예요.'
+---
+
+# 표준데이터 통계 대시보드를 "개수"에서 "유지관리 인사이트"로 재정의한 회고
+
+표준데이터 통계 대시보드가 있었지만, 보여주는 건 *"총 몇 개, 상태별 몇 개"* 정도였습니다. 숫자는 맞는데 *"그래서 뭘 해야 하지?"* 에 답을 못 주는 대시보드였어요. 이걸 *유지관리 인사이트* 중심으로 다시 정의한 작업을 정리합니다.
+
+---
+
+## 1. 왜 다시 짰나 — "개수"는 행동을 못 만든다
+
+기존 카드 1은 이런 모양이었습니다.
+
+```python
+# 변경 전: 총계 + 상태별 단순 분포
+return JsonResponse({"data": {
+    "total": total,
+    "active": state_counts.get("ACT", 0),
+    "inactive": state_counts.get("DLT", 0),
+    "in_review": state_counts.get("SBM", 0) + ... ,
+    "breakdown": breakdown,
+}})
+```
+
+`active`가 182개라는 숫자는, *관리자가 다음에 뭘 해야 하는지* 알려주지 않았어요. 표준데이터 운영의 진짜 관심사는 *"확정된 데이터 중 메타데이터까지 충실히 채워진 게 얼마나 되나"*, *"최근에 손이 닿은 건 뭔가"* 같은 것들이었습니다.
+
+그래서 지표를 *생애주기 + 완성도* 로 재정의했어요.
+
+---
+
+## 2. 핵심 지표 — "완성형" 데이터 정의하기
+
+가장 중요한 변화는 *완성형(고품질)* 이라는 개념을 도입한 거예요. 단순히 ACT(표준 확정) 상태인 것과, *메타데이터까지 충실한 것*은 다릅니다.
+
+```python
+# '완성형' 데이터: 등록 완료(ACT)이면서 필수 메타데이터가 모두 있는 경우
+# (제목·설명·ASN.1 노드가 있는 경우로 정의)
+completed_qs = (
+    Dataset.objects.filter(state="ACT")
+    .annotate(asn1_count=Count("asn1node"))
+    .filter(
+        Q(title__isnull=False) & ~Q(title="")
+        & Q(notes__isnull=False) & ~Q(notes="")
+        & Q(asn1_count__gt=0)
+    )
+)
+completed_count = completed_qs.count()
+```
+
+생애주기도 운영자 언어로 다시 묶었습니다.
+
+| 지표 | 의미 | 산출 |
+|------|------|------|
+| 표준 확정 | 확정된 표준 | `state='ACT'` |
+| 완성(고품질) | 확정 + 메타데이터 충실 | ACT & 제목·설명·ASN.1 노드 존재 |
+| 진행 중 | 절차 진행 | `SBM + ONG + HLD` |
+| 미사용/삭제 | 폐기 | `DLT` |
+
+상태 코드(SBM/ONG/HLD/DLT)는 운영자에게 의미가 없어서, *표준 확정 / 절차 진행 중 / 미사용* 같은 라벨로 묶어 보여줬어요.
+
+---
+
+## 3. 유지관리 카드 — 무엇을 손봐야 하는지
+
+새로 만든 `DatasetMaintenanceView`는 *"다음에 볼 것"* 을 모았습니다. 최근 업데이트 항목, 속성이 풍부한(rich) 데이터셋, 항목이 많은 카탈로그 같은 거예요.
+
+```python
+class DatasetMaintenanceView(TemplateView):
+    """표준데이터 인사이트: 등록 현황, 최근 업데이트, 인기 항목."""
+
+    def get(self, request, *args, **kwargs):
+        limit = min(int(request.GET.get("limit", 20)), 50)
+        recent_before = timezone.now() - timedelta(days=30)
+        active_qs = Dataset.objects.filter(state="ACT")
+        summary = {
+            "active_total": active_qs.count(),
+            "total_tags": Tag.objects.count(),
+            ...
+        }
+```
+
+요약 카드는 4종으로 개편했어요 — *공식 표준 / 상세 명세 / 준비 중 / 최근 30일*. 그 아래에 카탈로그·풍부한 데이터셋·최근 업데이트 리스트를 붙여, 숫자에서 *개별 항목으로 바로 들어갈 수 있게* 했습니다.
+
+---
+
+## 4. 샘플 fallback 데이터 동기화
+
+대시보드는 API가 비어도(또는 개발 환경) 화면이 그려지도록 *샘플 fallback JSON*을 둡니다. 지표를 바꿨으니 이 샘플도 같이 맞춰야 했어요. 안 맞추면 *"실서버는 새 지표, 샘플은 옛 지표"* 로 어긋납니다.
+
+```json
+// sample-stats-maintenance.json — 새 지표에 맞춘 fallback
+{ "summary": { "total_tags": 154, "total_definitions": 82,
+  "total_oids": 210, "avg_completeness": 85, "recently_updated": 12,
+  "active_total": 450 },
+  "top_catalogs": [ { "name": "itsk_common", "title": "ITS 공통 카탈로그", "count": 42 }, ... ],
+  "top_rich_datasets": [ { "name": "Signal_Status", "title": "교차로 신호 상태 정보", "count": 24, "unit": "속성" }, ... ] }
+```
+
+월별 추이 샘플도 *상태별 분포* 에서 *단순 등록 추이(count)* 로 형태를 바꿔, 프론트가 기대하는 새 계약과 일치시켰습니다. *샘플은 "계약의 예시"라서, 지표가 바뀌면 반드시 같이 움직여야 한다* 는 걸 다시 확인했어요.
+
+---
+
+## 5. 교훈
+
+- **대시보드는 "숫자"가 아니라 "행동"을 만들어야 합니다.** 총 등록 수보다, *완성형이 얼마나 되고 무엇을 손봐야 하는지*가 운영자에게 쓸모 있어요.
+- **품질 지표는 명시적으로 정의하세요.** "완성형 = ACT & 제목·설명·ASN.1 노드 존재"처럼 *기준을 코드로 박아두면*, 모두가 같은 정의로 숫자를 읽습니다.
+- **상태 코드는 운영자 언어로 번역합니다.** SBM/ONG/HLD 같은 내부 코드를 *절차 진행 중* 으로 묶어주면 화면이 이해됩니다.
+- **fallback 샘플은 계약의 일부입니다.** 지표를 바꾸면 샘플 JSON도 같이 갱신해야 실서버와 어긋나지 않아요.
+
+같은 데이터에서 *어떤 질문을 던지느냐* 로 대시보드의 쓸모가 갈렸습니다. "몇 개야?"에서 "뭘 손봐야 해?"로 질문을 바꾼 게, 이번 개편의 전부였어요.

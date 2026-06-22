@@ -1,0 +1,112 @@
+---
+title: 이용안내를 아코디언에서 캐러셀로 — 슬라이드 분할과 매크로 공유화 회고
+date: '2026-06-20'
+tags: [기술노트]
+draft: false
+summary: '표준데이터·OID·아키텍처·Open API 4개 이용안내 탭을 아코디언에서 캐러셀로 통일한 작업입니다. 긴 섹션을 화면 1개 단위 슬라이드로 잘게 나눠 스크롤을 줄이고, 탭마다 복붙돼 있던 인라인 매크로를 공유 파티얼 하나로 합친 이야기예요.'
+---
+
+# 이용안내를 아코디언에서 캐러셀로 — 슬라이드 분할과 매크로 공유화 회고
+
+시스템 이용안내는 표준데이터·OID·물리 아키텍처·Open API 네 개의 가이드 탭으로 돼 있었습니다. 전부 아코디언이었는데, *"위에서 아래로 끝없이 스크롤"* 하는 구조가 안내 문서엔 안 맞았어요. 이걸 캐러셀로 갈아엎으면서 마크업 중복까지 정리한 작업을 기록합니다.
+
+---
+
+## 1. 아코디언의 한계
+
+아코디언은 *여러 섹션을 동시에 펼쳐* 비교할 때 좋습니다. 그런데 이용안내는 성격이 달랐어요.
+
+- 한 섹션이 *화면 캡처 + 긴 설명*이라 펼치면 길었습니다. 펼칠수록 페이지가 늘어나 스크롤이 한없이 길어졌어요.
+- 사용자가 *지금 몇 번째 안내를 보고 있는지* 감이 없었습니다. 진행 위치 표시가 없으니까요.
+- 한 번에 한 주제만 집중해서 보면 되는데, 아코디언은 *여러 개를 동시에 열어두기 쉬워* 오히려 산만했어요.
+
+안내 문서는 *"한 번에 한 화면, 순서대로"* 가 맞다고 판단했습니다.
+
+---
+
+## 2. 결정 — 캐러셀 + 슬라이드 분할
+
+| 항목 | 아코디언(전) | 캐러셀(후) |
+|------|--------------|------------|
+| 노출 단위 | 펼친 섹션 전체 | 화면 1개 + 짧은 설명 |
+| 진행 인지 | 없음 | 현재 위치 N/M 표시 |
+| 이동 | 스크롤 | 이전/다음 버튼 + 키보드 화살표 |
+| 동시 노출 | 여러 개 펼침 가능 | 항상 하나만 |
+
+긴 섹션을 *화면 한 장 단위*로 잘게 나눴어요. 표준데이터 10슬라이드, OID 10슬라이드, 아키텍처 4슬라이드, Open API 7슬라이드. 슬라이드마다 캡처 이미지 1개 + 짧은 설명으로 두니, 스크롤이 거의 사라졌습니다.
+
+캐러셀 본체는 flex track을 좌우로 옮기는 단순한 슬라이더예요.
+
+```javascript
+const updateTrackPosition = () => {
+  const baseOffset = slides[0].offsetLeft;
+  const currentOffset = slides[currentIndex].offsetLeft - baseOffset;
+  trackEl.style.transform = `translate3d(-${currentOffset}px, 0, 0)`;
+};
+```
+
+진행 위치(N/M)와 버튼 활성 상태도 같이 갱신합니다.
+
+```javascript
+const updateCarousel = () => {
+  updateTrackPosition();
+  titleEl.textContent = slides[currentIndex].dataset.carouselSlideTitle || "";
+  indexEl.textContent = currentIndex + 1;   // N
+  countEl.textContent = slides.length;       // M
+  updateButtonState();                        // 첫/끝에서 prev/next disabled
+  updateSlideState();                         // aria-hidden 갱신
+  window.requestAnimationFrame(updateViewportHeight);
+};
+```
+
+---
+
+## 3. 함정 — 슬라이드마다 높이가 다름
+
+슬라이드는 내용이 제각각이라 높이가 다릅니다. 캐러셀 뷰포트 높이를 고정하면 *짧은 슬라이드엔 빈 공간, 긴 슬라이드엔 잘림*이 생겨요. 그래서 *현재 슬라이드 높이에 맞춰 뷰포트 높이를 동기화* 했습니다.
+
+```javascript
+const updateViewportHeight = () => {
+  viewportEl.style.height = `${slides[currentIndex].offsetHeight}px`;
+};
+```
+
+`requestAnimationFrame`으로 한 프레임 미뤄 호출한 이유는, 슬라이드 전환 직후 레이아웃이 확정된 다음에 높이를 읽기 위해서였어요. 너무 일찍 읽으면 전 슬라이드 높이가 잡힙니다.
+
+키보드 화살표도 붙였는데, 입력 요소에 포커스가 있을 땐 무시하도록 가드를 뒀습니다. *안내 화면에서 ←/→로 페이지를 넘기는데 검색창 입력까지 가로채면 안 되니까요.*
+
+```javascript
+carouselEl.addEventListener("keydown", (event) => {
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) return;
+  if (event.key === "ArrowLeft") { ... }
+});
+```
+
+화면 캡처는 클릭하면 확대 모달로 크게 볼 수 있게 했어요. 작은 슬라이드 안에서 세부를 확인할 수 있도록요.
+
+---
+
+## 4. 매크로 공유화 — 4탭에 복붙돼 있던 것 합치기
+
+이게 사실 더 큰 정리였습니다. 네 개 탭은 각자 *carousel/slide/screenshot/feature_card/step_card* 같은 매크로를 **인라인으로 중복 정의**하고 있었어요. 캐러셀로 바꾸면서 이 매크로들을 공유 파티얼 하나로 합쳤습니다.
+
+```jinja
+{# templates/utils/macros/user_guide.html.j2 — 4개 탭 공유 매크로 #}
+{# carousel / slide / screenshot / feature_card / step_card / arrow /
+   outline / login_badge / guide_scripts 를 한 곳에 정의 #}
+```
+
+각 탭 템플릿은 인라인 매크로를 지우고 이 파티얼을 import하도록 바꿨어요. `accordion.js` 호출도 빼고 `guide_scripts()` 매크로 한 번으로 통일했습니다. 외곽 컨테이너도 `min-w-[75rem]` → `w-full`로 바꿔 상단 탭 폭과 정렬을 맞췄어요.
+
+*"안내 4개를 캐러셀로 바꾸기"* 가 표면 목표였지만, 그 과정에서 *"같은 매크로가 네 군데 복사돼 있던 빚"* 을 갚은 셈이 됐습니다.
+
+---
+
+## 5. 교훈
+
+- **컴포넌트 선택은 콘텐츠 성격을 따릅니다.** 비교가 목적이면 아코디언, *순서대로 한 화면씩*이 목적이면 캐러셀. 이용안내는 명백히 후자였어요.
+- **높이가 다른 슬라이드는 뷰포트를 동기화하세요.** 고정 높이는 빈 공간 아니면 잘림을 만듭니다. `requestAnimationFrame`으로 레이아웃 확정 후 높이를 읽는 게 안정적이었어요.
+- **키보드 핸들러엔 입력 요소 가드를.** 전역 화살표 단축키가 폼 입력을 가로채면 안 됩니다.
+- **UI를 갈아엎는 김에 중복 매크로를 합치면 일석이조입니다.** 어차피 네 탭을 다 건드리는 작업이라, 흩어진 인라인 매크로를 공유 파티얼로 모으기 딱 좋은 타이밍이었어요. 다음에 슬라이드 스타일을 바꾸려면 이제 한 파일만 고치면 됩니다.
+
+긴 안내 문서를 *짧은 호흡의 슬라이드*로 바꾸니, 읽는 사람이 *"끝이 보인다"* 는 느낌을 갖게 됐어요. 스크롤 길이가 사라진 것만으로도 체감이 꽤 달랐습니다.

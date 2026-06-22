@@ -1,0 +1,112 @@
+---
+title: Open API 정책 토글의 캐시·만료 상태가 어긋나던 문제를 동기화한 회고
+date: '2026-06-13'
+tags: [기술노트]
+draft: false
+summary: '관리자가 오퍼레이션을 토글했는데 TTL이 지나야 반영되던 캐시 갭, 그리고 만료된 토큰의 신청 상태가 "승인됨"으로 남던 stale 문제를 정리합니다. 캐시 즉시 무효화와 진입 시점 sync_expired로 "보이는 상태 = 실제 상태"를 맞춘 이야기예요.'
+---
+
+# Open API 정책 토글의 캐시·만료 상태가 어긋나던 문제를 동기화한 회고
+
+Open API 관리 화면에 *정책 관리 페이지*를 붙이면서, 토글과 만료 상태가 화면과 실제 동작 사이에서 어긋나는 두 가지 stale 문제를 같이 잡았습니다. 둘 다 *"분명히 바꿨는데 화면은 옛날 상태"* 라는, 운영자가 가장 헷갈려 하는 종류의 버그였어요.
+
+---
+
+## 1. 배경 — constance 정책을 화면에서 즉시 바꾸기
+
+토큰 만료일, 분당/일일 호출 제한, 비활성 오퍼레이션 차단 캐시 TTL 같은 값은 `constance`로 런타임 조정이 가능합니다. 이걸 코드 배포 없이 만지도록 web_admin에 정책 관리 페이지를 만들었어요.
+
+```python
+class OpenApiPolicy(ConfigForm):
+    # data_source 는 의도적으로 제외 — get_data_provider() 가 settings 만 읽으므로
+    # 폼에 노출하면 편집해도 반영되지 않는 dead 설정이 된다.
+    field_names = [
+        OPEN_API_POLICY.token_expiry_days.name,
+        OPEN_API_POLICY.rate_limit_per_minute.name,
+        OPEN_API_POLICY.rate_limit_per_day.name,
+        OPEN_API_POLICY.operation_cache_ttl.name,
+    ]
+```
+
+여기서 작은 결정 하나를 먼저 했습니다. `OPEN_API_DATA_SOURCE`는 `get_data_provider()`가 settings만 읽기 때문에, 폼에 올려봤자 *편집해도 무효한 죽은 필드*가 됩니다. 그래서 일부러 노출하지 않았어요. *조정 가능한 척하는 UI가 조정 안 되는 것보다는 차라리 없는 게 낫다* 는 판단이었습니다.
+
+---
+
+## 2. 문제 ① — 토글했는데 TTL만큼 반영이 늦음
+
+비활성 오퍼레이션 차단은 매 요청마다 DB를 보지 않으려고 캐시를 씁니다(`OPEN_API_OPERATION_CACHE_TTL`, 기본 300초). 그런데 이 캐시 때문에 *관리자가 오퍼레이션을 끄거나 켜도 최대 TTL만큼 반영이 늦는* 갭이 생겼어요.
+
+운영자 입장에서는 *"방금 차단했는데 왜 아직 200이 떨어지지?"* 가 됩니다. 보안성 설정이 지연 반영되는 건 특히 위험했어요.
+
+해결은 단순합니다. **토글하는 순간 해당 캐시를 즉시 무효화**하는 거예요. 그리고 이게 정말 즉시 반영되는지 테스트로 못 박았습니다.
+
+```python
+def test_admin_toggle_invalidates_cache(self):
+    """관리자 토글이 미들웨어 차단 캐시를 즉시 무효화한다 — TTL 대기 없이 반영."""
+    # 활성 상태로 요청해 캐시를 데운다
+    resp = self.client.get("/api/v1/datasets/", HTTP_AUTHORIZATION=f"Token {self.token.key}")
+    self.assertEqual(resp.status_code, 200)
+
+    web.post(f"/web-admin/open-api/spec/{tag.pk}/operation/{op.pk}/toggle")
+
+    # cache.clear() 없이도 즉시 차단되어야 한다
+    resp = self.client.get("/api/v1/datasets/", HTTP_AUTHORIZATION=f"Token {self.token.key}")
+    self.assertEqual(resp.status_code, 404)
+```
+
+*"캐시를 데우고 → 토글하고 → 곧장 다시 호출"* 하는 시나리오를 그대로 테스트로 옮겼어요. `cache.clear()` 없이 404가 떨어져야 통과합니다.
+
+---
+
+## 3. 문제 ② — 만료된 토큰인데 신청은 "승인됨"
+
+두 번째는 더 미묘했습니다. 토큰이 만료되면 *인증 시점*에 신청 상태를 `EXPIRED`로 전이시키고 있었는데, 함정은 **API를 더 이상 호출하지 않는 사용자**였어요. 인증이 다시 일어나지 않으니 전이 트리거가 안 걸리고, 신청 현황은 영원히 *"승인됨"* 으로 남았습니다.
+
+즉, 인증 시점 전이만으로는 *보이는 상태(승인됨)* 와 *실제 상태(만료)* 가 벌어집니다.
+
+해결은 **신청 목록에 진입하는 시점에 한 번 동기화**하는 것이었어요. 목록을 보는 순간이 곧 "현황을 확인하는 순간"이니, 그때 만료분을 정리하면 화면이 항상 진실을 보여줍니다.
+
+```python
+class UserTokenRequestView(LoginRequiredMixin, ListView):
+    def get_queryset(self):
+        # 만료된 토큰의 APPROVED 신청을 EXPIRED 로 동기화 — 인증 시점 전이만으로는
+        # API 를 쓰지 않는 사용자의 신청 현황이 "승인됨"으로 남는다.
+        ApiTokenRequest.sync_expired()
+        return ApiTokenRequest.objects.filter(user=self.request.user).order_by("-requested_at")
+```
+
+관리자 신청 검토 목록에도 같은 `sync_expired()`를 넣었습니다. 두 진입점 모두를 테스트로 고정했어요.
+
+```python
+def test_admin_request_list_syncs_expired(self):
+    """관리자 신청 목록 진입 시 만료 토큰의 APPROVED 신청이 EXPIRED 로 전이된다."""
+    token = _make_token(self.user, expired=True)
+    req = self._approved_request(token)
+    resp = web.get("/web-admin/open-api/token-request/")
+    req.refresh_from_db()
+    self.assertEqual(req.status, ApiTokenRequest.Status.EXPIRED)
+```
+
+---
+
+## 4. 두 문제의 공통점 — "보이는 상태 = 실제 상태"
+
+따로 보면 하나는 캐시 무효화, 하나는 상태 전이라 무관해 보여요. 하지만 본질은 같았습니다.
+
+| 문제 | 어긋난 두 상태 | 동기화 시점 |
+|------|----------------|-------------|
+| 토글 캐시 | 차단 캐시 vs DB의 `is_enabled` | 토글하는 순간 |
+| 만료 신청 | 신청 현황 표시 vs 토큰 실제 만료 | 목록 진입 순간 |
+
+둘 다 *"상태를 바꾸는 사건"과 "상태를 보여주는 사건"이 다른 타이밍에 일어나서* 벌어진 갭이었어요. 그래서 해결도 같은 모양 — **상태가 바뀌거나 보여지는 바로 그 순간에 동기화를 끼워 넣기** — 였습니다.
+
+---
+
+## 5. 교훈
+
+- **캐시는 "언제 무효화하느냐"가 본체입니다.** TTL에만 의존하면 보안성 변경이 지연 반영돼요. 상태를 바꾸는 액션에 무효화를 같이 묶어두는 게 안전합니다.
+- **이벤트 기반 전이는 "이벤트가 안 일어나는 사용자"를 놓칩니다.** 인증·호출 같은 트리거가 끊긴 대상은 영원히 옛 상태로 남아요. *조회 시점에 한 번 맞추는* 보정을 같이 두면 화면이 거짓말을 안 합니다.
+- **편집해도 무효한 설정은 UI에 올리지 않습니다.** 조정 가능한 척하는 필드는 운영자를 속여요.
+- **stale은 거의 항상 테스트로 재현 가능합니다.** "데우고 → 바꾸고 → 곧장 본다"를 그대로 테스트로 옮기면, 회귀를 막을 수 있어요.
+
+운영자가 화면을 믿을 수 있다는 건 생각보다 큰 가치였습니다. *"바꿨으면 즉시 그렇게 보인다"* 는 작은 약속을 지키려고 이 두 군데에 동기화 한 줄씩을 넣은 셈이에요.
