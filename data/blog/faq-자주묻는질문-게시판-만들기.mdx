@@ -1,0 +1,112 @@
+---
+title: 새 모델 없이 Post + 카테고리로 FAQ 게시판 만들기
+date: '2026-06-11'
+tags: [기술노트]
+draft: false
+summary: 'FAQ 게시판을 새 모델을 추가하지 않고 기존 Post 모델 + "FAQ" 카테고리로 구현한 회고입니다. 공지사항과 한 모델을 공유하면서 카테고리로 분리하고, 큐레이션 순서 노출·읽기 전용 본문·데이터 적재 커맨드까지 묶은 이야기예요.'
+---
+
+# 새 모델 없이 Post + 카테고리로 FAQ 게시판 만들기
+
+FAQ(자주 묻는 질문) 게시판을 추가했습니다. 처음엔 *"FAQ 모델을 새로 만들까?"* 였는데, 결국 **기존 `Post` 모델에 `FAQ` 카테고리를 얹는** 방향으로 갔어요. 게시판이 늘 때마다 모델을 늘리지 않는 게 이 프로젝트의 결이기도 했습니다. 그 결정과 구현을 정리합니다.
+
+> 참고로 1:1 비공개 Q&A는 별도 글에서 다뤘는데, 그건 *사용자별 비공개 문의*였고 이번 FAQ는 *공개·읽기 중심* 이라 성격이 완전히 다릅니다.
+
+---
+
+## 1. 결정 — 새 모델 vs 기존 모델 + 카테고리
+
+FAQ가 필요로 하는 건 결국 *제목 + 본문 + 노출 상태 + 분류*입니다. 그건 공지사항이 쓰는 `Post`와 똑같았어요. 새 모델을 파면 마이그레이션·관리자 화면·폼을 다 새로 만들어야 하는데, FAQ는 그만한 고유 필드가 없었습니다.
+
+| 방식 | 장점 | 단점 |
+|------|------|------|
+| 새 `Faq` 모델 | 도메인 명확 | 마이그레이션·CRUD·폼 전부 신설, 공지와 중복 |
+| `Post` + `FAQ` 카테고리 | 기존 CRUD·폼 재사용 | 쿼리에 카테고리 조건 필수 |
+
+**후자**로 갔어요. 대신 *카테고리 조건을 빼먹으면 공지·FAQ가 섞이는* 리스크가 있어서, 그걸 막는 게 구현의 핵심이 됐습니다.
+
+---
+
+## 2. 카테고리를 안전하게 얻기
+
+FAQ 카테고리가 없는 환경(초기화 커맨드 미실행)에서도 깨지지 않도록, *없으면 만들어 반환* 하는 헬퍼를 뒀어요.
+
+```python
+FAQ_CATEGORY_NAME = "FAQ"
+
+def _get_faq_category():
+    """FAQ 분류를 반환한다. init_post_category 가 실행되지 않았어도 안전하게 생성한다."""
+    category, _created = Category.objects.get_or_create(
+        name=FAQ_CATEGORY_NAME,
+        defaults={"description": "자주 묻는 질문 게시판"},
+    )
+    return category
+```
+
+*"카테고리가 있다고 가정"* 하는 대신 `get_or_create`로 두니, 새 환경에서도 첫 진입이 터지지 않았습니다.
+
+---
+
+## 3. 사용자 화면 — 공개·검색·큐레이션 순서
+
+사용자용 목록 뷰는 *카테고리 = FAQ* 이면서 *공개 상태* 인 글만 보여줍니다. 검색은 제목/내용 부분일치로요.
+
+```python
+class FaqListView(ListView):
+    model = Post
+    template_name = "common/faq/faq_list.html.j2"
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.search_keyword:
+            queryset = queryset.filter(
+                Q(category__name__exact="FAQ")
+                & Q(state__exact=Post.State.PUBLIC)
+                & (Q(subject__icontains=self.search_keyword)
+                   | Q(content__icontains=self.search_keyword))
+            ).distinct()
+        else:
+            queryset = queryset.filter(
+                Q(category__name__exact="FAQ") & Q(state__exact=Post.State.PUBLIC)
+            ).distinct()
+        # 등록(큐레이션) 순서대로 노출 — faq.json 의 우선순위 순서를 그대로 따른다.
+        return queryset.order_by("pk")
+```
+
+여기서 작은 결정이 *정렬*이었어요. FAQ는 최신순이 아니라 *"중요한 질문이 위"* 가 맞습니다. 그래서 최신순(`-create_date`) 대신 등록 순서(`pk`)로 노출했어요. 적재 데이터(`faq.json`)에 우선순위 순서대로 넣어두면, 그 순서가 곧 화면 순서가 됩니다. *큐레이션을 데이터 순서로 표현* 한 셈이에요.
+
+같은 김에 공지사항 목록 검색도 *공지사항 카테고리로 한정* 했습니다. 한 `Post` 모델을 공유하니, 각 화면이 자기 카테고리만 보도록 조건을 박아두는 게 중요했어요.
+
+---
+
+## 4. 관리자 CRUD와 읽기 전용 본문
+
+관리자 쪽은 기존 `Post`용 `CreateView`/`UpdateView`/`DeleteView`를 그대로 재사용했습니다. FAQ 목록에 *FAQ 추가* 버튼을 얹고, 검토 탭에 FAQ를 추가한 정도예요. (아래 `FaqListView`는 사용자용과 이름은 같지만 `web_admin/views/system/faq.py`의 별도 클래스예요.)
+
+```python
+class FaqListView(ListView):
+    extra_context = _make_context({
+        "extra_search_buttons": [{
+            "title": _("FAQ 추가"), "class": "primary",
+            "onclick": {"type": "url", "url": "web-admin:system:add_faq"},
+        }],
+        "detail_url": "web-admin:system:faq_detail",
+        "tab_list": _get_tab_list(),
+    })
+    model = Post
+```
+
+상세 페이지에서는 CKEditor 본문을 *읽기 전용* 으로 처리했어요. FAQ·공지 상세는 보는 화면이지 편집 화면이 아니니, 에디터가 입력 가능한 상태로 뜨면 혼란스럽습니다.
+
+데이터는 `load_faq` 커맨드로 `faq.json`을 적재하게 했습니다. 카테고리 초기화(`init_post_category`)와 함께 `load.sh`/`load.bat`에 묶어, *새 환경에서 한 번에 시드* 되도록 했어요.
+
+---
+
+## 5. 교훈
+
+- **게시판이 늘 때마다 모델을 늘리지 않아도 됩니다.** 고유 필드가 없다면 *기존 모델 + 카테고리*가 마이그레이션·CRUD·폼을 통째로 아껴줘요.
+- **모델을 공유하면 "카테고리 조건"이 안전장치입니다.** 각 화면이 자기 카테고리만 보도록 쿼리에 못 박아야, 공지·FAQ가 섞이지 않아요. 공지 검색까지 카테고리로 한정한 게 그래서였습니다.
+- **정렬은 도메인 의미를 담습니다.** FAQ는 최신순이 아니라 큐레이션 순서(중요도). 적재 순서를 곧 노출 순서로 쓰면 운영이 단순해져요.
+- **시드 커맨드를 같이 만들면 환경 재현이 쉬워집니다.** 카테고리 생성을 `get_or_create`로 방어하고, 적재 커맨드를 load 스크립트에 묶어두면 새 환경에서 안 터집니다.
+
+새 모델을 안 만들고도 FAQ가 깔끔하게 떨어졌어요. *"이 데이터가 정말 새 모델을 필요로 하는가, 아니면 분류 하나면 되는가"* 를 먼저 물은 게 이번 작업의 출발점이었습니다.

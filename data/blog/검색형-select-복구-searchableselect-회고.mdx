@@ -1,0 +1,123 @@
+---
+title: 옵션이 많아질수록 필요한 검색형 select — searchableSelect.js 복구 회고
+date: '2026-06-18'
+tags: [기술노트]
+draft: false
+summary: '클래스 참조 필드처럼 옵션이 수백 개인 select를 스크롤로만 찾던 걸 입력 검색으로 좁히는 검색형 select로 되살린 작업입니다. placeholder 잘림, × 해제 안 되는 버그, 그리고 Font Awesome svg 모드 때문에 × 아이콘이 사라지던 함정까지 하나씩 잡았어요.'
+---
+
+# 옵션이 많아질수록 필요한 검색형 select — searchableSelect.js 복구 회고
+
+용어 폼의 *값영역·해당 인스턴스·도메인* 필드는 클래스를 참조합니다. 클래스가 수백 개로 늘면서, 네이티브 `<select>`를 스크롤로 훑어 고르는 게 고역이 됐어요. 입력으로 좁혀 고르는 검색형 select(`searchableSelect.js`)를 다시 도입하고, 거기서 줄줄이 나온 후속 결함을 잡은 기록입니다.
+
+---
+
+## 1. 왜 검색형이 필요했나
+
+네이티브 select는 옵션이 10개일 땐 완벽하지만, 수백 개가 되면 *원하는 항목을 찾는 비용*이 선형으로 늘어요. 예전엔 select2 같은 검색형 단일 선택을 썼는데, 그 의존을 걷어내면서 이 필드들이 평범한 select로 회귀해 있었습니다.
+
+목표는 분명했어요. *네이티브 select의 동작(폼 수집)은 그대로 두고, 그 위에 검색 UI만 얹기.* 그래야 폼 collect 로직을 안 건드립니다.
+
+```javascript
+// 단일 <select> → 검색 가능한 콤보박스. 네이티브 select의 value 만 갱신하므로
+// 폼 수집(collect) 로직은 그대로 호환된다.
+// 적용 대상: select.searchable-select
+// 동적으로 다시 그려지는 폼을 위해 window.initSearchableSelect() 로 재호출 가능 (멱등).
+```
+
+`processed-searchable` 클래스로 *이미 처리한 select는 건너뛰게* 해서, 폼이 동적으로 다시 그려져도 중복 초기화가 안 되게 했습니다(멱등).
+
+---
+
+## 2. 구조 — 숨긴 select + 표시 버튼 + 검색 패널
+
+원본 select는 `hidden`으로 감추고, 그 위에 세 조각을 만들었어요.
+
+| 조각 | 역할 |
+|------|------|
+| 표시 버튼(`ss-display`) | 현재 선택값 + 해제(×) + 펼침(∨) 표시 |
+| 검색 패널(`ss-panel`) | 검색 input + 필터된 옵션 리스트 |
+| 원본 `<select>` | 화면엔 숨김, 폼 제출 시 value 제공 |
+
+옵션을 고르면 *원본 select의 value만* 갱신합니다. 그래서 서버로 가는 데이터 형태는 네이티브 select와 100% 동일해요.
+
+```javascript
+function syncDisplay() {
+  const opt = select.options[select.selectedIndex];
+  const hasValue = opt && opt.value !== "";
+  labelEl.textContent = hasValue ? opt.text : placeholder;
+  clearEl.classList.toggle("hidden", !hasValue);   // ← 나중에 이 줄이 함정이 됨
+}
+```
+
+---
+
+## 3. 복구한 결함들
+
+도입 직후 후속 결함이 줄줄이 나왔습니다. 하나씩 잡았어요.
+
+### 3.1 placeholder가 잘림 → 필드 폭 확대
+
+도메인 필드의 안내문(예: *"주술(Subject)에 해당하는 클래스를 선택해주세요."*)이 좁은 폭에서 잘리거나 2줄이 됐어요. range/instance/domain 필드 폭을 `max-w-[28rem]`로 넓혀 한 줄에 들어가게 하고, 라벨은 말줄임(`truncate`) 대신 `break-words`로 둬서 *값이 길어도 숨지 않게* 했습니다.
+
+### 3.2 선택 후 해제가 안 되는 버그
+
+클래스 참조 select은 값이 있으면 빈 옵션(`value=""`)을 안 그립니다. 그래서 `select.value = ""`로 해제하려 해도 *그런 옵션이 없어서 무효* 였어요. 해법은 인덱스 자체를 비우는 것:
+
+```javascript
+// choose("") 에서 — 빈 옵션이 없으므로 선택 자체를 비운다
+select.selectedIndex = -1;   // × 로 해제 → 빈 값 저장
+```
+
+### 3.3 돋보기 아이콘 위치
+
+검색 input 오른쪽에 돋보기를 넣되, 클릭을 방해하지 않도록 `pointer-events-none`로 뒀습니다.
+
+```html
+<div class="relative">
+  <input class="ss-search w-full pl-3 pr-9 py-2 ..." placeholder="검색어를 입력하세요." />
+  <i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2
+            text-gray-400 pointer-events-none"></i>
+</div>
+```
+
+---
+
+## 4. 진짜 함정 — × 아이콘이 사라지던 버그
+
+가장 오래 걸린 건 *"× 해제 버튼이 안 보이는"* 버그였습니다. 코드상 `clearEl.classList.toggle("hidden", ...)`로 분명히 토글하는데, 화면엔 반영이 안 됐어요.
+
+원인은 **Font Awesome 6의 svg(JS) 모드**였습니다. 이 프로젝트는 FA를 `all.min.js`로 로드해서, 동적으로 만든 `<i>` 태그를 런타임에 `<svg>`로 *교체* 합니다. 문제는 셋업 시점에 잡아둔 참조였어요.
+
+```javascript
+// 변경 전: 셋업 시 <i> 를 한 번 캡처
+const clearEl = display.querySelector(".ss-clear");
+// → FA 가 이 <i> 를 <svg> 로 교체하는 순간, clearEl 은 "떨어져 나간 옛 <i>" 를 가리킴
+// → hidden 토글이 화면의 svg 가 아니라 사라진 <i> 에 걸림
+```
+
+FA가 `<i>`를 `<svg>`로 바꾸면서, 처음 캡처한 `clearEl`은 *DOM에서 분리된 유령 노드*가 됐던 거예요. 토글은 그 유령에 걸리니 화면은 그대로였습니다.
+
+해결은 *캐시하지 말고 매번 다시 조회* 하는 것이었어요. FA가 svg로 바꿔도 `ss-clear` 클래스는 보존되니까요.
+
+```javascript
+// 변경 후: syncDisplay 에서 매번 다시 조회
+function syncDisplay() {
+  const clearEl = display.querySelector(".ss-clear");   // svg 로 교체돼도 클래스는 남음
+  ...
+  clearEl.classList.toggle("hidden", !hasValue);
+}
+```
+
+정적 아이콘(돋보기·∨)은 토글이 없어서 무관했습니다. *동적으로 토글하는 FA 아이콘만* 이 참조 캐시 문제에 걸려요.
+
+---
+
+## 5. 교훈
+
+- **옵션 수가 늘면 select는 검색형이 필요합니다.** 수백 개를 스크롤로 찾게 두는 건 사실상 못 쓰는 UI예요. 단, *네이티브 value만 갱신* 하는 식으로 얹으면 폼 로직을 안 건드립니다.
+- **빈 값이 없는 select의 해제는 `selectedIndex = -1`.** `value = ""`는 그런 옵션이 있어야만 동작해요.
+- **FA svg 모드에서 동적 아이콘 참조를 캐시하지 마세요.** `<i>`→`<svg>` 교체로 셋업 시점 참조가 유령이 됩니다. *토글 직전에 클래스로 다시 조회* 하는 게 안전했어요.
+- **회귀로 사라진 기능을 되살릴 땐 후속 결함을 각오해야 합니다.** placeholder·해제·아이콘처럼 작은 것들이 줄줄이 나와요. 하나씩 잡으면서 *왜 깨졌는지*를 기록해두면 다음 사람이 덜 헤맵니다.
+
+검색형 select 자체보다, *FA svg 모드의 동적 노드 교체* 라는 함정에서 배운 게 컸어요. "분명히 토글했는데 안 보인다"의 범인이 라이브러리의 DOM 교체일 수 있다는 걸, 이번에 몸으로 익혔습니다.
