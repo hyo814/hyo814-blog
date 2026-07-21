@@ -1,3 +1,5 @@
+'use client'
+
 import dynamic from 'next/dynamic'
 
 const NewPostForm = dynamic(() => import('@/components/NewPostForm'), { ssr: false })
