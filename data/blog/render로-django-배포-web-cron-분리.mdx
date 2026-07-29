@@ -1,7 +1,7 @@
 ---
 title: Render로 Django 배포 — web 서비스와 cron 서비스 분리하기
 date: '2026-04-10'
-tags: [기술노트]
+tags: [기술노트, 인프라]
 draft: false
 summary: 'Render의 render.yaml 하나로 Django API(web)와 주간 크롤러(cron)를 각각 다른 서비스로 띄우고, fromDatabase로 DB를 공유한 기록입니다. 다시 읽으면서 SECRET_KEY가 두 서비스에서 서로 다르게 생성되는 것, CORS 환경변수 파싱, dj-database-url 기본값 등 설정 결함 네 개를 찾았습니다.'
 ---

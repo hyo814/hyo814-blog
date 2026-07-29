@@ -1,7 +1,7 @@
 ---
 title: 없는 관계를 prefetch하고 있었다 — 다운로드 4종을 죽인 한 단어
 date: '2026-07-20'
-tags: [기술노트]
+tags: [기술노트, Django]
 draft: false
 summary: '카탈로그 PNG 다운로드가 500을 뱉어서 들어갔는데, 원인은 성능 최적화라고 믿고 있던 prefetch_related의 인자 하나였습니다. Dataset에 없는 관계명이라 QuerySet 평가 시점에 AttributeError가 났고, 지연 평가 때문에 선언부가 아니라 버튼 클릭에서 터졌어요. 같은 파일 안에서 따옴표 표기가 갈려 grep이 한쪽만 잡은 이야기와, AST로 인자 478건을 전수 대조한 기록입니다.'
 ---
