@@ -23,7 +23,7 @@ summary: '피그마처럼 여럿이 함께 일정을 짜는 서비스를 2인 �
 
 피그마처럼 **여럿이 동시에 하나의 일정을 편집하는** 애플리케이션을 만들어보고 싶어 시작한 프로젝트입니다. 2인 팀이라 프런트엔드는 전부 제가 맡았고, 기획도 같이 했습니다.
 
-MVP는 6개월 만에 냈지만 **거기서 끝나지 않았습니다.** 이후 1년 반 동안 도메인을 옮기고(`triptune.site` → `triptune.co.kr`), Next.js를 14에서 15로 올리고, 라이트하우스를 잡고, 밀린 보안 경보를 걷어냈어요. 아래 1~6은 MVP 시기의 설계 결정이고, **7절부터는 그 이후에 드러난 것들**입니다.
+MVP는 6개월 만에 냈지만 **거기서 끝나지 않았습니다.** 이후 1년 반 동안 도메인을 옮기고(`triptune.site` → `triptune.co.kr`), Next.js를 14에서 15로 올리고, 라이트하우스를 잡고, 밀린 보안 경보를 걷어냈어요. 아래 1~6은 MVP 시기의 설계 결정이고, **7절부터는 그 이후에 드러난 것들**입니다. 여섯 결정이 같은 무게는 아닙니다 — 하나만 꼽으라면 **§1의 React-Query와 Fetch를 역할로 나눈 결정**이고, 이유는 맨 아래 결산에 적었습니다.
 
 > **지표에 대해** — 사이드 프로젝트라 사용자 규모 기반의 정량 지표가 없습니다. 아래 각 항목의 "기대 효과"는 측정한 결과가 아니라 **도입 시 의도한 바**입니다. 측정하지 않은 걸 성과처럼 적지 않으려고 구분해 표기했습니다.
 
@@ -100,7 +100,7 @@ MVP는 6개월 만에 냈지만 **거기서 끝나지 않았습니다.** 이후 
 
 **왜 BFF였나.** 일정 편집 화면은 *외부 여행 데이터* + *사용자가 정한 순서(`order`)* 를 합쳐야 화면이 나옵니다. 이 병합을 클라이언트에서 하면 UI 로직과 데이터 가공 로직이 한 컴포넌트에 엉켜요. 순서를 바꿀 때마다 병합을 다시 하고, 그 결과를 렌더에 반영하고, 서버에도 보내야 하니까요.
 
-**가공은 서버 쪽으로, 화면은 결과만 받도록** 나눴습니다. 클라이언트는 "무엇을 보여줄까"만 신경 쓰면 되고요.
+**가공은 서버 쪽으로, 화면은 결과만 받도록** 나눴습니다. 이 병합 계층은 제가 구현했습니다. 클라이언트는 "무엇을 보여줄까"만 신경 쓰면 되고요.
 
 DnD 라이브러리로 React DnD를 고른 건 React 생태계 호환과 컴포넌트 기반 설계와의 궁합 때문이었습니다.
 
@@ -144,24 +144,12 @@ MVP를 낸 뒤가 오히려 배운 게 많았습니다. 각각은 따로 글로 
 
 ## 화면
 
-![triptune](/static/images/triptune/image.png)
-![triptune](/static/images/triptune/image2.png)
-![triptune](/static/images/triptune/image3.png)
-![triptune](/static/images/triptune/image4.png)
-![triptune](/static/images/triptune/image5.png)
-![triptune](/static/images/triptune/image6.png)
-![triptune](/static/images/triptune/image7.png)
-![triptune](/static/images/triptune/image8.png)
-![triptune](/static/images/triptune/image9.png)
-![triptune](/static/images/triptune/image10.png)
-![triptune](/static/images/triptune/image11.png)
-![triptune](/static/images/triptune/image12.png)
-![triptune](/static/images/triptune/image13.png)
-![triptune](/static/images/triptune/image14.png)
-![triptune](/static/images/triptune/image15.png)
-![triptune](/static/images/triptune/image16.png)
-![triptune](/static/images/triptune/image17.png)
-![triptune](/static/images/triptune/image18.png)
-![triptune](/static/images/triptune/image19.png)
-![triptune](/static/images/triptune/image20.png)
-![triptune](/static/images/triptune/image21.png)
+![홈 화면 — 2026년 7월 현재 triptune.co.kr](/static/images/triptune/capture-2026-home.png)
+![로그인 — 이메일과 소셜 로그인(카카오·네이버)](/static/images/triptune/capture-2026-login.png)
+![회원가입 — 이메일 인증과 입력 규칙 안내](/static/images/triptune/capture-2026-join.png)
+![여행지 탐색 — 목록과 지도, 현재 위치 기준 거리 표시](/static/images/triptune/feature-12.png)
+![여행지 상세 — "내 일정 담기"로 기존 일정에 추가](/static/images/triptune/feature-15.png)
+![일정 편집 — 여행지 목록·지도·그룹 채팅이 한 화면에 (5·6절)](/static/images/triptune/feature-9.png)
+![비로그인 상태로 /Schedule 진입 시 — 미들웨어 경로 검증 (3절)](/static/images/triptune/capture-2026-schedule.png)
+
+*위 3장과 마지막 1장은 2026년 7월 현재 화면을 다시 캡처했고, 가운데 3장은 로그인이 필요한 화면이라 MVP 시기 캡처를 썼습니다(주소창은 잘라냈어요 — 그때는 `triptune.site` 도메인이었습니다).*

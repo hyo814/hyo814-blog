@@ -48,3 +48,8 @@ yarn-error.log*
 /.idea/hyo814-blog-new.iml
 /.idea/.gitignore
 /.idea/hyo814-blog.iml
+
+# 이력서·개인정보 문서 (전화번호·내부 IP 포함 — 공개 저장소에 올리지 말 것)
+*.pdf
+
+.idea/

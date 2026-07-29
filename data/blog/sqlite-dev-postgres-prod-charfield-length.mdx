@@ -1,7 +1,7 @@
 ---
 title: SQLite에선 통과하고 PostgreSQL에서 터진 CharField(512)
 date: '2026-07-09'
-tags: [기술노트]
+tags: [기술노트, Django]
 draft: false
 summary: '로컬(SQLite)에선 멀쩡히 적재되던 메타데이터 로더가 운영(PostgreSQL)에서만 value too long으로 죽었습니다. 프런트 쪽을 주로 맡다가 모델·마이그레이션을 조금씩 만지기 시작한 입장에서, 원인을 어떻게 좁혀갔고 네 가지 선택지 중 왜 TextField를 골랐는지 정리합니다.'
 ---
@@ -183,3 +183,5 @@ ALTER TABLE "meta_class_property" ALTER COLUMN "definition" TYPE text;
 - 스키마 변경은 올리기 전에 `sqlmigrate`로 실제 SQL을 봅니다. 넓히는 변경인지 좁히는 변경인지만 알아도 위험도가 갈립니다.
 
 가장 좋은 해결은 로컬도 운영과 같은 DB를 쓰는 것입니다. 도커로 PostgreSQL 하나 띄우는 비용이, 운영 배포 당일에 이런 걸 만나는 비용보다 훨씬 쌉니다. 이건 제안해뒀어요.
+
+**그 뒤 어떻게 됐는가.** 이 글을 쓰고 열흘쯤 뒤에 만든 [Playwright 메뉴 스윕](/blog/playwright-메뉴-136종-qa-스윕)에서도 개발 DB는 여전히 SQLite였고, 그것 때문에 `database is locked`를 피하려고 **워커를 1로 박아 136개 화면을 직렬로** 돌리게 됐습니다. 제안은 아직 이행되지 않았고, 그 대가가 이번엔 길이 불일치가 아니라 QA 스윕의 실행 시간으로 청구되고 있는 셈입니다. "제안해뒀다"로 끝나는 문장은 이렇게 다음 작업에서 이자가 붙습니다.
