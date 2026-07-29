@@ -1,7 +1,7 @@
 ---
 title: Django N+1 쿼리 문제와 해결법
 date: '2025-10-31'
-tags: [기술노트]
+tags: [기술노트, Django]
 draft: false
 summary: 'Django ORM에서 자주 발생하는 N+1 쿼리 문제를 진단하고 select_related, prefetch_related로 해결하는 방법을 정리합니다.'
 ---
@@ -187,6 +187,8 @@ for dataset in datasets:
     active = [c for c in dataset.concepts.all() if c.public]
 ```
 
+다만 리스트 컴프리헨션은 **이미 전부 당겨온 뒤에 거르는** 임시방편입니다. 정석은 `Prefetch(queryset=Concept.objects.filter(public=True))`처럼 필터를 prefetch 단계로 내리는 것 — 아래 ③에서 다루는 그 `Prefetch` 객체예요. 관계 행은 많은데 살아남는 게 적다면, 컴프리헨션 방식은 그 낭비를 그대로 안고 갑니다.
+
 ---
 
 ## 실무에서 만난 세 가지 — 이 글의 조언이 안 통했던 곳
@@ -226,6 +228,8 @@ Author.objects.annotate(
 
 역방향 조인이 둘이면 **행이 곱해집니다.** 글 3개 × 댓글 4개면 조인 결과가 12행이 되고, `Count('post')`가 3이 아니라 12를 세요. `distinct=True`를 주거나 서브쿼리로 빼야 합니다.
 
+`distinct=True`도 공짜는 아닙니다. 집계 전에 중복 제거가 들어가서 **조인 결과가 클수록 그 자체가 비싸져요.** 카운트 두 개 정도면 `distinct=True`로 충분하고, 조인이 크거나 집계가 더 겹치면 `Subquery`로 각각 따로 세는 쪽 — 이게 갈림 기준입니다.
+
 **N+1은 느려서 알아채지만 이건 빠르면서 틀립니다.** 쿼리 수만 보고 최적화를 판단하면 이 종류는 절대 안 걸려요.
 
 ### ③ `to_attr`을 쓰면 접근 방법도 바뀐다
@@ -262,7 +266,7 @@ for dataset in datasets:
 |------|------|
 | FK/OneToOne 루프 내 접근 | `select_related` |
 | **목록에서** M2M / 역참조 루프 내 접근 | `prefetch_related` |
-| 전량 순회·다운로드 경로 | prefetch를 **빼고** `iterator()` 등 다른 전략 |
+| 전량 순회·다운로드 경로 | `iterator()` — prefetch와의 병행은 Django 4.1부터 `chunk_size` 지정 시 가능. 이 프로젝트는 4.2라 "prefetch를 빼야 한다"는 조언은 이제 옛말 |
 | 개수만 필요 | `annotate(Count(...))` — 단, 두 개 이상이면 `distinct=True` |
 | 복합 관계 | 둘 다 조합 |
 | prefetch 후 Python 필터링 | `Prefetch(to_attr=...)` — 접근 경로가 바뀌는 것에 주의 |

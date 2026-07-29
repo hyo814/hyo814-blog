@@ -1,7 +1,7 @@
 ---
 title: Django CBV vs FBV — 클래스형 뷰와 함수형 뷰 비교
 date: '2025-07-17'
-tags: [기술노트]
+tags: [기술노트, Django]
 draft: false
 summary: 'Django의 두 가지 뷰 작성 방식인 FBV(함수형 뷰)와 CBV(클래스형 뷰)의 차이점, 장단점, 언제 무엇을 쓸지 정리합니다.'
 ---
@@ -148,6 +148,8 @@ class PostCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     success_url = reverse_lazy('post_list')
 ```
 
+Mixin 순서가 이 순서인 데는 이유가 있습니다. 파이썬 MRO상 왼쪽에 있는 클래스의 `dispatch()`가 먼저 실행되므로, `LoginRequiredMixin`이 맨 앞이어야 **로그인 확인이 권한 확인보다 먼저** 걸립니다. 순서를 바꿔도 에러는 안 나요 — 어떤 검사가 먼저 도는지가 조용히 달라질 뿐입니다. CBV에서 "동작은 하는데 의도와 다른" 종류의 문제는 대부분 이렇게 MRO에 숨어 있습니다.
+
 FBV에서 같은 처리를 하려면 데코레이터를 직접 쌓아야 합니다:
 
 ```python
@@ -189,7 +191,7 @@ class AdminStdDataGraphView(StaffOnlyMixin, StdDataGraphView):
 
 여기서 배운 건 **"차이나는 부분을 클래스 속성으로 올려두면 상속이 설정처럼 동작한다"** 는 점입니다. `active_only`를 메서드 안에 하드코딩했으면 `get_queryset()`을 통째로 오버라이드해야 했고, 그러면 로직이 두 벌이 됩니다.
 
-### CBV에 물렸던 경우 — 상속이 최적화까지 물려준다
+### CBV에 물렸던 경우 — 상속이 오타까지 물려준다
 
 반대 사례도 있습니다. 목록 성능을 잡으려고 `get_queryset()`에 `prefetch_related`를 넣었어요.
 
@@ -199,9 +201,9 @@ class DatasetBaseView(...):
         return super().get_queryset().prefetch_related("metadata")
 ```
 
-그런데 이 뷰를 상속한 **다운로드 뷰까지 그 prefetch를 물려받았습니다.** 목록은 한 페이지 20건이라 이득이지만 다운로드는 전량을 훑는 경로라, 연관 객체를 통째로 메모리에 올리면서 기능 네 개가 못 쓰게 됐어요.
+문제는 이 `"metadata"`가 **`Dataset`에 존재하지 않는 관계명**이었다는 겁니다. QuerySet은 지연 평가라 선언 시점엔 아무 검증도 없이 통과하고, 실제로 순회하는 순간 `AttributeError`가 납니다. 그리고 이 부모 뷰를 상속한 **다운로드 뷰 네 개가 그 잘못된 prefetch를 전부 물려받아** 같이 죽었어요. 스택 트레이스는 오타를 낸 부모 파일이 아니라 자식 뷰 쪽에서 시작해서, 원인을 찾는 데 한참 걸렸습니다.
 
-FBV였으면 각 함수가 자기 쿼리를 갖고 있으니 애초에 안 생겼을 문제입니다. **CBV의 재사용성은 "좋은 것도 물려주지만 나쁜 것도 물려준다"** 는 뜻이었어요. 자세한 건 [N+1 정리 글의 반대 사례](/blog/django-n-plus-1)에 적었습니다.
+FBV였으면 각 함수가 자기 쿼리를 갖고 있으니 틀린 함수 하나만 죽었을 문제입니다. **CBV의 재사용성은 "좋은 것도 물려주지만 틀린 것도 물려준다"** 는 뜻이었어요. 한동안 이 사건을 "전량 조회 경로의 메모리 부담" 때문이라고 잘못 기억하고 있었는데, 커밋을 다시 확인하니 원인은 없는 관계명이었습니다. 자세한 건 [없는 관계를 prefetch하고 있었다](/blog/없는-관계를-prefetch하고-있었다)와 [N+1 정리 글의 반대 사례](/blog/django-n-plus-1)에 적었습니다.
 
 ### `get_queryset()`에 부작용을 넣지 말 것
 
