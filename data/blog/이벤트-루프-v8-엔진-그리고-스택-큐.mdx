@@ -1,221 +1,70 @@
 ---
-title: 이벤트 루프, V8 엔진, 그리고 스택 & 큐
+title: 이벤트 루프, V8 엔진, 그리고 스택 & 큐 — 그리고 이 지식이 실전에서 쓰인 순간들
 date: '2023-07-20'
-tags: [JavaScript, 브라우저, 동작원리]
+tags: [기술노트]
 draft: false
-summary: '이벤트 루프, V8 엔진 및 스택과 큐의 관계에 대한 설명'
+summary: '면접 대비로 정리했던 이벤트 루프·V8·마이크로태스크 문답입니다. 당시엔 "면접용 지식"이라고 생각했는데, 이후 실무에서 정확히 이 지식으로 풀린 버그들이 있었어요 — 렌더 직후 getBBox가 0을 주던 문제, 구독 콜백의 stale closure. 문답 정리 뒤에 그 순간들을 붙였습니다.'
 ---
 
-#### **Q1. V8 엔진의 주요 역할은 무엇인가요?**
+# 이벤트 루프, V8 엔진, 그리고 스택 & 큐
 
-**답변:**
-V8 엔진은 자바스크립트 코드를 빠르게 실행하기 위해 설계된 고성능 엔진입니다. 자바스크립트 코드를 먼저 파싱하여 AST(Abstract Syntax Tree)를 생성한 후, 바이트코드와 네이티브 코드로 변환합니다. 특히 JIT(Just-In-Time) 컴파일을 통해 자주 실행되는 코드를 최적화하여 빠르게 처리하며, 메모리 관리를 위해 가비지 컬렉션을 수행합니다.
+면접 대비 문답 형태로 정리했던 글입니다. 문답은 그대로 두고, **이 지식이 실무에서 실제로 쓰인 순간들**을 뒤에 붙였습니다 — 그게 이 글을 다시 꺼낸 이유입니다.
 
----
+## Q1. V8 엔진의 주요 역할은?
 
-#### **Q2. 이벤트 루프(Event Loop)의 역할과 구조를 설명하세요.**
+자바스크립트 코드를 파싱해 AST를 만들고, 인터프리터(Ignition)가 바이트코드로 실행하며, 자주 실행되는 코드는 JIT 컴파일러(Turbofan)가 최적화된 네이티브 코드로 변환합니다. 가비지 컬렉션으로 메모리를 관리하고, 콜스택으로 실행 컨텍스트를 추적합니다.
 
-**답변:**
-이벤트 루프는 자바스크립트의 비동기 작업을 처리하는 핵심 메커니즘입니다.
+## Q2. 이벤트 루프의 역할과 구조는?
 
-- **콜스택(Call Stack):** 함수 실행 컨텍스트가 쌓이는 구조로, 동기적으로 코드를 실행합니다.
-- **테스크 큐(Task Queue):** 비동기 작업(예: `setTimeout`, I/O 작업)의 콜백이 대기하는 큐입니다.
-- **마이크로태스크 큐(Microtask Queue):** `Promise`의 `then`이나 `MutationObserver` 같은 작업이 처리되는 더 높은 우선순위의 큐입니다.
+이벤트 루프는 싱글 스레드인 자바스크립트가 비동기 작업을 처리하는 메커니즘입니다.
 
-이벤트 루프는 콜스택이 비어 있는 상태에서 태스크 큐의 작업을 순차적으로 실행합니다. 마이크로태스크는 일반 태스크보다 우선 처리됩니다.
+- **콜스택(Call Stack)** — 함수 실행 컨텍스트가 쌓이는 곳. 동기 코드가 실행되는 자리.
+- **태스크 큐(Task Queue)** — `setTimeout`·`setInterval`·DOM 이벤트 등 비동기 콜백의 대기열.
+- **마이크로태스크 큐(Microtask Queue)** — `Promise.then`, `async/await` 재개, `MutationObserver`. **태스크보다 우선순위가 높습니다.**
 
----
+루프의 규칙: **콜스택이 빌 때마다 → 마이크로태스크 큐를 전부 비우고 → 태스크 큐에서 하나 꺼내 실행.**
 
-#### **Q3. 이벤트 루프에서 마이크로태스크와 테스크의 차이점은 무엇인가요?**
-
-**답변:**
-
-- **마이크로태스크(Microtask):**
-  - `Promise.then`, `async/await`의 결과 처리, `MutationObserver`가 포함됩니다.
-  - **우선순위가 높아** 콜스택이 비어 있을 때 바로 실행됩니다.
-- **테스크(Task):**
-  - `setTimeout`, `setInterval`, DOM 이벤트 처리 등이 포함됩니다.
-  - 마이크로태스크가 모두 처리된 후에 실행됩니다.
-
----
-
-#### **Q4. 왜 이벤트 루프는 콜스택과 큐를 사용하나요?**
-
-**답변:**
-콜스택은 함수 호출과 실행을 관리하기 위해 사용되고, 큐는 비동기 작업을 처리하기 위해 사용됩니다. 자바스크립트는 싱글 스레드로 동작하기 때문에, 이벤트 루프를 통해 비동기 작업의 순서를 조정하고 처리할 수 있습니다. 이를 통해 UI가 멈추지 않고 비동기 처리가 가능합니다.
-
----
-
-### **2. 기술 노트 **
-
-#### **기술 노트 1: V8 엔진 구조**
-
-```plaintext
-1. **코드 파싱**: 자바스크립트 코드를 AST로 변환
-2. **바이트코드 생성**: 인터프리터(Ignition)가 실행
-3. **최적화된 네이티브 코드**: JIT 컴파일러(Turbofan)가 생성
-4. **메모리 관리**: 가비지 컬렉션(정리되지 않은 메모리 해제)
-5. **콜스택 관리**: 실행 중인 함수와 컨텍스트를 추적
-```
-
-#### **기술 노트 2: 이벤트 루프 단계**
-
-```plaintext
-1. **콜스택(Call Stack)**:
-   - 현재 실행 중인 함수가 쌓이고 처리됨.
-
-2. **테스크 큐(Task Queue)**:
-   - 타이머, I/O 작업 완료 후 실행될 콜백이 대기.
-   - `setTimeout`, `setInterval` 등이 포함.
-
-3. **마이크로태스크 큐(Microtask Queue)**:
-   - 더 높은 우선순위를 가짐.
-   - `Promise.then`, `MutationObserver` 등이 포함.
-
-4. **우선순위**:
-   - 콜스택 비우기 → 마이크로태스크 처리 → 테스크 처리.
-```
-
-#### **기술 노트 3: 이벤트 루프의 동작 예시**
+## Q3. 순서를 검증하는 최소 예제
 
 ```javascript
 console.log('Start')
 
-setTimeout(() => {
-  console.log('Task Queue')
-}, 0)
+setTimeout(() => console.log('Task Queue'), 0)
 
-Promise.resolve().then(() => {
-  console.log('Microtask Queue')
-})
+Promise.resolve()
+  .then(() => console.log('Microtask 1'))
+  .then(() => console.log('Microtask 2'))
 
 console.log('End')
 
-// 출력 순서:
-// Start
-// End
-// Microtask Queue
-// Task Queue
+// Start → End → Microtask 1 → Microtask 2 → Task Queue
 ```
+
+포인트 둘 — `setTimeout(..., 0)`도 **동기 코드가 끝나기 전엔 절대 실행되지 않는다**는 것, 그리고 마이크로태스크는 **체인으로 이어져도 태스크보다 전부 먼저** 소화된다는 것.
+
+## Q4. 왜 이 구조인가?
+
+자바스크립트는 싱글 스레드라 무거운 작업이 콜스택을 점유하면 UI가 멈춥니다. 비동기 작업의 콜백을 큐에 두고 "스택이 빌 때" 실행하는 구조 덕분에, 스레드 하나로도 UI가 멈추지 않으면서 비동기 처리가 됩니다. 뒤집어 말하면 — **콜스택을 오래 점유하는 동기 코드는 이 구조 전체를 무력화합니다.** 큐에 쌓인 게 아무리 급해도 스택이 비기 전엔 못 나오니까요.
 
 ---
 
-#### \*\*기술 노트 4
+## 이 지식이 실전에서 쓰인 순간들
 
-```jsx
-// 이벤트 예제: 이벤트, target, currentTarget, 이벤트 리스너, 이벤트 전파, 이벤트 위임
+당시엔 면접용 지식이라고 생각했는데, 이후 실무에서 이 글의 내용으로 정확히 풀린 문제들이 있었습니다.
 
-// 1. 버튼 클릭 이벤트 예제
-document.querySelector('#myButton').addEventListener('click', function () {
-  console.log('Button clicked!')
-})
+### 1. 렌더 직후 `getBBox()`가 엉뚱한 값을 주던 문제
 
-// 2. 이벤트 타겟 (event.target) 예제
-document.querySelector('#parent').addEventListener('click', function (event) {
-  console.log('Target:', event.target) // 실제 클릭된 요소
-})
+D3로 그래프를 그린 **직후에** 크기를 재서 중앙 정렬하려는데, `getBBox()`가 0이나 어긋난 값을 줬습니다. 원인은 이벤트 루프 그 자체 — DOM 조작 코드는 실행됐지만 **브라우저의 레이아웃·페인트는 현재 태스크가 끝난 뒤**에 일어나거든요. 같은 동기 흐름 안에서 측정하면 아직 계산 전의 값을 읽습니다. 해결은 측정을 다음 프레임으로 미루는 것(`requestAnimationFrame` 또는 `setTimeout(0)`)이었고, [D3 시각화 글](/blog/django-프로젝트에-d3-시각화-붙이기)에서 실제로 쓴 방법입니다. "왜 한 틱 기다리면 되는가"의 답이 정확히 이 글의 Q2였어요.
 
-// 3. 커렌트 타겟 (event.currentTarget) 예제
-document.querySelector('#parent').addEventListener('click', function (event) {
-  console.log('Current Target:', event.currentTarget) // 이벤트 핸들러가 연결된 요소
-})
+### 2. 구독 콜백의 stale closure
 
-// 4. 이벤트 타겟과 커렌트 타겟 비교
-document.querySelector('#parent').addEventListener('click', function (event) {
-  console.log('Target:', event.target) // 클릭된 실제 요소
-  console.log('Current Target:', event.currentTarget) // 이벤트 핸들러가 연결된 요소
-})
+무한 스크롤과 웹소켓 구독에서 겪은 버그 — 콜백이 **등록 시점의 상태를 캡처한 채** 나중에(큐에서 꺼내질 때) 실행되니, 그 사이 바뀐 상태를 못 봅니다. "콜백은 등록되는 시점과 실행되는 시점이 다르다"는 이벤트 루프의 기본 성질이 클로저와 결합해 만드는 함정이고, [무한 스크롤 구현 글](/blog/react-infinite-scroll-구현하기)에서 실제 사례를 다뤘습니다.
 
-// 5. 이벤트 위임 예제
-document.querySelector('#list').addEventListener('click', function (event) {
-  if (event.target.tagName === 'LI') {
-    console.log('Clicked item:', event.target.textContent)
-  }
-})
+### 3. 원래 이 글에 붙어 있던 DOM 이벤트 정리에 대해
 
-// 6. 이벤트 전파 단계: 캡처링(Capturing)과 버블링(Bubbling)
-// 이벤트 전파 단계
-// - 캡처링 단계: 이벤트가 최상위 요소에서부터 이벤트가 발생한 요소로 내려옴
-// - 타깃 단계: 이벤트가 발생한 요소에 도달
-// - 버블링 단계: 이벤트가 다시 상위 요소로 올라감
+원본에는 `target` vs `currentTarget`, 캡처링/버블링, 이벤트 위임 예제가 통째로 붙어 있었는데, **제목과 다른 주제**(이벤트 루프가 아니라 DOM 이벤트 전파)라 이번 개고에서 걷어냈습니다. 요지만 남기면 — `target`은 실제로 클릭된 요소, `currentTarget`은 핸들러가 달린 요소이고, 이 차이를 이용하는 게 이벤트 위임(`#list`에 하나만 달고 `event.target.tagName`으로 분기)입니다. 정리 노트가 길어질 때 서로 다른 주제가 한 파일에 눌어붙는 전형적인 사례였어요.
 
-document.querySelector('#child').addEventListener(
-  'click',
-  function (event) {
-    console.log('Child clicked - Bubbling')
-  },
-  false
-) // 버블링 단계 (default)
+## 정리
 
-document.querySelector('#parent').addEventListener(
-  'click',
-  function (event) {
-    console.log('Parent clicked - Capturing')
-  },
-  true
-) // 캡처링 단계
-
-// 7. 이벤트 전파 중단: stopPropagation()
-document.querySelector('#child').addEventListener('click', function (event) {
-  console.log('Stopping propagation')
-  event.stopPropagation() // 부모로 전파 중단
-})
-
-document.querySelector('#parent').addEventListener('click', function (event) {
-  console.log('Parent clicked (will not log if propagation is stopped)')
-})
-
-// 8. preventDefault() 사용 예제
-document.querySelector('#link').addEventListener('click', function (event) {
-  event.preventDefault() // 기본 동작(예: 링크 이동)을 막음
-  console.log('Default action prevented')
-})
-
-// 이벤트 루프와 관련된 예제
-
-// 기본적인 이벤트 루프 동작 예제
-console.log('Start')
-
-setTimeout(() => {
-  console.log('Task from setTimeout')
-}, 0)
-
-Promise.resolve().then(() => {
-  console.log('Microtask from Promise')
-})
-
-console.log('End')
-
-// 실행 순서 설명:
-// 1. console.log("Start") 실행
-// 2. setTimeout의 콜백은 테스크 큐(Task Queue)로 이동
-// 3. Promise.then의 콜백은 마이크로태스크 큐(Microtask Queue)로 이동
-// 4. console.log("End") 실행
-// 5. 마이크로태스크 큐의 작업 실행 ("Microtask from Promise")
-// 6. 테스크 큐의 작업 실행 ("Task from setTimeout")
-
-// 마이크로태스크 우선 처리 예제
-console.log('Start')
-
-setTimeout(() => {
-  console.log('Task from setTimeout')
-}, 0)
-
-Promise.resolve()
-  .then(() => {
-    console.log('Microtask 1 from Promise')
-  })
-  .then(() => {
-    console.log('Microtask 2 from Promise')
-  })
-
-console.log('End')
-
-// 실행 순서 설명:
-// 1. console.log("Start") 실행
-// 2. setTimeout의 콜백은 테스크 큐(Task Queue)로 이동
-// 3. 첫 번째 Promise.then의 콜백은 마이크로태스크 큐(Microtask Queue)로 이동
-// 4. console.log("End") 실행
-// 5. 마이크로태스크 큐 작업 실행 ("Microtask 1 from Promise" -> "Microtask 2 from Promise")
-// 6. 테스크 큐 작업 실행 ("Task from setTimeout")
-```
+- 이벤트 루프의 규칙은 세 줄이면 끝나지만("스택 비우기 → 마이크로태스크 전부 → 태스크 하나"), 그 세 줄이 **렌더 타이밍 버그와 stale closure의 원인 설명**까지 해줍니다.
+- "면접용 지식"과 "실무 지식"의 구분은 배울 때는 몰랐고, 버그를 만나고서야 같은 것이었음을 알았습니다.

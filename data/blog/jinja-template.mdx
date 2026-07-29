@@ -1,56 +1,24 @@
 ---
-title: jinja template에 대한 정리 하기 사전 조사
+title: Jinja 템플릿 정리 — 문법 레퍼런스와 Django에서 실제로 쓰며 배운 것
 date: '2025-04-21'
 tags: [기술노트]
 draft: false
-summary: '장고에서 템플릿을 어떻게 사용 해야할지에 대한 정리 모음'
+summary: 'Jinja 템플릿의 문법·필터·상속·매크로를 표로 정리한 레퍼런스입니다. Django 프로젝트에서 Jinja2를 실제로 쓰며 배운 것들을 뒤에 붙였습니다 — url·static이 공짜가 아니라는 것, safe 필터가 사고의 지름길이라는 것, 그리고 원문 필터 표의 예시가 문법부터 틀려 있었다는 고백까지.'
 ---
 
-# JINJA TEMPLATE
+# Jinja 템플릿 정리
 
-공식 문서 : https://jinja.palletsprojects.com/en/stable/templates/
+Jinja는 HTML, XML 등 텍스트 파일을 **동적으로 생성**하는 템플릿 엔진입니다. Django 기본 템플릿(DTL) 대신 Jinja2를 쓰는 프로젝트에 들어가면서 정리했던 레퍼런스이고, 실제로 쓰며 배운 것들을 뒤에 붙였습니다.
 
----
+공식 문서: https://jinja.palletsprojects.com/en/stable/templates/
 
-## Jinja 템플릿이란?
+## 기본 구분자
 
-- **Jinja**는 HTML, XML, CSV 등 텍스트 기반 파일을 **동적으로 생성**할 수 있게 도와주는 템플릿 엔진.
-- 주로 **웹 페이지의 HTML**을 생성할 때 자주 사용.
-
-**기본 구조 예시**
-
-```html
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <title>{{ title }}</title>
-</head>
-<body>
-    {% for user in users %}
-        <p>{{ user.name }}</p>
-    {% endfor %}
-</body>
-</html>
-```
-
-| 구분자                  | 용도                         |
-| ----------------------- | ---------------------------- |
-| `{{ ... }}`             | 변수 또는 표현식을 출력      |
-| `{% ... %}`             | 조건문, 반복문 등 로직 처리  |
-| `{# ... #}`             | 주석 (출력되지 않음)         |
-
----
-
-## **기본 문법**
-
-| 문법           | 설명           | 예시                             |
-| -------------- | -------------- | -------------------------------- |
-| `{{ 변수 }}`   | 변수 출력      | `<code>{{ user.username }}</code>` |
-| `{% if %}`     | 조건문 처리    | `<code>{% if user.is_authenticated %}</code>` |
-| `{% for %}`    | 반복문 처리    | `<code>{% for item in items %}</code>` |
-| `{# 주석 #}`   | 주석 처리      | `<code>{# 출력되지 않습니다. #}</code>` |
-
-**예시**
+| 구분자 | 용도 |
+| --- | --- |
+| `{{ ... }}` | 변수·표현식 출력 |
+| `{% ... %}` | 조건문·반복문 등 로직 |
+| `{# ... #}` | 주석 (출력 안 됨) |
 
 ```jinja
 {% if user.is_admin %}
@@ -58,133 +26,104 @@ summary: '장고에서 템플릿을 어떻게 사용 해야할지에 대한 정�
 {% else %}
   일반 사용자입니다.
 {% endif %}
-```
 
-```jinja
 {% for post in posts %}
   <li>{{ post.title }}</li>
-{% else %}
+{% else %}          {# 반복 대상이 비었을 때 — for의 else는 Jinja의 좋은 기능 #}
   게시물이 없습니다.
 {% endfor %}
 ```
 
----
+## 심화 문법
 
-## **심화 문법**
+| 문법 | 설명 |
+| --- | --- |
+| `{% set total = price * count %}` | 변수 생성 |
+| `{% include 'header.html' %}` | 템플릿 포함 |
+| `{% extends %}` + `{% block %}` | 상속·블록 재정의 |
+| `{% macro %}` / `{% call %}` | 매크로 정의·호출 |
+| `{% import 'macros.html' as m %}` | 매크로 임포트 |
+| `{% from 'macros.html' import input %}` | 특정 매크로만 |
+| `{% with %}` | 로컬 변수 스코프 |
+| `{% autoescape %}` | 이스케이프 제어 |
+| `{% do mylist.append(3) %}` | 출력 없는 실행 |
 
-| 문법             | 설명               | 예시                                           |
-| ---------------- | ------------------ | ---------------------------------------------- |
-| `{% set %}`      | 변수 생성          | `<code>{% set total = price * count %}</code>` |
-| `{% include %}`  | 템플릿 포함        | `<code>{% include 'header.html' %}</code>`     |
-| `{% extends %}`  | 템플릿 상속        | `<code>{% extends 'base.html' %}</code>`       |
-| `{% block %}`    | 블록 정의/재정의   | `<code>{% block content %}내용{% endblock %}</code>` |
-| `{% macro %}`    | 매크로 정의        | `<code>{% macro input(name) %}<input>{{ name }}{% endmacro %}</code>` |
-| `{% call %}`     | 매크로 호출        | `<code>{% call box() %}내용{% endcall %}</code>` |
-| `{% import %}`   | 매크로 임포트      | `<code>{% import 'macros.html' as m %}</code>` |
-| `{% from %}`     | 특정 매크로 임포트 | `<code>{% from 'macros.html' import input %}</code>` |
-| `{% with %}`     | 로컬 변수 설정     | `<code>{% with total = sum %}{{ total }}{% endwith %}</code>` |
-| `{% autoescape %}` | 자동 이스케이프  | `<code>{% autoescape true %}{{ trusted_html }}{% endautoescape %}</code>` |
-| `{% do %}`       | 출력 없는 실행     | `<code>{% do mylist.append(3) %}</code>`      |
+## 자주 쓰는 필터
 
----
+| 필터 | 예시 |
+| --- | --- |
+| `length` | `{{ items \| length }}` |
+| `upper` / `lower` | `{{ name \| upper }}` |
+| `replace` | `{{ s \| replace('old', 'new') }}` |
+| `default` | `{{ nickname \| default('이름 없음') }}` |
+| `truncate` | `{{ body \| truncate(30) }}` |
+| `join` | `{{ tags \| join(', ') }}` |
+| `striptags` | `{{ html \| striptags }}` |
+| `safe` | `{{ trusted_html \| safe }}` — **아래 실무 절 필독** |
 
-## **자주 쓰이는 필터 (Filters)**
-
-| 필터             | 설명               | 예시                               |
-| ---------------- | ------------------ | ---------------------------------- |
-| `length`         | 길이              | `<code>{{ length }}</code>`   |
-| `upper`, `lower` | 대/소문자 변환    | `<code>{{ upper }}</code>`     |
-| `replace`        | 문자열 치환        | `<code>{{ replace('old','new') }}</code>` |
-| `default`        | 기본값 설정       | `<code>{{ default('이름 없음') }}</code>` |
-| `safe`           | HTML 안전 출력    | `<code>{{ safe }}</code>`  |
-| `truncate`       | 잘라내기          | `<code>{{ truncate(30) }}</code>` |
-| `int`, `float`   | 타입 변환         | `<code>{{ float }}</code>`     |
-| `join`           | 리스트 합치기     | `<code>{{ join(', ') }}</code>`|
-| `striptags`      | 태그 제거         | `<code>{{ striptags }}</code>`  |
-
----
-
-## **템플릿 상속**
-
-**base.html**
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <title>{% block title %}기본 제목{% endblock %}</title>
-</head>
-<body>
-  {% block content %}{% endblock %}
-</body>
-</html>
-```
-
-**child.html**
+## 상속·매크로·공백 제어
 
 ```jinja
+{# base.html #}
+<title>{% block title %}기본 제목{% endblock %}</title>
+<body>{% block content %}{% endblock %}</body>
+
+{# child.html #}
 {% extends 'base.html' %}
 {% block title %}홈페이지{% endblock %}
-{% block content %}
-  <h1>환영합니다!</h1>
-{% endblock %}
 ```
-
----
-
-## **Include 와 Import**
-
-```jinja
-{% include 'partials/header.html' %}
-{% import 'forms.html' as forms %}
-{{ forms.input('username') }}
-```
-
----
-
-## **매크로**
 
 ```jinja
 {% macro input(name, type='text') %}
 <input name="{{ name }}" type="{{ type }}">
 {% endmacro %}
-{{ input('email','email') }}
+{{ input('email', 'email') }}
 ```
-
----
-
-## **자동 이스케이프**
-
-```jinja
-{% autoescape true %}
-  {{ user_input }}
-{% endautoescape %}
-```
-
----
-
-## **공백 제어**
 
 ```jinja
 <ul>
-{%- for item in items -%}
+{%- for item in items -%}   {# '-'로 앞뒤 공백·개행 제거 #}
   <li>{{ item }}</li>
 {%- endfor -%}
 </ul>
 ```
 
+루프 안에서는 `loop.index`(1부터), `loop.first`, `loop.last`를 쓸 수 있습니다.
+
 ---
 
-## **추가: 루프 특수 변수**
+## 실무에서 배운 것
 
-```jinja
-{% for user in users %}
-  {{ loop.index }}. {{ user.name }}
-  {% if loop.first %}(첫){% endif %}
-  {% if loop.last %}(마지막){% endif %}
-{% endfor %}
+### 0. 고백 — 이 글의 필터 표부터 틀려 있었다
+
+원래 버전의 필터 표는 예시를 `{{ upper }}`, `{{ length }}`처럼 적어놨었습니다. **파이프 없이 필터 이름만 쓴, 실행되지 않는 문법**이에요. `값 | 필터` 구조인데 값을 통째로 빼먹은 거죠. 표로 "정리"하는 데 집중하면 정작 예시를 실행해 볼 생각을 안 하게 되는데, **돌려보지 않은 예시는 정리가 아니라 장식**이었습니다. 이번에 전부 실행 가능한 형태로 고쳤습니다.
+
+### 1. Django에서 Jinja2는 `url`·`static`이 공짜가 아니다
+
+DTL의 `{% url %}`·`{% static %}` 태그는 Jinja2에 없습니다. `Environment`를 직접 만들어 전역 함수로 등록해야 해요.
+
+```python
+# jinja2env.py
+from django.urls import reverse
+from django.templatetags.static import static
+from jinja2 import Environment
+
+def environment(**options):
+    env = Environment(**options)
+    env.globals.update({'url': reverse, 'static': static})
+    return env
 ```
 
----
+이걸 해야 템플릿에서 `{{ url('std-data:list') }}` 형태를 쓸 수 있습니다. DTL 예제를 복사해 넣으면 태그 문법부터 달라서 깨지는데(`{% url 'name' %}` vs `{{ url('name') }}`), **두 템플릿 언어가 "비슷해 보여서" 생기는 혼동**이 초기에 잦았습니다.
 
-정리 템플릿: https://github.com/hyo814/jinja-template-study
+### 2. `safe`는 편의 기능이 아니라 방어선 해제 스위치다
+
+표에는 한 줄로 적혀 있지만, 실무에서 겪은 사고 후보는 전부 여기서 나왔습니다. 사용자 입력을 `| safe`로 렌더한 화면은 [stored XSS 경로가 됐고](/blog/django로-1-on-1-비공개-qna-게시판-만들기), 서버 JSON을 `| safe`로 템플릿 리터럴에 주입한 코드는 [데이터에 백틱 하나만 들어와도 깨지는 구조](/blog/JSTree-VTree)였어요. 정리하면 — `safe`를 쓰기 전에 물을 질문은 "이게 편한가"가 아니라 **"이 값의 생산자를 신뢰하는가"** 이고, JSON 전달은 `safe`가 아니라 `json_script` 계열이 정석입니다.
+
+### 3. 매크로는 "공용 컴포넌트"의 서버사이드 버전이었다
+
+프런트 프레임워크의 컴포넌트처럼, 반복되는 화면 조각(페이지네이션, 폼 행, 배지)은 매크로로 뽑아 `{% from %}`으로 가져다 썼습니다. 다만 매크로가 커지면 템플릿 파일이 로직 덩어리가 되는 건 컴포넌트와 똑같아서, 공용 매크로를 어디까지 허용할지 선을 그어야 했어요 — [실제 프로젝트에서의 정리 과정](/blog/django-템플릿-공용-매크로와-스크롤-스파이-외부화-회고)을 따로 남겼습니다.
+
+## 한계
+
+여기 정리한 건 Django + Jinja2 서버 렌더링 기준입니다. Flask에서의 컨텍스트 주입 방식이나 비동기 렌더링(`enable_async`)은 써보지 않아 다루지 않았습니다.

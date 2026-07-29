@@ -3,7 +3,7 @@ title: Render로 Django 배포 — web 서비스와 cron 서비스 분리하기
 date: '2026-04-10'
 tags: [기술노트]
 draft: false
-summary: 'Render의 render.yaml 하나로 Django API(web)와 주간 크롤러(cron)를 각각 다른 서비스로 띄우고, 같은 DB를 공유하도록 연결한 경험을 정리합니다.'
+summary: 'Render의 render.yaml 하나로 Django API(web)와 주간 크롤러(cron)를 각각 다른 서비스로 띄우고, fromDatabase로 DB를 공유한 기록입니다. 다시 읽으면서 SECRET_KEY가 두 서비스에서 서로 다르게 생성되는 것, CORS 환경변수 파싱, dj-database-url 기본값 등 설정 결함 네 개를 찾았습니다.'
 ---
 
 # Render로 Django 배포 — web 서비스와 cron 서비스 분리하기
@@ -12,18 +12,29 @@ summary: 'Render의 render.yaml 하나로 Django API(web)와 주간 크롤러(cr
 
 결론부터 말하면 `render.yaml` 한 파일에서 `type: web`과 `type: cron`을 분리하고, `fromDatabase`로 DB 연결 문자열을 양쪽에 주입하는 구조로 갔습니다.
 
+그리고 **6절부터는 이 설정에서 나중에 찾은 결함 네 개**를 적었습니다. 전부 "돌아가긴 하는데 전제가 어긋난" 것들이에요.
+
 ---
 
-## 1. 왜 web과 cron을 나눴나
+## 1. 주기 작업을 어디에 둘 것인가
 
 같은 Django 프로젝트이지만 두 서비스의 특성은 완전히 다릅니다.
 
 - **web (API 서버)**: 24시간 떠 있어야 하고, 프론트엔드(Vercel)에서 들어오는 요청을 처리합니다.
 - **cron (크롤러)**: 매주 월요일 오전 한 번만 실행되면 되고, 실행 시간은 몇 분 단위입니다.
 
-크롤러를 web 서비스 안에서 `celery beat` 같은 걸로 돌릴 수도 있지만, 그러려면 워커 프로세스를 상시 띄워야 하고 Redis 같은 브로커도 필요합니다. **한 달에 4번 도는 작업**을 위해 상시 인프라를 유지하는 건 과합니다.
+| 방법 | 상시 비용 | 실패 시 | 판단 |
+|---|---|---|---|
+| ① Celery beat + worker + Redis | **워커 상시 + 브로커 상시** | 재시도·모니터링 좋음 | 월 4회 도는 작업에 인프라 3개. 기각 |
+| ② web 안에서 `APScheduler` 등 인프로세스 스케줄러 | 0 | **web이 슬립하면 안 돎.** 인스턴스가 둘이면 두 번 돎 | 기각 |
+| ③ 외부 스케줄러(GitHub Actions 등)가 API 호출 | 0 | 크롤링을 HTTP 요청 안에서 돌려야 함. **타임아웃** | 기각 |
+| ④ Render `type: cron` 서비스 | 실행 시간만 | 로그는 남지만 재시도 없음 | **채택** |
 
-Render에는 `type: cron` 서비스가 따로 있어서, **스케줄에 맞춰 컨테이너를 띄우고 명령이 끝나면 종료**합니다. 상시 비용 없이 스케줄 실행만 과금되는 구조라 이 케이스에 정확히 맞습니다.
+②를 진지하게 봤다가 접은 이유가 결정적이었습니다. **web을 free 플랜으로 둘 거라 트래픽이 없으면 슬립**합니다. 슬립한 프로세스 안의 스케줄러는 안 깨어나요. 즉 "비용을 아끼려고 free를 쓰는 것"과 "인프로세스 스케줄러"가 서로 모순입니다.
+
+①은 정석이지만 **한 달에 4번 도는 작업**을 위해 상시 인프라를 유지하는 건 과합니다. 워커와 브로커를 띄우는 비용이 작업 자체보다 커요.
+
+Render의 `type: cron`은 **스케줄에 맞춰 컨테이너를 띄우고 명령이 끝나면 종료**합니다. 상시 비용 없이 스케줄 실행만 과금되는 구조라 이 케이스에 맞습니다. 대신 **재시도가 없다**는 걸 받아들여야 하고, 그건 9절에 적었습니다.
 
 ---
 
@@ -78,7 +89,7 @@ services:
 
 ## 3. DB 연결 — `fromDatabase`로 양쪽에 같은 문자열 주입
 
-가장 편리했던 부분입니다. `databases` 블록에 선언한 `pynews-db`를, web과 cron 양쪽의 `envVars`에서 다음처럼 참조합니다.
+가장 편리했던 부분입니다. `databases` 블록에 선언한 `pynews-db`를, web과 cron 양쪽의 `envVars`에서 참조합니다.
 
 ```yaml
 envVars:
@@ -88,26 +99,15 @@ envVars:
       property: connectionString
 ```
 
-이렇게 하면 Render가 자동으로 연결 문자열을 주입하기 때문에, **비밀번호나 호스트를 직접 복붙할 필요가 없습니다**. DB를 재생성해도 참조가 유지됩니다.
+Render가 연결 문자열을 주입하므로 **비밀번호나 호스트를 직접 복붙할 필요가 없습니다.** DB를 재생성해도 참조가 유지돼요.
 
-Django `settings.py`에서는 `dj-database-url`로 받으면 됩니다:
-
-```python
-import dj_database_url
-
-DATABASES = {
-    "default": dj_database_url.config(
-        default=os.environ["DATABASE_URL"],
-        conn_max_age=600,
-    )
-}
-```
+여기가 이 구조의 핵심입니다. **두 서비스가 코드는 같고 DB도 같은데, 프로세스 수명만 다릅니다.** 공유해야 할 것(DB)은 `fromDatabase`로 한 곳에 선언하고, 달라야 할 것(수명·명령)만 서비스별로 씁니다.
 
 ---
 
-## 4. cron 서비스의 스케줄 — `schedule: "0 0 * * 1"`
+## 4. cron 서비스의 스케줄
 
-cron 표현식 그대로입니다. 여기서는 **UTC 기준 매주 월요일 00:00**, 한국 시간으로는 월요일 오전 9시가 됩니다.
+cron 표현식 그대로입니다. **UTC 기준 매주 월요일 00:00**, 한국 시간으로는 월요일 오전 9시가 됩니다.
 
 ```yaml
 - type: cron
@@ -116,10 +116,24 @@ cron 표현식 그대로입니다. 여기서는 **UTC 기준 매주 월요일 00
   startCommand: python manage.py crawl_news --days=7
 ```
 
-주의할 점 두 가지:
+주의할 점 둘:
 
 1. **Render cron은 UTC 기준**입니다. 한국 시간으로 사고할 때 9시간 차이를 꼭 염두에 둬야 합니다.
-2. `startCommand`는 **한 번 실행되고 끝나야 하는 명령**이어야 합니다. `runserver`처럼 상시 돌리는 명령을 넣으면 안 됩니다. 여기서는 Django management command인 `crawl_news`를 실행합니다.
+2. `startCommand`는 **한 번 실행되고 끝나야 하는 명령**이어야 합니다. `runserver`처럼 상시 도는 명령을 넣으면 안 됩니다.
+
+### 그런데 `7`이 두 군데에 적혀 있다
+
+`schedule: "0 0 * * 1"`(주 1회)과 `--days=7`(최근 7일)은 **같은 사실을 두 곳에 쓴 것**입니다. 한쪽만 바꾸면 조용히 어긋나요.
+
+| 바꾼 것 | 결과 |
+|---|---|
+| 스케줄만 격주(`0 0 * * 1/2`)로 | **7~14일 사이 글이 영원히 누락**됩니다. 에러 없음 |
+| 스케줄만 매일로 | 매일 7일치를 훑습니다. 중복 체크가 막아주지만 **매일 6일치를 헛수고** |
+| `--days`만 3으로 | 주 1회인데 3일치만 봅니다. **4일치 누락** |
+
+셋 다 **예외도 경고도 안 납니다.** 뉴스레터에 글이 좀 적어 보일 뿐이에요. 지금은 값이 맞아서 잘 돌지만, 이건 **두 값이 맞다는 걸 아무도 검사하지 않는 상태**입니다.
+
+`--days`를 넉넉히(예: 10) 잡고 중복 체크에 맡기는 게 더 안전합니다. 중복은 어차피 막고 있고, **누락은 못 막으니까요.** 겹치게 두는 쪽이 옳은 비대칭입니다.
 
 ---
 
@@ -134,13 +148,102 @@ cron 표현식 그대로입니다. 여기서는 **UTC 기준 매주 월요일 00
 ```
 
 - web은 `free`: 트래픽이 많지 않은 개인 프로젝트라 무료 플랜으로 충분합니다. 단, free 플랜은 **일정 시간 트래픽이 없으면 슬립**에 들어가서 첫 요청이 느려집니다.
-- cron은 `starter`: free 플랜에서는 cron job이 지원되지 않아 starter 이상이 필요합니다.
+- cron은 `starter`: free 플랜에서는 cron job이 지원되지 않아 유료 플랜이 필요합니다.
 
-배포 비용을 정확히 파악하려면 Render 공식 문서의 플랜별 한도를 확인해야 합니다.
+플랜별 한도와 과금은 바뀌므로 **Render 공식 문서를 그때그때 확인**해야 합니다. 특히 free DB 플랜에는 보존 기한이 걸려 있어서, 개인 프로젝트라도 데이터를 오래 두려면 이 조건을 먼저 봐야 합니다.
 
 ---
 
-## 6. CORS — Vercel 프론트와 연결
+## 6. `SECRET_KEY`가 두 서비스에서 서로 다르다
+
+```yaml
+# web
+- key: SECRET_KEY
+  generateValue: true
+
+# cron
+- key: SECRET_KEY
+  generateValue: true
+```
+
+**`generateValue: true`는 서비스마다 독립적으로 값을 만듭니다.** 즉 web의 `SECRET_KEY`와 cron의 `SECRET_KEY`가 **다릅니다.**
+
+지금 이 프로젝트에서는 안 터집니다. cron이 하는 일이 DB에 글을 쓰는 것뿐이라 서명이 필요한 경로를 안 지나가거든요. 그런데 이건 **"지금 안 쓰니까 괜찮다"** 이지 맞는 설정이 아닙니다.
+
+`SECRET_KEY`는 Django에서 이런 걸 서명합니다.
+
+- 세션 쿠키
+- `PasswordResetTokenGenerator` 토큰
+- `django.core.signing`으로 만든 서명값 (구독 해지 링크 같은 것)
+- 메시지 프레임워크 쿠키
+
+**cron이 언젠가 "구독 해지 링크가 담긴 메일"을 보내는 순간, 그 링크는 web에서 검증에 실패합니다.** 뉴스레터 발송을 cron으로 옮기는 건 지극히 자연스러운 다음 단계고요.
+
+맞는 설정은 공유 환경변수 그룹입니다.
+
+```yaml
+envVarGroups:
+  - name: pynews-shared
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+
+services:
+  - type: web
+    envVars:
+      - fromGroup: pynews-shared
+  - type: cron
+    envVars:
+      - fromGroup: pynews-shared
+```
+
+> **같은 값이어야 하는 설정을 두 곳에 `generateValue`로 쓰면, 문법은 같지만 값은 다릅니다.** YAML이 같아 보이는 게 함정이에요. 3절에서 DB는 `fromDatabase`로 공유해놓고, 정작 `SECRET_KEY`는 각자 만들게 뒀습니다.
+
+---
+
+## 7. `dj_database_url.config(default=os.environ[...])`
+
+```python
+import dj_database_url
+
+DATABASES = {
+    "default": dj_database_url.config(
+        default=os.environ["DATABASE_URL"],
+        conn_max_age=600,
+    )
+}
+```
+
+이 두 줄은 **서로를 무효화합니다.**
+
+`dj_database_url.config()`는 원래 `DATABASE_URL` 환경변수를 **자기가 읽습니다.** `default=`는 그 환경변수가 **없을 때** 쓸 값이고요. 그런데 그 기본값을 `os.environ["DATABASE_URL"]`에서 가져오고 있어요.
+
+```python
+>>> os.environ.pop("DATABASE_URL", None)
+>>> default = os.environ["DATABASE_URL"]
+KeyError: 'DATABASE_URL'
+```
+
+**환경변수가 없으면 `default`를 계산하다가 `KeyError`로 죽습니다.** `default`가 존재하는 이유가 정확히 그 상황인데요.
+
+Render에서는 항상 주입되니 안 터집니다. **로컬에서 `.env` 없이 `manage.py`를 치는 순간** 터져요. 그리고 그 에러 메시지는 "DB 설정이 없다"가 아니라 `KeyError: 'DATABASE_URL'`이라, 처음 보는 사람은 settings 어딘가의 오타를 찾습니다.
+
+고치면 한 줄입니다.
+
+```python
+DATABASES = {
+    "default": dj_database_url.config(
+        default="sqlite:///db.sqlite3",   # 로컬 기본값
+        conn_max_age=600,
+    )
+}
+```
+
+`conn_max_age=600`도 짚고 갑니다. **커넥션을 10분 재사용**하라는 뜻인데, 이건 web에는 맞고 **cron에는 무의미**합니다. cron 프로세스는 몇 분 살다 죽으니까요. 무해하긴 하지만, free DB 플랜은 동시 커넥션 한도가 낮아서 **web이 붙잡고 있는 커넥션 + cron이 붙잡는 커넥션**이 겹칠 때 한도에 닿을 수 있습니다. 설정 파일이 하나라 서비스별로 다르게 주기가 번거로웠고, 그래서 안 나눈 채로 뒀습니다.
+
+---
+
+## 8. CORS 환경변수 파싱
 
 프론트엔드는 Vercel, API는 Render인 분리 배포 구조라 CORS 설정이 필수입니다.
 
@@ -149,20 +252,39 @@ cron 표현식 그대로입니다. 여기서는 **UTC 기준 매주 월요일 00
   value: "https://python-news.vercel.app,https://python-news-hyo814s-projects.vercel.app"
 ```
 
-Django 쪽에서는 `django-cors-headers`로 받습니다:
-
 ```python
 # settings.py
 CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
 ```
 
-Vercel은 **프로젝트 도메인 + 자동 생성 도메인**이 둘 다 생기기 때문에, 둘 다 허용 목록에 넣어두는 편이 안전합니다. PR 프리뷰 URL까지 포함하려면 정규식 기반의 `CORS_ALLOWED_ORIGIN_REGEXES`도 고려할 수 있습니다.
+이 한 줄에 함정이 둘 있습니다.
+
+```python
+>>> "".split(",")
+['']
+>>> "https://a.app, https://b.app".split(",")
+['https://a.app', ' https://b.app']
+```
+
+**① 환경변수가 비면 빈 리스트가 아니라 `['']`가 됩니다.** "허용 오리진 없음"이 아니라 "빈 문자열이라는 오리진 하나"예요. 의도한 상태가 아니고, 설정 검증에 걸릴 수도 있습니다.
+
+**② 쉼표 뒤에 공백을 하나 넣으면 그 오리진은 영영 매칭되지 않습니다.** 사람이 YAML을 읽기 좋게 정렬하려고 공백을 넣는 건 아주 자연스러운 일이고, 그 결과는 **CORS 에러 하나**입니다. 원인이 공백이라는 걸 알아내는 데 시간이 꽤 걸리는 종류예요.
+
+```python
+CORS_ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
+```
+
+> **환경변수에서 리스트를 만들 땐 `strip()`과 빈 값 제거가 세트입니다.** `split(",")` 하나만 쓰면 사람이 보기엔 멀쩡한 값이 코드에선 안 맞습니다.
+
+Vercel은 **프로젝트 도메인 + 자동 생성 도메인**이 둘 다 생기므로 둘 다 허용 목록에 넣어야 합니다. PR 프리뷰 URL까지 포함하려면 `CORS_ALLOWED_ORIGIN_REGEXES`를 쓰는데, **정규식 허용은 범위를 넓히는 설정이라** 개인 프로젝트라도 패턴을 좁게 잡는 게 맞습니다.
 
 ---
 
-## 7. `build.sh` — web 서비스의 빌드 스텝
+## 9. `build.sh`와 마이그레이션 순서
 
-web 서비스는 `buildCommand: ./build.sh`로 셸 스크립트 하나를 호출하고, 그 안에서 의존성 설치 + 마이그레이션 + 정적 파일 수집을 순서대로 처리합니다.
+web 서비스는 `buildCommand: ./build.sh`로 셸 스크립트를 호출하고, 그 안에서 의존성 설치 + 정적 파일 수집 + 마이그레이션을 처리합니다.
 
 ```bash
 #!/usr/bin/env bash
@@ -173,26 +295,55 @@ python manage.py collectstatic --no-input
 python manage.py migrate
 ```
 
-cron 서비스는 정적 파일이 필요 없어서 `buildCommand`에 `pip install -r requirements.txt`만 써도 충분합니다.
+`set -o errexit`이 중요합니다. **없으면 `migrate`가 실패해도 빌드가 성공으로 끝나고**, 마이그레이션이 안 된 코드가 배포됩니다.
+
+cron 서비스는 정적 파일이 필요 없어서 `buildCommand`에 `pip install -r requirements.txt`만 씁니다. **그리고 `migrate`도 안 합니다.**
+
+여기 전제가 하나 숨어 있어요. **cron은 web이 이미 마이그레이션을 적용했다고 가정합니다.** 모델을 바꾼 커밋을 배포할 때 두 서비스가 각자 빌드되는데, cron 빌드가 먼저 끝나고 스케줄이 그 사이에 걸리면 **cron이 옛 스키마의 DB에 새 코드로 접근**합니다.
+
+이 프로젝트에서는 주 1회 스케줄이라 실질적으로 안 마주칩니다. 그래도 **"안 마주친다"와 "막아뒀다"는 다릅니다.** 막으려면 cron의 `startCommand` 앞에 `migrate`를 붙이거나(그러면 이번엔 두 서비스가 동시에 마이그레이션을 시도할 수 있음), 마이그레이션을 배포 파이프라인의 별도 단계로 빼야 합니다. 후자가 맞는 방향인데 안 했습니다.
 
 ---
 
-## 8. 배포 후 체크리스트
+## 10. 배포 후 체크리스트
 
 ```
 □ render.yaml 커밋 후 Render 대시보드에서 "New Blueprint" 연결
 □ 첫 배포 시 DATABASE_URL이 양쪽 서비스에 정상 주입됐는지 Logs 확인
+□ web·cron 두 서비스의 SECRET_KEY가 같은 값인지 확인 (6절)
 □ web 서비스 URL로 /admin 접속 (마이그레이션 성공 여부)
 □ cron 서비스 "Trigger Run"으로 수동 실행 → 로그에서 크롤링 결과 확인
+□ CORS 값에 공백이 섞이지 않았는지 확인 (8절)
 □ Vercel 프론트에서 API 호출 시 CORS 에러 없는지 확인
 □ cron schedule이 UTC 기준임을 재확인 (KST 변환)
-□ free 플랜 슬립 시간 확인 (첫 요청 지연 감안)
+□ schedule 주기와 --days 값이 서로 맞는지 확인 (4절)
+□ free 플랜 슬립 시간·DB 보존 기한 확인
 ```
+
+체크리스트에 **"확인"만 있고 자동 검사가 하나도 없다**는 게 이 구성의 한계입니다. 6·8절 같은 결함은 전부 사람이 눈으로 봐야 잡히는 자리에 있어요.
+
+---
+
+## 11. 남은 것
+
+- **cron 실패 시 재시도·알림이 없습니다.** 실행이 실패하면 그 주 뉴스레터가 그냥 안 나가고, 로그를 안 보면 모릅니다. 최소한 실패 시 알림 하나는 있어야 합니다.
+- **`SECRET_KEY`를 `envVarGroups`로 옮겨야 합니다**(6절).
+- **`dj_database_url` 기본값**(7절), **CORS 파싱**(8절) — 둘 다 한 줄 수정입니다.
+- **마이그레이션이 빌드 스텝 안에 있습니다**(9절). 별도 단계로 빼는 게 맞습니다.
+- **`--days`와 스케줄의 결합**(4절). 겹치게 두는 방향으로 바꾸는 게 안전합니다.
 
 ---
 
 ## 정리
 
-Render의 `render.yaml`은 **한 파일에서 여러 타입의 서비스를 선언적으로 묶을 수 있다는 점**이 가장 큰 장점이었습니다. web과 cron을 분리해서 비용 구조를 최적화했고, DB는 `fromDatabase`로 한 번만 선언해서 양쪽에서 공유했습니다.
+Render의 `render.yaml`은 **한 파일에서 여러 타입의 서비스를 선언적으로 묶을 수 있다는 점**이 가장 큰 장점이었습니다. web과 cron을 분리해 비용 구조를 맞췄고, DB는 `fromDatabase`로 한 번만 선언해서 양쪽에서 공유했습니다.
 
-다음 글에서는 이 cron 서비스를 만들기 전에 사용하던 **로컬 crontab 기반 `setup_cron.sh`**와 Render Cron Job을 비교해보겠습니다.
+다시 읽으며 얻은 것:
+
+- **주기 작업의 배치는 "얼마나 자주 도는가"보다 "실패하면 어떻게 되는가"로 고른다.** 인프로세스 스케줄러는 슬립하는 플랜과 근본적으로 안 맞는다.
+- **같은 값이어야 하는 설정을 두 곳에 `generateValue`로 쓰면 값이 갈린다.** YAML이 똑같아 보이는 게 함정이다.
+- **같은 사실을 두 곳에 적으면(스케줄과 `--days`) 언젠가 어긋나고, 그때 에러는 안 난다.** 겹침과 누락 중에서는 겹침을 고른다.
+- **환경변수에서 리스트를 만들 땐 `strip()`과 빈 값 제거를 같이 한다.**
+- **`default=`를 만들면서 그 값을 필수 환경변수에서 읽지 않는다.**
+
+다음 글에서는 이 cron 서비스를 만들기 전에 쓰던 **로컬 crontab 기반 `setup_cron.sh`** 와 Render Cron Job을 비교합니다. → [주간 스케줄링, 로컬 crontab vs Render Cron](/blog/주간-스케줄링-로컬-crontab-vs-render-cron)

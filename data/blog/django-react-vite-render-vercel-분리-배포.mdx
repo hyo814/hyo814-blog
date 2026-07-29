@@ -258,6 +258,14 @@ API 서버가 슬립에 들어간 상태에서 첫 요청이 오면 **수십 초
 
 `DEBUG=False` 상태에서 `ALLOWED_HOSTS`가 안 맞으면 `400 Bad Request`가 납니다. Render URL이 바뀌는 경우는 드물지만, 커스텀 도메인을 붙일 때 빼먹으면 즉시 장애입니다.
 
+### (5) 다시 보니 — 이 글에 실은 코드 자체의 문제들
+
+개고하면서 위 코드들을 다시 읽었고, 그대로 두면 안 될 것들이 보입니다.
+
+- **CORS 정규식이 남의 앱도 허용합니다.** `^https://python-news.*\.vercel\.app$`은 내 프로젝트만 매칭하는 게 아닙니다 — Vercel은 누구나 프로젝트를 만들 수 있으니, **다른 사용자가 `python-news-x` 같은 이름으로 만든 앱도** 이 정규식을 통과합니다. 지금은 자격증명 없는 공개 읽기 API라 실익이 없지만, 인증 붙은 API에서 이 패턴을 복사하면 CORS가 보호 수단 역할을 못 합니다. 팀 스코프까지 고정한 정규식(`python-news-git-.*-hyo814s-projects\.vercel\.app$`)이 맞습니다.
+- **(2)번 사고의 원인이 코드에 그대로 남아 있습니다.** "폴백 때문에 프로덕션이 localhost를 호출했다"고 써놓고, 위 `api.js`는 여전히 `?? 'http://localhost:8000'` 폴백을 갖고 있어요. 같은 실수가 나면 또 조용히 넘어갑니다. 프로덕션 빌드에서는 폴백 대신 크게 실패하는 게 맞습니다: `if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE) throw new Error('VITE_API_BASE 미설정')`.
+- **`STATICFILES_STORAGE`는 Django 4.2부터 deprecated**입니다. 지금 기준으로는 `STORAGES = {"staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}}` 딕셔너리 방식이 맞습니다.
+
 ---
 
 ## 10. 분리 배포 전 체크리스트

@@ -1,28 +1,27 @@
 ---
-title: React에서 스크롤 위치 기억하기 useScrollMemory 훅
+title: React에서 스크롤 위치 기억하기 — useScrollMemory 훅과 그 코드의 결함 다섯 개
 date: '2025-02-21'
 tags: [기술노트]
 draft: false
-summary: '웹 애플리케이션에서 사용자가 특정 페이지에서 스크롤한 위치를 기억하고, 페이지를 다시 방문했을 때 해당 위치로 자동으로 스크롤하는 기능'
+summary: '목록↔상세를 오갈 때 스크롤 위치를 기억했다가 복원하는 훅을 만들었던 글입니다. 개고하며 코드를 다시 보니 결함이 다섯 개 보여요 — 전역 단일 키, 저장과 복원의 책임 분열, 스로틀 없는 매 이벤트 저장, "맨 위로 돌아간 것"을 기억 못 하는 조건, 그리고 비동기 목록에서는 복원 타이밍 자체가 문제라는 것까지. 원래 코드와 고친 코드를 나란히 실었습니다.'
 ---
 
-### 1. `useScrollMemory` 훅 구현
+# React에서 스크롤 위치 기억하기
+
+목록형 페이지(여행지 목록 등)에서 상세로 들어갔다 돌아오면 스크롤이 맨 위로 튀는 문제를 풀려고 만들었던 훅입니다. 당시 코드를 그대로 싣고, **지금 다시 보며 찾은 결함 다섯 개**와 고친 버전을 붙였습니다.
+
+## 1. 당시의 구현
 
 ```tsx
-import { useEffect } from 'react';
-
 export const useScrollMemory = (): void => {
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
     const key = `scroll-position`;
 
-    // 브라우저의 기본 스크롤 복원을 방지
+    // 브라우저 기본 복원 비활성화
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
 
-    // 스크롤 이벤트로 현재 위치 저장 (0이 아닌 값만 저장)
     const handleScroll = (): void => {
       const scrollY = window.scrollY;
       if (scrollY > 0) {
@@ -31,76 +30,55 @@ export const useScrollMemory = (): void => {
     };
 
     window.addEventListener('scroll', handleScroll);
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      const finalScroll = window.scrollY;
-      if (finalScroll > 0) {
-        sessionStorage.setItem(key, finalScroll.toString());
-      }
+      if (window.scrollY > 0) sessionStorage.setItem(key, window.scrollY.toString());
     };
   }, []);
 };
 ```
 
-#### ✅ 주요 기능
+복원은 사용하는 쪽에서 마운트 시 `sessionStorage`를 읽어 `scrollTo` 했습니다. 이 구성으로 "돌아오면 그 자리"는 일단 동작했어요. 문제는 "일단"이었다는 겁니다.
 
-1. `sessionStorage`를 활용해 스크롤 위치를 저장합니다.
-2. `window.history.scrollRestoration = 'manual'`을 설정해 브라우저의 기본 스크롤 복원 기능을 비활성화합니다.
-3. 페이지 이동 시 스크롤 이벤트를 감지해 `sessionStorage`에 현재 위치를 저장합니다.
-4. 언마운트될 때 마지막 스크롤 위치를 한 번 더 저장합니다.
+## 2. 다시 보니 — 결함 다섯 개
 
----
+**① 키가 전역 하나입니다.** `scroll-position` 고정 키라, 이 훅을 두 페이지에서 쓰는 순간 서로의 위치를 덮어씁니다. 목록에서 저장한 값을 마이페이지가 덮으면, 목록으로 돌아왔을 때 엉뚱한 위치로 점프해요. 키에 경로가 들어가야 합니다: `` `scroll:${location.pathname}` ``.
 
-### 2. `useScrollMemory` 훅 적용
+**② 저장은 훅이, 복원은 사용처가 합니다.** 이름은 `useScrollMemory`인데 실제로는 절반(저장)만 하고, 복원 코드는 쓰는 컴포넌트마다 복사됐습니다. 사용처가 둘이 되는 순간 복원 로직이 미묘하게 갈라졌어요 — 캡슐화하려고 만든 훅이 캡슐화에 실패한 거죠.
 
-`useScrollMemory` 훅을 적용하여 페이지 방문 시 기존 스크롤 위치를 복원하는 코드입니다.
+**③ 스크롤 이벤트마다 동기 스토리지 쓰기.** 스크롤은 초당 수십 번 발생하는데 그때마다 `sessionStorage.setItem`(동기 I/O)을 호출합니다. 어차피 의미 있는 값은 "떠나는 순간의 위치"뿐이라, 이벤트마다 저장할 이유가 없었습니다.
+
+**④ `scrollY > 0`일 때만 저장 — "맨 위"를 기억하지 못합니다.** 사용자가 중간까지 내렸다가 **맨 위로 돌아간 뒤** 떠나면, 0은 저장되지 않아 이전의 중간 위치가 남습니다. 돌아왔을 때 본인이 마지막으로 있던 맨 위가 아니라 중간으로 점프해요. "0은 의미 없는 값"이라는 가정이 틀렸던 겁니다 — 0도 사용자의 위치입니다.
+
+**⑤ 복원 타이밍은 코드가 아니라 데이터의 문제였습니다.** 이게 실전에서 제일 컸는데, 무한 스크롤 목록에서는 마운트 직후 `scrollTo(0, 3000)`을 해봐야 **아직 목록이 한 페이지만 렌더된 상태라 3000px 지점이 존재하지 않습니다.** 스크롤 복원은 데이터 복원과 세트예요 — [목록 캐시가 쿼리 캐시에 살아 있어야](/blog/무한-스크롤에서는-왜-이슈가-생긴-걸까) 돌아온 즉시 전체 높이가 확보되고, 그제서야 위치 복원이 의미를 가집니다. 훅 하나로 풀리는 문제가 아니라 캐시 전략과 함께 설계할 문제였습니다.
+
+## 3. 고친 버전
 
 ```tsx
-'use client';
-import { useEffect } from 'react';
-import { useScrollMemory } from '@/hooks/useScrollMemory';
+export const useScrollMemory = (ready: boolean = true): void => {
+  const key = `scroll:${window.location.pathname}`;
 
-const PageComponent = () => {
-  useScrollMemory();
-
+  // 복원 — 데이터가 준비된(ready) 뒤에 한 번
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedPosition = sessionStorage.getItem('scroll-position');
-      if (savedPosition) {
-        window.scrollTo(0, parseInt(savedPosition, 10));
-      }
-    }
-  }, []);
+    if (!ready) return;
+    window.history.scrollRestoration = 'manual';
+    const saved = sessionStorage.getItem(key);
+    if (saved !== null) window.scrollTo(0, parseInt(saved, 10));
+  }, [ready, key]);
 
-  return (
-    <div style={{ height: '200vh', padding: '20px' }}>
-      <h1>스크롤 메모리 테스트</h1>
-      <p>이 페이지에서 스크롤한 위치를 기억하고, 다시 방문하면 해당 위치로 이동합니다.</p>
-    </div>
-  );
+  // 저장 — 이벤트마다가 아니라 떠나는 순간 한 번, 0도 저장
+  useEffect(() => {
+    return () => {
+      sessionStorage.setItem(key, String(window.scrollY));
+    };
+  }, [key]);
 };
-
-export default PageComponent;
 ```
 
-#### ✅ 적용 결과
+- 경로별 키(①), 저장·복원 모두 훅 안으로(②), 언마운트 시 1회 저장(③), 0 포함 저장(④), 그리고 `ready` 파라미터로 **데이터 준비 후 복원**(⑤) — 목록 쿼리의 `isSuccess`를 넘기면 됩니다.
 
-- 페이지를 스크롤한 후 새로고침해도 기존 위치를 유지합니다.
-- 페이지를 벗어나고 다시 돌아와도 마지막 스크롤 위치로 자동 이동합니다.
+## 정리
 
----
-
-### 3. `useScrollMemory` 활용 예시
-
-이 훅을 사용하면 다음과 같은 상황에서 유용합니다.
-
-- **목록형 페이지 (게시판, 상품 리스트, 예약 목록 등)**: 스크롤이 긴 페이지에서 사용자가 이전에 확인한 위치를 유지할 수 있습니다.
-- **페이지 이동 후 돌아왔을 때**: 특정 페이지를 방문한 후 다시 돌아왔을 때 스크롤 위치가 유지됩니다.
-- **SPA (Single Page Application)에서 자연스러운 UX 제공**: 사용자가 새로고침해도 원하는 위치를 유지할 수 있습니다.
-
----
-
-### 4. 결론
-
-React나 Next.js 프로젝트에서 `useScrollMemory` 훅을 쓰면 짧은 코드로 스크롤 위치를 기억하고 복원할 수 있습니다. 사용자 경험을 끌어올리는 데 도움이 되고, 특히 긴 페이지를 다루는 애플리케이션에서 효과가 큽니다.
+- 위치 기억 훅의 어려움은 스크롤 API가 아니라 **키 설계(어디의 위치인가)와 타이밍(무엇이 준비된 뒤인가)** 이었습니다.
+- "일단 동작"하는 코드의 결함은 사용처가 하나일 때는 숨어 있습니다. 두 번째 사용처가 생기는 순간(①·②) 드러났어요.
+- 스크롤 복원은 단독 기능이 아니라 **데이터 캐시 전략의 마지막 조각**입니다.

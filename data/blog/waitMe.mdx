@@ -213,15 +213,36 @@ html, body {
 ### 6. **Next.js 등 SSR 환경에서는 주의 필요**
 
 - `document`나 `$`가 없기 때문에 클라이언트 사이드에서만 사용해야 함.
-- 해결 방법:
 
-  ```
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      import('waitme').then(() => {
-        // waitMe 사용 코드
-      });
-    }
-  }, []);
+```jsx
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    import('waitme').then(() => {
+      // waitMe 사용 코드
+    });
+  }
+}, []);
+```
 
-    ```
+---
+
+## 실제로 어디에 쓰고 있나
+
+Django + jQuery 프로젝트에서 **AJAX 구간 로딩 표시**로 씁니다. 패턴은 항상 같습니다 — `beforeSend`에서 켜고 `complete`에서 끄기:
+
+```js
+function run_waitMe(el) {
+  el.waitMe({ effect: 'ios', text: 'Please wait...', bg: 'rgba(255,255,255,0.7)', color: '#000' });
+}
+
+$.ajax({
+  url: uri,
+  beforeSend: () => run_waitMe($('table#classInfo')),   // 요청 직전 켜기
+  success: (json) => { /* 렌더 */ },
+  complete: () => $('table#classInfo').waitMe('hide'),  // 성공이든 실패든 끄기
+});
+```
+
+포인트는 끄는 자리가 `success`가 아니라 **`complete`** 라는 것 — 요청이 실패해도 로딩은 꺼져야 합니다. `success`에만 두면 에러 시 스피너가 영원히 도는 화면이 되는데, 위의 3번(자동 종료 없음)과 결합해 실제로 겪기 쉬운 조합입니다.
+
+**한계** — jQuery 의존 라이브러리라 이미 jQuery를 쓰는 레거시에서만 의미가 있습니다. React·Vue 프로젝트라면 CSS 스피너 컴포넌트가 맞고, 이 프로젝트에서도 jQuery를 걷어내는 날이 오면 같이 걷힐 목록에 있습니다. 웹팩 번들에 넣을 때의 CSS 순서 문제는 [웹팩 설정 변경 시 주의사항](/blog/webpack-변경-시-주의사항)에 있습니다.
