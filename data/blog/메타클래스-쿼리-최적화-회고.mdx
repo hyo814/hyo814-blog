@@ -161,7 +161,48 @@ from django.db.models import Count, Q
 
 ---
 
-## 7. 회고 — ORM 디폴트는 의심부터
+## 7. 함정 셋째 — `Count`를 두 개 붙이면 숫자가 부풀어 오른다
+
+이번 작업에서는 안 밟았지만, 이 코드에 카운트를 하나 더 붙이는 순간 걸릴 지뢰가 있어서 같이 적어둡니다.
+
+```python
+# 위험: 역방향 관계 두 개를 동시에 Count
+.annotate(
+    property_count=Count("properties"),
+    tag_count=Count("tags"),          # ← 여기서 둘 다 틀려진다
+)
+```
+
+역방향 관계를 두 개 조인하면 **행이 곱해집니다.** 속성 3개 × 태그 4개면 조인 결과가 12행이 되고, `Count("properties")`는 3이 아니라 12를 셉니다. 반대쪽도 마찬가지고요. 쿼리는 성공하고 숫자만 조용히 틀립니다.
+
+해결은 두 가지입니다.
+
+```python
+# ① distinct=True — 간단하지만 SQL에 DISTINCT 비용이 붙는다
+.annotate(property_count=Count("properties", distinct=True),
+          tag_count=Count("tags", distinct=True))
+
+# ② 서브쿼리 — 조인 자체를 안 만든다
+from django.db.models import OuterRef, Subquery, Count
+prop_sq = (MetaProperty.objects.filter(class_id=OuterRef("pk"))
+           .values("class_id").annotate(c=Count("*")).values("c"))
+.annotate(property_count=Subquery(prop_sq))
+```
+
+지금 코드는 `Count`가 하나뿐이라 정확합니다. 다만 **"카운트를 하나 더 붙이는 건 안전한 변경처럼 보인다"** 는 게 이 함정의 핵심이라, 다음에 이 뷰를 건드리는 사람(과 저)을 위해 남겨둡니다. N+1은 느려서 알아채지만, 이건 **빠르면서 틀립니다.**
+
+---
+
+## 8. 한계
+
+- **측정이 한 시점의 데이터 규모에서만 이뤄졌습니다.** 300건에서 4쿼리·180ms인 건 확인했지만, 쿼리 수가 고정이라고 응답 시간이 고정은 아니에요. 행이 넓어지고(JOIN한 컬럼이 다 딸려옴) 건수가 늘면 다시 재야 합니다.
+- **`select_related`는 공짜가 아닙니다.** FK를 늘릴수록 한 행이 넓어져서, 목록에서 안 쓰는 컬럼까지 전부 실려 옵니다. 지금은 두 개라 괜찮지만 습관적으로 늘리면 다른 종류의 비용이 생겨요.
+- **이 최적화는 목록 경로 기준입니다.** 같은 쿼리셋을 상세나 전량 조회에서 재사용하면 반대로 손해일 수 있습니다. 실제로 이후에 목록용으로 넣어둔 `prefetch_related`가 다운로드 경로를 망가뜨리는 일을 겪었어요 — **최적화는 경로별로 붙여야 한다**는 걸 그때 다시 배웠습니다.
+- **회귀를 막는 장치가 없습니다.** 누가 템플릿에 `cls.parent.name`을 하나 더 추가하면 N+1이 조용히 돌아옵니다. `assertNumQueries`로 쿼리 수를 테스트에 못 박아두는 게 맞아요.
+
+---
+
+## 9. 회고 — ORM 디폴트는 의심부터
 
 ORM은 lazy 호출이 디폴트입니다. 한 객체만 다룰 때는 편한데, 리스트에서는 N+1로 직결돼요. 이번 작업의 핵심 교훈:
 

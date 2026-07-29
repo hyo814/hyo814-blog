@@ -1,241 +1,118 @@
 ---
-title: 무한 스크롤 비교
+title: 무한 스크롤 비교 — 쓸 것인가, 그리고 무엇으로
 date: '2024-07-25'
 tags: [기술노트]
 draft: false
-summary: '무한 스크롤 비교'
+summary: '무한 스크롤 라이브러리를 비교하기 전에 "무한 스크롤을 쓸 것인가"부터 정해야 했습니다. 페이지네이션과의 트레이드오프, 그리고 useInfiniteQuery·useQuery·useSWRInfinite 중 무엇을 고를지의 기준을 정리했습니다. 구현 코드는 별도 글로 뺐습니다.'
 ---
 
-#### **1. @tanstack/react-query의 `useInfiniteQuery` 사용**
+# 무한 스크롤 비교 — 쓸 것인가, 그리고 무엇으로
 
-```javascript
-import React, { useEffect, useRef } from 'react';
-import { useInfiniteQuery, QueryFunctionContext } from '@tanstack/react-query';
+[TripTune](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발)의 여행지 목록과 일정 목록에 무한 스크롤을 넣기로 하면서 조사한 내용입니다.
 
-interface Photo {
-    id: number;
-    title: string;
-    url: string;
-    thumbnailUrl: string;
-}
+처음엔 "어떤 라이브러리로 구현하지"부터 찾아봤는데, 그 전에 답해야 할 질문이 하나 있었습니다.
 
-const fetchPhotos = async ({ pageParam = 1 }: QueryFunctionContext): Promise<Photo[]> => {
-    const res = await fetch(`https://jsonplaceholder.typicode.com/photos?_page=${pageParam}&_limit=10`);
-    return res.json();
-};
+> **여기에 무한 스크롤이 맞나?**
 
-const InfiniteScroll: React.FC = () => {
-    const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery<Photo[], Error>({
-        queryKey: ['photos'],
-        queryFn: fetchPhotos,
-        getNextPageParam: (lastPage, allPages) => lastPage.length ? allPages.length + 1 : undefined,
-    });
-
-    const observerRef = useRef<HTMLDivElement | null>(null);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && hasNextPage) {
-                fetchNextPage();
-            }
-        });
-
-        if (observerRef.current) {
-            observer.observe(observerRef.current);
-        }
-
-        return () => {
-            if (observerRef.current) {
-                observer.unobserve(observerRef.current);
-            }
-        };
-    }, [fetchNextPage, hasNextPage]);
-
-    if (error) return <div>Failed to load</div>;
-
-    return (
-        <div>
-            <h1>Infinite Scroll</h1>
-            <div>
-                {data?.pages.map((page, i) => (
-                    <React.Fragment key={i}>
-                        {page.map((photo: Photo) => (
-                            <div key={photo.id}>
-                                <img src={photo.thumbnailUrl} alt={photo.title} />
-                                <p>{photo.title}</p>
-                            </div>
-                        ))}
-                    </React.Fragment>
-                ))}
-            </div>
-            {isFetchingNextPage && <p>Loading more...</p>}
-            <div ref={observerRef} style={{ height: '1px' }}></div>
-        </div>
-    );
-};
-
-export default InfiniteScroll;
-```
-
-- **장점**
-  - 내장된 페이지네이션 처리로 무한 스크롤 구현이 간단.
-  - `getNextPageParam`으로 다음 페이지 매개변수 설정.
-  - `isFetchingNextPage` 상태로 로딩 상태 관리 가능.
-- **단점**
-  - `react-query` 사용법 숙지가 필요.
+**이 글은 그 판단과 도구 선택 기준까지입니다.** 실제 구현 코드와 실무에서 물린 지점은 [React Infinite Scroll 구현하기](/blog/react-infinite-scroll-구현하기)에 따로 적었습니다.
 
 ---
 
-#### **2. @tanstack/react-query의 `useQuery` 사용**
+## 1. 무한 스크롤 vs 페이지네이션
 
-```javascript
-import React, { useEffect, useRef, useState } from 'react';
-import { useQuery } from 'react-query';
+무한 스크롤이 기본값처럼 쓰이지만, 공짜가 아닙니다.
 
-interface Photo {
-    id: number;
-    title: string;
-    url: string;
-    thumbnailUrl: string;
-}
+| | 무한 스크롤 | 페이지네이션 |
+|---|---|---|
+| 탐색 흐름 | **끊기지 않음** | 클릭마다 끊김 |
+| "아까 그거" 다시 찾기 | **어려움** — 몇 번째였는지 모름 | 페이지 번호로 지목 가능 |
+| 공유·북마크 | 상태가 URL에 없음 | `?page=3`으로 그대로 |
+| 뒤로가기 복원 | **직접 구현해야 함** | 브라우저가 해줌 |
+| 총량 감각 | 없음 — 끝을 모름 | "12페이지 중 3" |
+| 푸터 접근 | **사실상 불가** | 항상 접근 |
+| 구현 난이도 | 종료 판정·중복 방지·복원까지 | 낮음 |
 
-const fetchPhotos = async (page: number): Promise<Photo[]> => {
-    const res = await fetch(`https://jsonplaceholder.typicode.com/photos?_page=${page}&_limit=10`);
-    return res.json();
-};
+TripTune에서는 화면마다 다르게 갈렸습니다.
 
-const InfiniteScroll: React.FC = () => {
-    const [page, setPage] = useState<number>(1);
-    const [photos, setPhotos] = useState<Photo[]>([]);
-    const observerRef = useRef<HTMLDivElement | null>(null);
+- **여행지 탐색 목록 → 무한 스크롤.** 사용자가 "둘러보는" 화면입니다. 특정 여행지를 찾으러 오는 게 아니라 스크롤하며 고르는 흐름이에요. 여기서 페이지 버튼은 흐름을 끊습니다.
+- **일정 목록 → 무한 스크롤.** 내 일정은 많아야 수십 개라 애초에 끝이 가깝습니다.
+- **관리자용 표 형태 목록 → 페이지네이션.** "몇 건 중 몇 건"이 필요하고 특정 행으로 다시 돌아가야 합니다.
 
-    const { data, error, isLoading } = useQuery(['photos', page], () => fetchPhotos(page), { keepPreviousData: true });
+> **"둘러보기"에는 무한 스크롤, "찾아가기"에는 페이지네이션.** 사용자가 그 화면에서 무엇을 하려는지가 기준이었습니다. 데이터가 많고 적음이 아니었어요.
 
-    useEffect(() => {
-        if (data) {
-            setPhotos((prevPhotos) => [...prevPhotos, ...data]);
-        }
-    }, [data]);
+### 무한 스크롤을 골랐다면 같이 져야 하는 부채
 
-    useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                setPage((prevPage) => prevPage + 1);
-            }
-        });
+- **뒤로가기 복원.** 상세로 들어갔다 돌아오면 목록 맨 위입니다. 브라우저가 해주지 않아요. 이건 [스크롤 위치 기억하기](/blog/react에서-스크롤-위치-기억하기)에 따로 적었습니다.
+- **푸터에 못 닿음.** TripTune 푸터에는 이메일과 GitHub 링크가 있는데, 목록 화면에서는 계속 밀립니다. 끝까지 스크롤하면 닿긴 하지만 그건 데이터가 끝났을 때 얘기예요.
+- **접근성.** 키보드 사용자와 스크린 리더 사용자에게 "계속 늘어나는 목록"은 다루기 어렵습니다. "더 보기" 버튼을 같이 두면 해결되는데, **이 프로젝트에서는 안 했습니다.**
 
-        if (observerRef.current) {
-            observer.observe(observerRef.current);
-        }
-
-        return () => {
-            if (observerRef.current) {
-                observer.unobserve(observerRef.current);
-            }
-        };
-    }, []);
-
-    if (error) return <div>Failed to load</div>;
-
-    return (
-        <div>
-            <h1>Infinite Scroll</h1>
-            <div>
-                {photos.map((photo) => (
-                    <div key={photo.id}>
-                        <img src={photo.thumbnailUrl} alt={photo.title} />
-                        <p>{photo.title}</p>
-                    </div>
-                ))}
-            </div>
-            {isLoading && <p>Loading...</p>}
-            <div ref={observerRef} style={{ height: '1px' }}></div>
-        </div>
-    );
-};
-
-export default InfiniteScroll;
-```
-
-- **장점**
-  - 간단한 페이지네이션 로직 구현 가능.
-  - 상태를 `useState`로 관리하여 코드 가독성 높음.
-- **단점**
-  - `useInfiniteQuery`에 비해 많은 코드 작성 필요.
-  - 무한 스크롤 로직 수동 처리.
+**셋 다 알고 시작한 게 아니라 겪고 나서 알았습니다.** 특히 마지막은 지금도 부채로 남아 있어요.
 
 ---
 
-#### **3. SWR의 `useSWR` 사용**
+## 2. 무엇으로 구현할 것인가
 
-```javascript
-import React, { useEffect, useRef, useState } from 'react';
-import useSWR from 'swr';
+도구는 셋을 놓고 봤습니다.
 
-interface Photo {
-    id: number;
-    title: string;
-    url: string;
-    thumbnailUrl: string;
-}
+| | `useInfiniteQuery` | `useQuery` + 페이지 상태 | `useSWRInfinite` |
+|---|---|---|---|
+| 페이지 누적 | **라이브러리가 관리** (`data.pages`) | 직접 `useState`에 누적 | 라이브러리가 관리 |
+| 종료 판정 | `getNextPageParam` → `hasNextPage` | **직접** | `getKey` → `null` |
+| 로딩 상태 | `isFetchingNextPage` 제공 | `isLoading`만 (첫 로딩 전용) | `isValidating` |
+| 페이지 번호를 밖에서 쓰기 | 어려움 | **쉬움** — 그냥 상태 | 어려움 |
+| 이미 프로젝트에 있나 | ✅ TanStack Query 사용 중 | ✅ | ❌ 의존성 추가 |
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+**마지막 줄이 결정적이었습니다.** 이 프로젝트는 이미 TanStack Query를 쓰고 있었어요. SWR이 나쁘다는 게 아니라, **같은 일을 하는 데이터 패칭 라이브러리를 두 개 두면** 캐시가 둘로 갈리고 무효화 규칙도 둘이 됩니다.
 
-const InfiniteScroll: React.FC = () => {
-    const [page, setPage] = useState<number>(1);
-    const [photos, setPhotos] = useState<Photo[]>([]);
-    const observerRef = useRef<HTMLDivElement | null>(null);
+> 라이브러리 비교에서 **"이미 프로젝트에 있는가"는 기능 비교표보다 무겁습니다.** 새 도구가 20% 낫다고 두 개를 유지하는 비용을 못 이깁니다.
 
-    const { data, error } = useSWR<Photo[]>(`https://jsonplaceholder.typicode.com/photos?_page=${page}&_limit=10`, fetcher);
+### 그리고 `useSWRInfinite`에 대한 정정
 
-    useEffect(() => {
-        if (data) {
-            setPhotos((prevPhotos) => [...prevPhotos, ...data]);
-        }
-    }, [data]);
+이 글을 처음 쓸 때 SWR의 단점으로 *"react-query처럼 다음 페이지를 명확히 다루는 내장 옵션이 부족하다"* 고 적었습니다. **틀렸습니다.** `useSWRInfinite`가 정확히 그 API고, `getKey`가 `null`을 반환하면 끝이라는 신호입니다.
 
-    useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                setPage((prevPage) => prevPage + 1);
-            }
-        });
+**"내가 안 찾아본 것"을 "라이브러리에 없는 것"으로 적은 것**이고, 비교 글에서 제일 하지 말아야 할 일이었어요. 결론(TanStack Query 채택)은 안 바뀌지만 **근거는 바뀝니다.** "SWR은 기능이 부족해서"가 아니라 "이미 있는 걸 쓰려고"가 맞습니다.
 
-        if (observerRef.current) {
-            observer.observe(observerRef.current);
-        }
+---
 
-        return () => {
-            if (observerRef.current) {
-                observer.unobserve(observerRef.current);
-            }
-        };
-    }, []);
+## 3. 결국 한 가지로 통일하지 못했다
 
-    if (error) return <div>Failed to load</div>;
+실제로는 화면마다 다르게 씁니다.
 
-    return (
-        <div>
-            <h1>Infinite Scroll</h1>
-            <div>
-                {photos.map((photo) => (
-                    <div key={photo.id}>
-                        <img src={photo.thumbnailUrl} alt={photo.title} />
-                        <p>{photo.title}</p>
-                    </div>
-                ))}
-            </div>
-            <div ref={observerRef} style={{ height: '1px' }}></div>
-        </div>
-    );
-};
+| 화면 | 방식 | 이유 |
+|---|---|---|
+| 일정 목록 (전체/공유/검색) | `useInfiniteQuery` | 서버가 `totalPages`를 줌. 받은 그대로 쌓으면 됨 |
+| 여행지 탐색 목록 | `useQuery` + 페이지 상태 | 페이지 번호가 검색어·좌표 필터와 엮임 |
+| 일정 편집의 여행 루트 | `useInView` + Zustand | 서버 페이지와 클라이언트 순서가 병합됨 |
 
-export default InfiniteScroll;
+세 번째는 원래 react-query로 하다가 되돌린 것이고, 그 판단이 코드에 주석으로 남아 있습니다.
+
+```tsx
+// 무한 스크롤 준비
+// 이전에는 react-query로 했었음
+// 병합 이슈로 인하여 zustand만 살리기로!
+const { ref, inView } = useInView();
 ```
 
-- **장점**
-  - 자동 데이터 캐싱 및 가져오기 관리.
-  - 간단한 설정으로 구현 가능.
-- **단점**
-  - 추가 로직 필요.
-  - `react-query`보다 명확한 내장 옵션 부족
+**"통일 못 했다"가 아니라 "통일하면 안 되는 자리가 있었다"** 는 게 지금의 판단입니다. 서버가 페이지를 주는 목록과, 클라이언트에서 순서를 재조립하는 목록은 다른 문제예요.
+
+다만 **되돌린 이유를 코드에 남긴 게 핵심**이었습니다. 안 남겼으면 나중에 누군가(주로 나중의 나) "여기만 왜 react-query를 안 쓰지?" 하고 다시 바꿨을 겁니다.
+
+---
+
+## 4. 남은 것
+
+- **"더 보기" 버튼 대안이 없습니다.** 접근성 부채(1절).
+- **`useSWRInfinite`는 결국 안 써봤습니다.** 2절의 비교는 문서를 읽은 수준이고 실측이 아닙니다.
+- 페이지네이션과의 비교에 **숫자가 없습니다.** 체류 시간이나 스크롤 깊이 같은 걸 재본 적이 없어요. 이 표는 일반론과 이 프로젝트에서의 체감입니다.
+
+---
+
+## 정리
+
+- **라이브러리를 고르기 전에 "이 패턴을 쓸 것인가"를 정합니다.** "둘러보기"에는 무한 스크롤, "찾아가기"에는 페이지네이션.
+- **무한 스크롤을 고르면 스크롤 복원·푸터 접근·접근성이 같이 딸려옵니다.** 셋 다 나중에 청구됩니다.
+- **"이미 프로젝트에 있는가"는 기능 비교표보다 무겁습니다.**
+- **"안 찾아본 것"을 "없는 것"으로 적지 않습니다.**
+- **되돌린 결정은 코드에 이유를 남깁니다.** 안 남기면 원상복구됩니다.
+
+관련 글: [React Infinite Scroll 구현하기](/blog/react-infinite-scroll-구현하기) · [무한 스크롤에서는 왜 이슈가 생긴 걸까](/blog/무한-스크롤에서는-왜-이슈가-생긴-걸까) · [React에서 스크롤 위치 기억하기](/blog/react에서-스크롤-위치-기억하기)

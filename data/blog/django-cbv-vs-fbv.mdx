@@ -161,11 +161,83 @@ def post_create(request):
 
 ---
 
+## 실무에서 CBV가 이겼던 순간과, 물렸던 순간
+
+이 비교는 원론적인데, 실제 프로젝트에서 **어느 쪽이 얼마나 이득이었는지**는 구체적인 상황에서 갈렸습니다.
+
+### CBV가 확실히 이긴 경우 — 공개 화면을 관리자 화면으로 복제할 때
+
+표준데이터 관계도 화면을 관리자용으로도 만들어야 했습니다. 로직은 완전히 같고 **권한과 레이아웃, 노출 범위만** 달랐어요.
+
+CBV라서 이렇게 끝났습니다.
+
+```python
+class StdDataGraphView(TemplateView):
+    active_only = True          # 확장점을 클래스 속성으로 승격
+
+    def get_queryset(self):
+        qs = Dataset.objects.all()
+        return qs.filter(state="ACT") if self.active_only else qs
+
+
+class AdminStdDataGraphView(StaffOnlyMixin, StdDataGraphView):
+    active_only = False         # 관리자는 심사중·보류도 조회
+    extra_context = {"section": "admin"}
+```
+
+**관리자 뷰 네 종을 이 패턴으로 한 번에 만들었습니다.** FBV였다면 함수 네 개를 복사하고 각각에 데코레이터를 쌓고 필터 조건을 손으로 바꿨을 거예요.
+
+여기서 배운 건 **"차이나는 부분을 클래스 속성으로 올려두면 상속이 설정처럼 동작한다"** 는 점입니다. `active_only`를 메서드 안에 하드코딩했으면 `get_queryset()`을 통째로 오버라이드해야 했고, 그러면 로직이 두 벌이 됩니다.
+
+### CBV에 물렸던 경우 — 상속이 최적화까지 물려준다
+
+반대 사례도 있습니다. 목록 성능을 잡으려고 `get_queryset()`에 `prefetch_related`를 넣었어요.
+
+```python
+class DatasetBaseView(...):
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related("metadata")
+```
+
+그런데 이 뷰를 상속한 **다운로드 뷰까지 그 prefetch를 물려받았습니다.** 목록은 한 페이지 20건이라 이득이지만 다운로드는 전량을 훑는 경로라, 연관 객체를 통째로 메모리에 올리면서 기능 네 개가 못 쓰게 됐어요.
+
+FBV였으면 각 함수가 자기 쿼리를 갖고 있으니 애초에 안 생겼을 문제입니다. **CBV의 재사용성은 "좋은 것도 물려주지만 나쁜 것도 물려준다"** 는 뜻이었어요. 자세한 건 [N+1 정리 글의 반대 사례](/blog/django-n-plus-1)에 적었습니다.
+
+### `get_queryset()`에 부작용을 넣지 말 것
+
+CBV에서 특히 하기 쉬운 실수가 하나 더 있습니다. 훅 메서드에 **조회 외의 일**을 넣는 거예요.
+
+```python
+class UserTokenRequestView(LoginRequiredMixin, ListView):
+    def get_queryset(self):
+        ApiTokenRequest.sync_expired()      # 조회 메서드가 DB를 쓴다
+        return ApiTokenRequest.objects.filter(user=self.request.user)
+```
+
+실제로 제가 쓴 코드입니다. 만료 상태를 화면 진입 시점에 맞추려는 의도였고 지금 규모에서는 잘 돌아가는데, **이름이 `get_queryset`인 메서드가 UPDATE를 실행**합니다. 페이지네이션 때문에 여러 번 불릴 수도 있고요.
+
+이 판단의 근거와 대가는 [정책 토글·만료 동기화 회고](/blog/open-api-정책-토글-캐시와-만료-상태-동기화)에 따로 적었습니다. FBV였다면 함수 안에 순서대로 적혀서 눈에 띄었을 텐데, **CBV에서는 훅 안에 숨으면 잘 안 보입니다.**
+
+### 결국 나눈 기준
+
+| 상황 | 선택 |
+|---|---|
+| 같은 화면의 변형이 여럿 (공개/관리자, 필터만 다름) | **CBV** — 차이를 클래스 속성으로 |
+| CRUD가 반복 | **CBV** — 제네릭 + Mixin |
+| 조건 분기가 복잡하고 한 번만 쓰는 화면 | **FBV** — 흐름이 그대로 보임 |
+| 여러 모델을 조합해 한 화면을 만드는 대시보드 | **FBV 또는 `TemplateView` + 명시적 메서드** |
+
+원칙 하나만 남기면 — **"이 화면의 변형이 앞으로 생길 것 같은가"** 입니다. 생길 것 같으면 CBV로 두고 **차이날 지점을 클래스 속성으로 미리 뽑아두는** 게 나중에 제일 싸게 먹혔어요.
+
+---
+
 ## 정리
 
 FBV와 CBV는 둘 다 유효한 선택이며, 하나의 프로젝트에서 혼용해도 괜찮습니다.
 
 - **FBV**: 읽기 쉽고 빠르게 작성 가능. 복잡한 로직에 강함.
 - **CBV**: 반복 패턴 제거에 강함. Mixin 조합으로 확장성 좋음.
+- **CBV를 쓸 땐** 차이나는 값을 클래스 속성으로 올려두고, 훅 메서드(`get_queryset` 등)에는 조회 외의 일을 넣지 않기.
+- **상속은 최적화도 물려줍니다.** 부모 쿼리셋에 붙인 것이 모든 자식 경로에서 옳은지 확인하세요.
 
 실무에서는 단순 CRUD는 CBV로, 비즈니스 로직이 복잡한 뷰는 FBV로 작성하는 경우가 많습니다.

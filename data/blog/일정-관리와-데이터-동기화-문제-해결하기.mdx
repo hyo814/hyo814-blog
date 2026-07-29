@@ -1,128 +1,71 @@
 ---
-title: 일정 관리와 데이터 동기화 문제 해결하기
-date: '2023-09-10'
-tags: [데이터동기화, 프론트엔드, 백엔드]
+title: 일정 데이터 동기화 문제 해결하기 — 그리고 이 해결책은 나중에 뒤집혔다
+date: '2025-01-11'
+tags: [기술노트]
 draft: false
-summary: '증분 동기화 로직을 활용해 일정 관리 애플리케이션의 데이터 동기화 문제를 해결하고, 삭제된 데이터와 실시간 데이터를 정확히 반영하여 사용자 경험을 개선.'
+summary: '여행 루트 목록에서 과거 데이터 병합 오류·삭제 데이터 미반영이 반복돼 병합 로직을 재작성했던 기록입니다. 당시엔 해결이라고 썼는데, 이 방식은 결국 뒤집혔어요 — 병합 자체가 문제의 근원이라 react-query를 이 화면에서 걷어내는 것으로 끝났습니다. 중간 기록으로서의 가치가 있어 결말과 함께 남깁니다. (원래 2023-09로 잘못 적혀 있던 날짜를 커밋 기준 2025-01로 교정했습니다.)'
 ---
 
-## 배경
+# 일정 데이터 동기화 문제 해결하기
 
-최근 일정 관리 애플리케이션에서 일정 데이터와 여행 경로 데이터를 동기화하다가 여러 문제가 터졌습니다. 특히 과거 데이터를 제대로 병합하지 못해 데이터 매칭 오류가 자주 났고, 사용자 경험에도 영향이 컸습니다. 이 글에서는 문제를 어떻게 분석하고 해결했는지 정리합니다.
+[TripTune](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발) 일정 편집 화면의 여행 루트 목록에서 동기화 문제가 반복되던 시기의 기록입니다. 이 글은 **그 싸움의 중간 기록**이고, 결말은 당시 예상과 달랐습니다 — 끝에 붙였습니다.
 
-## 문제 정의
+> **날짜 정정** — 이 글은 원래 2023-09-10으로 게시돼 있었는데, 프로젝트 시작(2024-06)보다 앞선 불가능한 날짜였습니다. 해당 로직(`fetchAndMergeRoutes`)이 들어간 커밋 기준으로 2025-01-11로 교정합니다.
 
-1. **과거 데이터와 새로운 데이터의 병합 오류**
-   - 과거 데이터를 무시한 채 새 데이터만 추가하다 보니 데이터 불일치가 생김.
-   - 삭제된 데이터를 병합에서 빼지 못해 UI 표시 데이터와 실제 데이터가 어긋남.
-2. **무한 스크롤에서 데이터 매칭 문제**
-   - React Query로 무한 스크롤을 구현했는데, 병합 로직이 제대로 동작하지 않아 데이터가 중복되거나 누락됨.
-3. **상태 관리와 동기화 문제**
-   - 삭제된 장소 데이터(`deletedPlaces`)가 동기화되지 않아 삭제 처리가 제대로 안 됨.
-   - 상태 관리 파일(src/store/scheduleStore.ts)의 `fetchAndMergeRoutes` 로직에 오류가 있음.
+## 1. 무엇이 반복해서 깨졌나
 
-## 문제 해결 과정
+- **과거 데이터 병합 오류** — 새 페이지 데이터만 추가하다 보니 이미 화면에 있는 항목과 어긋남
+- **삭제 미반영** — 사용자가 루트에서 뺀 장소(`deletedPlaces`)가 다음 페이지 로드 때 되살아남
+- **중복/누락** — react-query 무한 스크롤의 캐시와 편집 중인 목록이 서로 다른 버전을 들고 있음
 
-### 1. 과거 데이터와 새로운 데이터 병합 로직 수정
+## 2. 당시의 해결 — 병합 로직 재작성
 
-기존 병합 로직은 과거 데이터를 충분히 고려하지 않았습니다. 그래서 병합 로직을 아래와 같이 수정했습니다.
+스토어 액션에서 전 페이지를 순회해 가져온 뒤, "이미 있는 항목"과 "삭제된 항목"을 걸러 병합하도록 재작성했습니다.
 
-```jsx
+```ts
 fetchAndMergeRoutes: async (scheduleId: number) => {
-  try {
-    let currentPage = 1;
-    let totalPages = 1;
-    let allRoutes: Place[] = [];
+  let currentPage = 1;
+  let totalPages = 1;
+  let allRoutes: Place[] = [];
 
-    while (currentPage <= totalPages) {
-      const response = await fetchTravelRoute(scheduleId, currentPage);
-
-      if (response.success) {
-        const { data } = response;
-        totalPages = data.totalPages;
-        allRoutes = [...allRoutes, ...data.content];
-        currentPage++;
-      } else {
-        console.error(`[fetchAndMergeRoutes] 페이지 ${currentPage} 조회 실패`);
-        break;
-      }
-    }
-
-    set((state) => {
-      const mergedRoutes = [
-        ...allRoutes.filter(
-          (newRoute) =>
-            !state.travelRoute.some(
-              (route) => route.placeId === newRoute.placeId,
-            ) &&
-            !state.deletedPlaces.includes(newRoute.placeId),
-        ),
-        ...state.travelRoute,
-      ];
-
-      return {
-        travelRoute: mergedRoutes,
-        addedPlaces: mergedRoutes.map((route) => ({
-          placeId: route.placeId,
-          lat: route.latitude,
-          lng: route.longitude,
-        })),
-      };
-    });
-  } catch (error) {
-    console.error('[fetchAndMergeRoutes] 오류 발생:', error);
+  while (currentPage <= totalPages) {
+    const response = await fetchTravelRoute(scheduleId, currentPage);
+    if (!response.success) break;
+    totalPages = response.data.totalPages;
+    allRoutes = [...allRoutes, ...response.data.content];
+    currentPage++;
   }
+
+  set((state) => ({
+    travelRoute: [
+      ...allRoutes.filter(
+        (newRoute) =>
+          !state.travelRoute.some((r) => r.placeId === newRoute.placeId) &&
+          !state.deletedPlaces.includes(newRoute.placeId),
+      ),
+      ...state.travelRoute,
+    ],
+  }));
 };
-
 ```
 
-### 2. React Query를 활용한 서버 상태 관리
+삭제 반영과 중복 제거는 이 필터로 실제로 잡혔고, 당시 글의 결론은 "React Query와 명시적 병합 로직으로 해결"이었습니다.
 
-React Query를 도입해 서버 상태를 효율적으로 관리하고, 데이터 불일치 문제를 줄였습니다. 얻은 장점은 다음과 같습니다.
+## 3. 그 후 — 이 해결책은 뒤집혔다
 
-- **자동 캐싱 및 리패칭**: 데이터가 바뀌면 최신 상태가 유지됨.
-- **병렬 데이터 요청**: 네트워크 성능 최적화.
-- **명시적 에러 핸들링**: 오류 상황을 상세히 로그로 남김.
+몇 달 뒤, 이 화면에서 **react-query를 아예 걷어냈습니다.** 병합 로직을 아무리 다듬어도 근본 구조가 문제였거든요 — 같은 목록을 react-query 캐시와 zustand 스토어가 **둘 다 소유**하는 한, 병합은 계속 필요하고 병합이 있는 한 충돌 케이스는 계속 나옵니다. 편집 가능한 목록의 주인은 하나(스토어)여야 한다는 게 최종 결론이었고, 그 관점 정리는 [무한 스크롤에서는 왜 이슈가 생긴 걸까](/blog/무한-스크롤에서는-왜-이슈가-생긴-걸까)에 있습니다.
 
-### 3. 삭제 데이터 동기화
+그래서 이 글의 가치는 "해결책"이 아니라 **중간 기록**입니다. 증상(중복·누락·부활)을 필터로 막는 단계를 거쳐야, "필터가 계속 필요하다는 것 자체가 설계 신호"라는 걸 볼 수 있었으니까요.
 
-`deletedPlaces` 상태가 제대로 반영되지 않던 문제를 해결하려고 삭제 데이터 동기화 로직을 새로 만들었습니다. 삭제된 데이터를 병합에서 빼는 필터링 과정을 분명하게 정의했습니다.
+## 4. 다시 보니 — 이 코드 자체의 문제들
 
-```jsx
-const mergedRoutes = [
-  ...allRoutes.filter(
-    (newRoute) =>
-      !state.travelRoute.some((route) => route.placeId === newRoute.placeId) &&
-      !state.deletedPlaces.includes(newRoute.placeId)
-  ),
-  ...state.travelRoute,
-]
-```
+결말과 별개로, 위 코드에는 지금 보면 걸리는 게 셋 있습니다.
 
-### 4. 오류 타입 명시화
+- **"무한 스크롤"이 아니라 전량 재조회입니다.** `while (currentPage <= totalPages)` — 호출될 때마다 1페이지부터 끝 페이지까지 전부 다시 불러옵니다. 스크롤 바닥에 닿을 때마다 전체 목록을 재다운로드하는 구조라, 페이지가 늘수록 비용이 선형으로 커져요. 병합 오류를 "매번 다 새로 가져오기"로 덮은 셈인데, 당시엔 그게 은폐라는 걸 몰랐습니다.
+- **병합 순서가 이상합니다.** 새로 걸러낸 항목을 기존 목록 **앞에** 붙입니다(`[...filtered, ...state.travelRoute]`). 서버 순서 기준이면 새 페이지는 뒤에 와야 하고, 사용자 편집 순서 기준이면 애초에 서버 순서를 덮으면 안 되죠. 이 애매함 자체가 "주인이 둘"이라는 문제의 증상이었습니다.
+- **실패가 조용합니다.** 중간 페이지가 실패하면 `break`로 부분 데이터만 병합하고 사용자에게는 아무 표시가 없습니다. 부분 성공은 침묵할 게 아니라 알려야 하는 상태였어요.
 
-JavaScript에서 `any` 타입 사용을 줄이고 `Error` 타입을 분명히 지정해서 디버깅 시간을 단축했습니다.
+## 정리
 
-```jsx
-try {
-  // 로직 실행
-} catch (error: unknown) {
-  if (error instanceof Error) {
-    console.error('[fetchAndMergeRoutes] 오류 발생:', error.message);
-  }
-}
-
-```
-
-## 결과
-
-위 수정 사항을 반영한 뒤 다음과 같은 개선 효과가 나왔습니다.
-
-1. 과거 데이터와 새로운 데이터가 제대로 병합됨.
-2. 삭제된 데이터가 UI와 백엔드 상태 양쪽에 정확히 반영됨.
-3. React Query 기반 서버 상태 관리로 데이터 불일치 문제 해결.
-4. 명시적 에러 핸들링으로 디버깅 효율 향상.
-
-## 결론
-
-이번 작업으로 상태 관리와 데이터 동기화가 얼마나 중요한지 다시 한번 느꼈습니다. 특히 React Query와 분명한 병합 로직을 함께 쓰면서 데이터 불일치를 잡았고, 좀 더 안정적인 애플리케이션 환경을 만들 수 있었습니다. 앞으로도 사용자 경험을 끌어올리려고 계속 문제를 분석하고 개선해 나갈 생각입니다.
+- 증상 필터(중복 제거·삭제 반영)가 **계속 필요하다면, 그건 유지할 로직이 아니라 설계를 의심하라는 신호**였습니다.
+- "해결했다"고 쓴 글도 시간이 지나면 중간 기록이 됩니다. 결말을 이어 붙일 수 있다는 게 기록을 남기는 이유고요.

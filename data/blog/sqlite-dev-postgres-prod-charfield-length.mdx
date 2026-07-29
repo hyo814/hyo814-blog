@@ -1,0 +1,185 @@
+---
+title: SQLite에선 통과하고 PostgreSQL에서 터진 CharField(512)
+date: '2026-07-09'
+tags: [기술노트]
+draft: false
+summary: '로컬(SQLite)에선 멀쩡히 적재되던 메타데이터 로더가 운영(PostgreSQL)에서만 value too long으로 죽었습니다. 프런트 쪽을 주로 맡다가 모델·마이그레이션을 조금씩 만지기 시작한 입장에서, 원인을 어떻게 좁혀갔고 네 가지 선택지 중 왜 TextField를 골랐는지 정리합니다.'
+---
+
+# SQLite에선 통과하고 PostgreSQL에서 터진 CharField(512)
+
+메타데이터 표준 용어를 엑셀에서 읽어 DB에 넣는 적재 커맨드가 있습니다. 로컬에서는 몇 달 동안 멀쩡히 돌았는데, 운영 환경에 처음 적재하는 순간 이렇게 죽었습니다.
+
+```
+django.db.utils.DataError: value too long for type character varying(512)
+```
+
+같은 파일, 같은 코드, 같은 명령어인데 로컬에서만 성공합니다.
+
+저는 이 프로젝트에서 화면과 프런트 쪽을 주로 맡고 있고, 모델과 마이그레이션은 필요할 때 조금씩 넓혀가는 중입니다. 그래서 이 에러를 처음 봤을 땐 "적재 스크립트 버그겠지" 쪽부터 뒤졌어요. 결과적으로 코드는 멀쩡했고, **개발은 SQLite, 운영은 PostgreSQL**이었던 게 전부였습니다. 그 사실에 도달하기까지의 과정을 그대로 적어둡니다.
+
+---
+
+## 1. 증상 — 로컬만 성공, 운영만 실패
+
+```bash
+# 로컬(SQLite): 성공
+python manage.py load_meta_terms
+
+# 운영(PostgreSQL): DataError
+python manage.py load_meta_terms
+```
+
+처음엔 엑셀 파일이 서로 다른 줄 알았습니다. 운영에 올린 파일을 그대로 내려받아 로컬에서 다시 돌려도 통과하더군요. **같은 입력인데 결과가 다르다** — 그럼 입력이 아니라 환경이 변수입니다.
+
+---
+
+## 2. 원인을 좁혀간 방법
+
+에러 메시지가 `character varying(512)`라고 컬럼 타입까지 말해주고 있었으니, 확인할 건 두 가지였습니다. **어떤 필드가 512인가**, 그리고 **실제 데이터가 512를 넘는가**.
+
+### ① 512로 선언된 필드 찾기
+
+```bash
+grep -n "max_length=512" std_data/models.py
+```
+
+정의(`definition`) 필드 둘이 걸렸습니다.
+
+```python
+class MetaClass(models.Model):
+    label_ko = models.CharField(max_length=255, null=True, blank=True, verbose_name="국문 레이블")
+    definition = models.CharField(max_length=512, null=True, blank=True)      # ← 여기
+    definition_ko = models.TextField(null=True, blank=True, verbose_name="국문 정의")
+```
+
+여기서 이미 이상한 점이 보입니다. **국문 정의(`definition_ko`)는 `TextField`인데 영문 정의(`definition`)만 `CharField(512)`**예요. 한쪽만 고친 흔적입니다. 아마 국문을 넣다가 길이 초과를 겪고 그때 그 필드만 바꿨을 거예요.
+
+### ② 실제 데이터 최댓값 재기
+
+추측 대신 숫자를 보려고 shell에서 직접 쟀습니다.
+
+```python
+from django.db.models import Max
+from django.db.models.functions import Length
+
+MetaClass.objects.aggregate(Max(Length("definition")))
+# {'definition__length__max': 4192}
+MetaClassProperty.objects.aggregate(Max(Length("definition")))
+# {'definition__length__max': 815}
+```
+
+- 클래스 영문 정의 최대 **4,192자**
+- 속성 영문 정의 최대 **815자**
+
+`max_length=512`를 한참 넘습니다. 그런데 이 조회 자체가 **로컬 SQLite에서 돌아갔다**는 게 결정적이었어요. 로컬 DB에는 4,192자가 이미 들어가 있었던 겁니다.
+
+### ③ 왜 SQLite는 통과시켰나
+
+여기서 처음 알게 된 사실인데, **SQLite는 컬럼 타입의 길이 제한을 강제하지 않습니다.** SQLite는 타입 친화성(type affinity) 모델을 써서 `varchar(512)`라고 선언해도 사실상 TEXT처럼 다루고, 4,192자를 넣어도 조용히 저장합니다. 반면 PostgreSQL은 `character varying(512)`를 문자 그대로 지켜서 초과분에 `DataError`를 던져요.
+
+그럼 Django의 `max_length` 검증은요? `max_length`는 **폼/`full_clean()` 단계의 검증**입니다. 그런데 적재 커맨드는 `update_or_create`로 DB에 바로 밀어넣기 때문에 `full_clean()`을 타지 않아요.
+
+```python
+# load_meta_terms.py — 폼 검증 경로가 아니다
+MetaClass.objects.update_or_create(
+    name=row["name"],
+    defaults={
+        "definition": row["definition"],
+        "definition_ko": row["definition_ko"],
+        ...
+    },
+)
+```
+
+정리하면 **애플리케이션 검증도 안 타고, 로컬 DB 제약도 없었으니, 이 버그는 로컬에서 구조적으로 재현될 수 없었습니다.** 운영에 처음 붙는 날 처음 드러날 수밖에 없었던 거예요.
+
+---
+
+## 3. 네 가지 선택지와 고른 이유
+
+원인을 알고 나니 고칠 방법이 여러 개였습니다. 각각 뭘 포기하는지 적어놓고 골랐어요.
+
+| 방법 | 장점 | 포기하는 것 | 판단 |
+|---|---|---|---|
+| ① `max_length`를 5000 등으로 늘리기 | 변경 최소 | 다음에 4,193자가 오면 또 터짐. 5000의 근거가 없음 | ✗ |
+| ② 로더에서 512자로 자르기(truncate) | 스키마 안 건드림 | **데이터 손실**. 정의가 잘린 채 서비스됨 | ✗ |
+| ③ `TextField`로 변경 | 상한 근거가 없는 필드에 상한을 없앰. 국문 필드와 타입 정렬 | PG에서 마이그레이션 필요 | **✓ 채택** |
+| ④ 로컬 DB를 PostgreSQL로 교체 | 재현 불가능 문제를 근본 해결 | 이번 장애를 지금 막지는 못함 | 별건으로 진행 |
+
+②는 잠깐 솔깃했습니다. 스키마를 안 건드리니 제일 빨라 보였거든요. 그런데 이건 **에러를 데이터 손실로 바꾸는 것**뿐입니다. 지금은 시끄럽게 실패하지만, 자르기 시작하면 조용히 틀린 데이터가 쌓여요. 표준 용어의 정의가 중간에 잘려 있으면 그걸 나중에 발견할 방법이 없습니다.
+
+①과 ③ 사이에서는 "**이 필드에 상한을 둘 근거가 있는가**"로 갈랐습니다. `label_ko`가 255인 건 레이블이니까 납득이 되는데, 정의는 몇 자여야 한다는 기준이 애초에 없어요. 근거 없는 숫자는 언젠가 다시 터지는 숫자입니다. 마침 바로 옆 `definition_ko`가 이미 `TextField`라 타입을 맞추는 게 자연스럽기도 했고요.
+
+④는 이 장애와 별개로 팀에 제안했습니다. 이번 건의 진짜 교훈은 여기에 있으니까요.
+
+---
+
+## 4. 수정
+
+```python
+# 변경 전
+definition = models.CharField(max_length=512, null=True, blank=True)
+
+# 변경 후
+definition = models.TextField(null=True, blank=True)
+```
+
+`MetaClass`와 `MetaClassProperty` 두 모델에 같은 수정을 넣고 마이그레이션을 만들었습니다.
+
+```python
+class Migration(migrations.Migration):
+    dependencies = [
+        ("std_data", "0016_metaclassproperty_range_class"),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name="metaclass",
+            name="definition",
+            field=models.TextField(blank=True, null=True),
+        ),
+        migrations.AlterField(
+            model_name="metaclassproperty",
+            name="definition",
+            field=models.TextField(blank=True, null=True),
+        ),
+    ]
+```
+
+마이그레이션을 넣기 전에 실제로 어떤 SQL이 나가는지부터 확인했습니다. 운영 DB에 거는 변경이라 눈으로 보고 싶었어요.
+
+```bash
+python manage.py sqlmigrate std_data 0017
+```
+
+```sql
+ALTER TABLE "meta_class" ALTER COLUMN "definition" TYPE text;
+ALTER TABLE "meta_class_property" ALTER COLUMN "definition" TYPE text;
+```
+
+`varchar(n) → text`는 PostgreSQL에서 **넓히는 방향**이라 데이터 변환 없이 끝납니다. 반대 방향(`text → varchar(n)`)이었다면 초과 데이터 때문에 마이그레이션 자체가 실패했을 거예요. 이 비대칭을 확인하고 나서야 마음 놓고 올렸습니다.
+
+---
+
+## 5. 검증
+
+- 운영과 같은 PostgreSQL을 도커로 띄워 로더 재실행 → `DataError` 없이 완주
+- 최장 정의(4,192자) 레코드를 조회해 잘림 없이 저장됐는지 확인
+- 정의를 표시하는 목록 화면들이 긴 텍스트에서 깨지지 않는지 확인 — 표에서는 `line-clamp-2`로 두 줄까지만 보여주고 있어서 영향 없었습니다
+
+이번에 "운영과 같은 DB를 로컬에 띄워보는 것"을 처음 해봤는데, 사실 이걸 먼저 했으면 원인 추적에 쓴 시간의 대부분이 필요 없었을 겁니다.
+
+---
+
+## 6. 회고
+
+백엔드를 조금씩 넓혀가는 입장에서 이번에 남은 것들입니다.
+
+- **개발 DB와 운영 DB가 다르면, 그 차이가 곧 "로컬에서 재현 불가능한 버그"의 목록입니다.** varchar 길이, 대소문자 구분, 정렬(collation), 날짜/타임존 — 전부 SQLite와 PostgreSQL이 다르게 굽니다. 이번엔 길이였고, 다음엔 다른 게 걸릴 거예요.
+- **`max_length`는 "여기까지만 허용하겠다"는 의도가 있을 때만 씁니다.** 정의·설명·비고처럼 상한의 근거가 없는 자유 텍스트는 처음부터 `TextField`가 맞습니다.
+- **벌크 적재 경로는 폼 검증을 타지 않습니다.** 로더가 넣는 데이터에는 DB 제약이 유일한 방어선이라는 걸 전제로 필드를 설계해야 한다는 걸 이번에 알았어요.
+- **에러를 데이터 손실로 바꾸는 수정은 수정이 아닙니다.** truncate로 넘어갔으면 지금쯤 잘린 정의가 조용히 서비스되고 있었을 겁니다.
+- 스키마 변경은 올리기 전에 `sqlmigrate`로 실제 SQL을 봅니다. 넓히는 변경인지 좁히는 변경인지만 알아도 위험도가 갈립니다.
+
+가장 좋은 해결은 로컬도 운영과 같은 DB를 쓰는 것입니다. 도커로 PostgreSQL 하나 띄우는 비용이, 운영 배포 당일에 이런 걸 만나는 비용보다 훨씬 쌉니다. 이건 제안해뒀어요.

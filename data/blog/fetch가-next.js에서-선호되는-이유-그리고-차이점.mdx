@@ -1,104 +1,56 @@
 ---
-title: fetch가 Next.js에서 선호되는 이유, 그리고 차이점
+title: fetch가 Next.js에서 선호되는 이유, 그리고 axios와의 차이점
 date: '2023-06-01'
-tags: [Next.js, React, 프론트엔드]
+tags: [기술노트]
 draft: false
-summary: 'fetch API가 Next.js에서 선호되는 이유와 다른 데이터 페칭 방법과의 차이점'
+summary: 'fetch와 axios의 차이를 정리했던 글입니다. 내장 API·번들 크기·SSR 호환이라는 당시 결론은 지금도 유효하지만, 다시 보니 진짜 이유를 놓치고 있었어요 — Next.js App Router는 fetch 자체를 확장해 캐싱·중복 제거를 얹습니다. 실제 프로젝트에서 fetch를 직접 채택하고 래퍼를 만들며 치른 비용까지 붙여서 업데이트했습니다.'
 ---
 
-### **1. `fetch`가 Next.js에서 선호되는 이유**
+# fetch가 Next.js에서 선호되는 이유, 그리고 axios와의 차이점
 
-#### **a. 기본 내장 API**
+2023년에 정리했던 글입니다. 기본 비교는 그대로 두고, 이후 실제 프로젝트에서 fetch를 채택해 운영하며 알게 된 것과 **시효가 지난 부분의 정정**을 뒤에 붙였습니다.
 
-- **fetch**는 브라우저와 Node.js 환경에서 기본적으로 제공되는 API입니다.
-  Next.js는 브라우저와 서버(SSR) 모두에서 작동하기 때문에, 추가적인 패키지 설치 없이 바로 사용 가능한 `fetch`를 선호합니다.
+## 1. fetch가 선호되는 이유 (당시 정리)
 
-#### **b. SSR 환경과 호환성**
+- **기본 내장** — 브라우저와 Node.js 양쪽에 내장이라, 서버(SSR)와 클라이언트를 오가는 Next.js에서 추가 설치 없이 동일하게 동작합니다.
+- **번들 크기** — axios는 외부 의존성이고, fetch는 번들에 아무것도 더하지 않습니다.
+- **표준** — 표준 API를 따르는 것이 장기 유지보수에 유리합니다.
 
-- Next.js는 서버 측에서 데이터를 가져오는 기능(예: `getServerSideProps`, `getStaticProps`)을 지원합니다.
-  `fetch`는 브라우저와 서버 환경 모두에서 동일한 방식으로 작동하기 때문에 Next.js의 SSR/SSG와 잘 통합됩니다.
+## 2. fetch vs axios 핵심 차이
 
-#### **c. 번들 크기 감소**
+| | fetch | axios |
+| --- | --- | --- |
+| 제공 방식 | 내장 | 외부 라이브러리 |
+| JSON 처리 | `.json()` 직접 호출 | 자동 변환 |
+| HTTP 에러 | **reject 안 됨** — `response.ok` 직접 확인 | 4xx/5xx에서 자동 reject |
+| 인터셉터·기본 헤더 | 직접 구현 | 기본 제공 |
 
-- `axios`를 사용하면 프로젝트 번들 크기가 커질 수 있습니다.
-  `fetch`는 내장 API이기 때문에 번들 크기에 영향을 주지 않아 더 가벼운 애플리케이션을 만들 수 있습니다.
+fetch의 가장 큰 함정은 에러 처리입니다. **404·500에서도 Promise가 성공**하므로, `ok` 확인을 빼먹으면 에러 응답을 정상 데이터처럼 파싱하다 엉뚱한 곳에서 터집니다.
 
-#### **d. 표준화된 API**
-
-- `fetch`는 JavaScript의 표준 API로, 최신 브라우저와 Node.js 환경에서 기본적으로 지원됩니다.
-  표준을 따르는 것은 장기적인 유지보수성과 호환성 측면에서 유리합니다.
-
----
-
-### **2. `fetch`와 `axios`의 주요 차이점**
-
-#### **a. 기본 제공 여부**
-
-- `fetch`: 브라우저 및 Node.js에 내장된 API.
-- `axios`: 외부 라이브러리로 설치(`npm install axios`) 필요.
-
-#### **b. 데이터 처리 방식**
-
-- **fetch**:
-  - `fetch`는 응답을 JSON으로 자동 변환하지 않습니다. 응답 데이터를 처리하려면 `.json()` 메서드를 호출해야 합니다.
-    ```javascript
-    const response = await fetch('/api/data')
-    const data = await response.json()
-    ```
-- **axios**:
-  - `axios`는 응답 데이터를 자동으로 JSON으로 변환합니다.
-    ```javascript
-    const { data } = await axios.get('/api/data')
-    ```
-
-#### **c. HTTP 오류 처리**
-
-- **fetch**:
-  - HTTP 오류(예: 404, 500)가 발생해도 Promise가 reject되지 않습니다. 응답 객체의 `ok` 속성을 확인해야 합니다.
-    ```javascript
-    const response = await fetch('/api/data')
-    if (!response.ok) {
-      throw new Error('HTTP error: ' + response.status)
-    }
-    const data = await response.json()
-    ```
-- **axios**:
-  - HTTP 오류가 발생하면 Promise가 자동으로 reject됩니다.
-    ```javascript
-    try {
-      const { data } = await axios.get('/api/data')
-    } catch (error) {
-      console.error(error.message)
-    }
-    ```
-
-#### **d. 기능 확장**
-
-- **axios**:
-  - 기본적으로 요청 취소, 요청 및 응답 인터셉터, 기본 헤더 설정 등 추가 기능 제공.
-  - 복잡한 API 클라이언트 구축에 더 적합.
-- **fetch**:
-  - 이런 기능을 사용하려면 직접 구현하거나 추가 라이브러리가 필요.
-
-#### **e. 브라우저 호환성**
-
-- **fetch**:
-  - 구형 브라우저(예: IE11)에서는 폴리필이 필요.
-- **axios**:
-  - 구형 브라우저에서도 더 나은 지원 제공.
+```javascript
+const response = await fetch('/api/data')
+if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
+const data = await response.json()
+```
 
 ---
 
-### **3. 언제 `axios`를 사용하는 것이 더 나을까?**
+## 3. 다시 보니 — 이 글이 놓쳤던 것과 시효가 지난 것
 
-- **복잡한 요청 흐름**: 요청 취소 기능(`CancelToken`), 응답/요청 인터셉터 사용이 필요한 경우.
-- **구형 브라우저 지원 필요**: IE11 같은 구형 브라우저에서 작동해야 한다면, `axios`가 더 적합.
-- **반복되는 설정**: 기본 URL, 헤더 설정이 자주 필요할 경우 `axios`가 더 편리.
+### 진짜 이유는 "내장이라서"가 아니었다
 
----
+당시엔 내장·번들·표준을 이유로 꼽았는데, App Router 이후로 보면 더 근본적인 이유가 있습니다. **Next.js는 fetch를 자기 캐싱 계층의 인터페이스로 확장합니다** — `fetch(url, { next: { revalidate: 60 } })`처럼 요청 단위 캐시 수명을 걸고, 같은 렌더 패스의 중복 요청을 자동으로 합쳐요. 이 확장은 fetch에만 적용되므로, axios를 쓰면 Next.js 캐싱·재검증 체계 바깥에서 노는 셈이 됩니다. "선호"가 아니라 **프레임워크와의 통합 여부**의 문제였던 거죠. 이 글의 예시로 들었던 `getServerSideProps`/`getStaticProps`도 Pages Router 시절 API라, 지금 신규 프로젝트 기준으로는 서버 컴포넌트에서 fetch를 직접 await하는 모양이 표준입니다.
 
-### **4. 결론**
+### "취소가 필요하면 axios" — 지금은 틀린 말
 
-- **Next.js에서는 `fetch`가 기본적이고 효율적인 선택**:
-  - 내장 API로 번들 크기를 줄이고, SSR/SSG와 자연스럽게 통합되며, Node.js와 브라우저 환경 모두에서 표준적으로 작동하기 때문.
-- 그러나 **복잡한 HTTP 요청 로직**이 필요하거나 **기능 확장**이 필요한 경우에는 `axios`를 고려할 수 있습니다.
+원문 3절에서 요청 취소가 필요하면 axios(`CancelToken`)를 권했는데, **CancelToken은 deprecated**됐고 axios도 지금은 `AbortController`를 씁니다. 그런데 `AbortController`는 fetch도 똑같이 지원해요. 취소는 더 이상 axios를 고를 이유가 아닙니다. IE11 지원 항목도 마찬가지로 시효가 끝났습니다.
+
+### 인터셉터 없는 대가는 실제로 치렀다
+
+"인터셉터가 필요하면 axios"는 지금도 맞는 말인데, 실제 프로젝트(TripTune)에서는 **그럼에도 fetch를 골랐고**, 그 대가로 401 처리·토큰 갱신·재시도를 담은 래퍼를 직접 만들었습니다. 처음엔 그 처리가 화면마다 흩어져 로그인 풀림·중복 alert·무한 갱신 루프를 겪었고, 공통 래퍼 한곳으로 모으고서야 끝났어요 — [그 과정은 따로 정리](/blog/로그인-풀림-버그-계보와-401-처리-일원화)했습니다. 요약하면: **fetch를 고르는 건 공짜가 아니라, axios가 기본 제공하는 것을 언제 직접 만들지 정하는 결정**이었습니다.
+
+## 4. 지금 기준의 결론
+
+- **Next.js라면 fetch** — 내장이라서가 아니라, 프레임워크의 캐싱·중복 제거가 fetch 위에 얹히기 때문.
+- **인터셉터·재시도·공통 에러 처리가 필요한 규모**라면, axios를 들이거나 fetch 래퍼를 직접 만들거나 — 어느 쪽이든 그 계층은 생깁니다. 안 만들면 화면마다 복사되다 사고가 나는 걸 겪었습니다.
+- 취소(AbortController)와 브라우저 지원은 이제 판단 기준이 아닙니다.

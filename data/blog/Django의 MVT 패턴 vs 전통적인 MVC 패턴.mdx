@@ -3,130 +3,65 @@ title: Django의 MVT 패턴 vs 전통적인 MVC 패턴
 date: '2025-04-23'
 tags: [기술노트]
 draft: false
-summary: '장고에서는 mvt 패턴을 가진다고 하는데 mvc 패턴 과는 어떠한 차이가 있는지 정리 해보자.'
+summary: 'Django는 MVT 패턴이라는데 MVC와 뭐가 다른지 정리했습니다. 결론은 이름 매핑 하나로 끝나는데(Django의 View = MVC의 Controller), 실무에서 정작 어려웠던 건 그 다음 — "그래서 이 로직은 View, Model, Template 중 어디에 두나"였습니다. 개념 정리 뒤에 그 경계에서 실제로 겪은 것들을 붙였습니다.'
 ---
 
 # Django의 MVT 패턴 vs 전통적인 MVC 패턴
 
-[](https://qph.cf2.quoracdn.net/main-qimg-4fd67f68b9ab55c6d4d9f6ba88b0a065)
+Django를 실무에서 쓰게 되면서 "MVT 패턴"이라는 말부터 정리했던 글입니다. 결론부터 말하면 **용어 매핑 표 하나로 끝나는 이야기**인데, 진짜 어려운 건 그 다음이었습니다. 개념 정리는 앞에 그대로 두고, 실무에서 걸린 지점을 뒤에 붙였습니다.
 
-[](https://qph.cf2.quoracdn.net/main-qimg-1744f41dfe446047ed4151f9b51c47d7)
+## 1. 매핑 — 이 표가 이 주제의 전부다
 
-https://cupofcode.blog/intro-to-django/
+| 역할 | MVC | MVT (Django) |
+| --- | --- | --- |
+| 데이터 | Model | Model |
+| 로직·요청 처리 | **Controller** | **View** |
+| 화면 | **View** | **Template** |
 
-1. user request
- 1. User Makes request by hitting the Url
-2. url resolving
- 1. The Url is resolved which maps to a view
-3. view logic
- 1. view contain all the custom logic and connect to templates and models
-4. model
- 1. model contains the data as it is connected to database with orm. it provide required data to views to be sent to template
-5. template
- 1. context data is passed from view to html template to be displayed
+혼란의 근원은 Django가 **Controller에 해당하는 것을 View라고 부른다**는 명명 하나입니다. Django의 View는 요청을 받아 로직을 실행하고 데이터를 넘기는 중간 처리자(=MVC의 Controller)고, 사용자에게 보이는 화면은 Template(=MVC의 View)이 담당합니다. "Django에는 Controller가 없다"가 아니라 **이름이 다를 뿐 같은 자리**가 있는 겁니다.
 
-
----
-
-## 1. MVT와 MVC 패턴 개요 및 차이
-
-MVT(Model-View-Template)와 MVC(Model-View-Controller)는 웹 프레임워크에서 애플리케이션 아키텍처를 설계할 때 자주 쓰는 패턴입니다. Django는 MVT 패턴을 따르지만, 사실상 MVC의 변형 구조입니다. 가장 큰 차이는 Django의 "View"가 비즈니스 로직을 처리하고, HTML을 렌더링하는 템플릿 시스템이 MVC의 View 역할을 대신한다는 점입니다.
-
----
-
-## 2. Django MVT 각 구성 요소의 역할 (MVC와의 매핑 포함)
-
-- **Model**: 데이터베이스 테이블과 1:1로 매핑되는 클래스. DB 읽기/쓰기 로직을 담당합니다.
-- **View**: 클라이언트 요청을 받아 로직을 실행하고 템플릿에 데이터를 넘겨주는 중간 처리자입니다. (MVC의 Controller 역할)
-- **Template**: 사용자에게 보일 HTML을 담당하며, context 데이터로 렌더링됩니다. (MVC의 View 역할)
-
----
-
-## 3. MVT vs MVC 구조 다이어그램
-
-구조를 비교하면 다음과 같습니다.
-
-MVC:
-
-- Model ↔ Controller ↔ View
-
-MVT:
-
-- Model ↔ View ↔ Template
-
-Django는 Controller 없이 View가 이를 대신하며, Template이 렌더링을 전담합니다.
-
----
-
-## 4. Django 백엔드의 요청-응답 처리 흐름
+## 2. 요청-응답 흐름
 
 1. 사용자의 HTTP 요청 수신
-2. URLconf에 따라 해당 View 함수 호출
-3. View는 Model과 상호작용하여 데이터 처리
-4. 처리된 데이터를 Template에 전달하여 HTML 생성
-5. 생성된 HTML을 클라이언트에게 응답으로 반환
+2. URLconf가 URL을 해석해 해당 View 함수 호출
+3. View가 Model(ORM)과 상호작용해 데이터 처리
+4. 처리된 데이터를 context로 Template에 전달해 HTML 생성
+5. 생성된 HTML을 응답으로 반환
 
----
+(참고: [cupofcode — intro to django](https://cupofcode.blog/intro-to-django/))
 
-## 5. Django 렌더링 과정에서의 성능 포인트
+## 3. 역할 분리가 주는 것
 
-- 쿼리 최적화: ORM에서 `select_related`, `prefetch_related` 활용
-- 템플릿 캐싱: 반복 렌더링되는 부분은 fragment cache 적용
-- DB 접근 최소화: 불필요한 DB 호출 제거, context data 정리
-- Static 파일 최적화: CDN, 압축, 미리 컴파일된 자산 사용
-
----
-
-## 6. MVT 패턴이 프로젝트 구조에 미치는 영향
-
-- 역할이 명확히 나뉘어 협업 효율이 올라갑니다.
-- View에서 로직, Template에서 UI, Model에서 데이터를 분리하므로 유지보수가 쉬워집니다.
-- 구조가 일관되어 코드베이스가 커져도 복잡도가 낮습니다.
-
----
-
-## 7. MVT 패턴이 프로젝트 유지보수에 주는 도움
-
-- 로직과 표현이 분리되어 있어 UI를 바꿀 때 백엔드를 손대지 않아도 됩니다.
+- 로직(View)과 표현(Template)이 분리돼, UI 수정이 백엔드 코드를 건드리지 않습니다.
 - 구성 요소별로 따로 테스트하기 쉽습니다.
-- 재사용성 높은 컴포넌트 설계에 유리합니다.
+- 구조가 프레임워크 차원에서 강제되니, 코드베이스가 커져도 "어디에 뭐가 있는지"의 예측 가능성이 유지됩니다.
 
 ---
 
-## 8. MVT 패턴이 프로젝트 확장성에 미치는 영향
+## 실무에서 안 통했던 지점
 
-- 기능을 추가해도 기존 구조를 크게 해치지 않고 모듈을 확장할 수 있습니다.
-- View, Template 파일이 많아져도 기능별 디렉토리로 나누기 쉽습니다.
-- 대규모 트래픽을 고려해 로직을 분산하거나 따로 배포하기에도 편합니다.
+여기까지가 정리고, 여기부터가 실전입니다. **매핑 표는 5분이면 이해되는데, 그 표가 답해주지 않는 질문이 실무의 전부였습니다.**
 
----
+### 1. "View가 Controller"라는 도식은 로직의 주소를 정해주지 않는다
 
-## 9. MVC 패턴과 MVT 패턴의 비교
+패턴은 칸을 세 개 주지만, 실제 코드는 그 경계 위에서 씁니다. 목록 화면 하나에도 필터링·정렬·페이지네이션·권한 검사가 있는데, 이걸 View에 다 쓰면 뷰 함수가 수백 줄이 되고, Model 매니저로 내리면 재사용은 좋지만 추적이 어려워집니다. 이 고민의 연장이 함수형 뷰(FBV)냐 클래스형 뷰(CBV)냐였고, 실제 프로젝트에서 어느 쪽을 언제 썼는지는 [따로 정리](/blog/django-cbv-vs-fbv)했습니다.
 
-| 항목 | MVC | MVT (Django) |
-| --- | --- | --- |
-| 모델 | Model | Model |
-| 컨트롤러 | Controller | View |
-| 뷰 | View | Template |
+### 2. Template은 로직이 새어 들어오는 걸 막아주지 않는다
 
-Django의 View는 Controller 역할을 하고, 사용자에게 보이는 화면은 Template이 담당합니다.
+"Template은 표현만"이라는 원칙과 달리, 템플릿 언어에도 `if`·`for`가 있으니 **로직은 조용히 템플릿으로 샙니다.** 조건 분기 서너 개가 겹친 템플릿은 테스트도 못 하고 읽기도 어려웠어요. 실무에서 쓴 완충 장치는 두 가지였습니다:
 
----
+- **모든 페이지에 필요한 공통 데이터**(예: 헤더의 안 읽은 쪽지 수)는 각 View마다 context에 넣는 게 아니라 context processor로 — [실제 사례](/blog/django-context-processor-쪽지-카운트)
+- **반복되는 화면 조각**은 템플릿 매크로로 공용화 — [실제 사례](/blog/django-템플릿-공용-매크로와-스크롤-스파이-외부화-회고)
 
-## 10. 템플릿 중심 개발의 장점과 한계
+둘 다 매핑 표에는 등장하지 않지만, MVT를 실무에서 굴리려면 이 층이 필요했습니다.
 
-**장점**:
+### 3. 복잡한 동적 UI 앞에서 Template은 뼈대까지만이다
 
-- 프론트엔드 개발자가 Template만 만져도 UI를 바꿀 수 있습니다.
-- 빠른 프로토타이핑과 서버사이드 렌더링에 유리합니다.
-
-**한계**:
-
-- 복잡한 동적 UI를 다루기 어렵습니다(JS 프레임워크가 필요합니다).
-- 로직과 표현이 템플릿에 얽히면 가독성이 떨어지기 쉽습니다.
+서버사이드 렌더링이라 프로토타이핑은 빨랐지만, 트리 탐색·그래프 시각화·대시보드처럼 **상호작용이 많은 화면은 결국 Template이 아니라 JS(D3, jsTree)가 담당**했습니다. Template은 컨테이너와 초기 데이터 주입까지 하고, 나머지는 클라이언트 스크립트의 영역이었어요. MVT의 T가 커버하는 범위를 처음에 과대평가했다가, 화면 복잡도가 올라갈수록 "Django는 데이터와 뼈대, 화면 동작은 JS"로 역할이 재편됐습니다.
 
 ---
 
-## 11. Django에서의 View는 MVC의 Controller인가?
+## 돌아보면
 
-맞습니다. Django의 View는 비즈니스 로직 처리, 요청 분기, 데이터 가공을 맡으며 MVC의 Controller와 같은 역할을 합니다. Template은 MVC에서 View가 맡던 역할, 즉 사용자에게 보이는 화면을 담당합니다.
+- **패턴 이름 논쟁은 실무에서 5분짜리 주제였습니다.** MVT냐 MVC냐보다 "이 로직의 주소가 어디냐"는 질문이 매일 나왔고, 그 답은 패턴이 아니라 프로젝트의 컨벤션으로 정해야 했습니다.
+- **원문의 6·7·8절은 같은 말 세 번이었습니다.** 유지보수에 좋다, 협업에 좋다, 확장에 좋다 — 전부 "역할 분리가 좋다"의 반복이라 이번에 한 절로 합쳤습니다. 정리 글이 길어질 때는 내용이 는 게 아니라 같은 말이 늘어난 것일 수 있다는 걸 이 글 스스로가 보여주고 있었어요.

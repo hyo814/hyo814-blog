@@ -1,16 +1,20 @@
 ---
-title: React Infinite Scroll 구현하기
+title: React Infinite Scroll 구현하기 — 세 가지 방법과, 실무에서 안 통했던 지점
 date: '2025-01-12'
 tags: [기술노트]
 draft: false
-summary: 'React Infinite Scroll 구현하기를 3종류로 구현'
+summary: 'useInfiniteQuery, useQuery, useSWR로 무한 스크롤을 각각 구현해 비교했습니다. 그런데 실제 프로젝트에 넣어보니 예제 코드 세 개가 전부 문제를 갖고 있었어요. 종료 조건, stale closure, 등호 비교로 바닥을 판정하는 것까지 — 실무에서 걸린 지점을 뒤에 덧붙였습니다.'
 ---
 
-무한 스크롤은 많은 웹 애플리케이션에서 데이터 로딩 경험을 개선하기 위해 자주 사용되는 패턴입니다. React에서 무한 스크롤을 구현하는 방법은 여러 가지가 있는데, 이번 글에서는 `@tanstack/react-query`의 `useInfiniteQuery`와 `useQuery`, 그리고 `swr`의 `useSWR`을 사용하여 무한 스크롤을 구현하는 방법을 비교해보려고 합니다.
+# React Infinite Scroll 구현하기
+
+무한 스크롤은 많은 웹 애플리케이션에서 데이터 로딩 경험을 개선하기 위해 자주 쓰이는 패턴입니다. React에서 구현하는 방법은 여러 가지인데, 여기서는 `@tanstack/react-query`의 `useInfiniteQuery`와 `useQuery`, 그리고 `swr`의 `useSWR`을 비교합니다.
+
+**아래 1~3은 처음 정리할 때 쓴 예제입니다.** 그 뒤에 [TripTune](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발)에 실제로 넣으면서 이 예제들이 왜 그대로는 안 되는지 알게 됐고, **4절부터가 그 기록**입니다. 예제를 고쳐 쓰지 않고 남겨둔 건, 뭘 몰랐는지가 4절의 재료라서예요.
 
 ---
 
-## 1. @tanstack/react-query의 `useInfiniteQuery` 사용 예제
+## 1. `useInfiniteQuery`
 
 ```tsx
 import React, { useEffect, useRef } from 'react'
@@ -88,28 +92,21 @@ export default InfiniteScroll
 
 ### 장점
 
-- **페이지네이션 처리 내장**: `useInfiniteQuery`는 페이지네이션이 내장되어 있어 다음 페이지 데이터를 손쉽게 받아옵니다.
-- **간단한 설정**: `getNextPageParam` 함수로 다음 페이지 매개변수가 자동 설정되어, 무한 스크롤 로직이 간결해집니다.
+- **페이지네이션 처리 내장**: 다음 페이지 데이터를 손쉽게 받아옵니다.
+- **간단한 설정**: `getNextPageParam`으로 다음 페이지 매개변수가 자동 설정됩니다.
 - **로딩 상태 관리**: `isFetchingNextPage` 같은 상태로 로딩 표시를 쉽게 다룹니다.
 
 ### 단점
 
-- **설정 복잡성**: `react-query`의 개념을 충분히 이해해야 설정을 제대로 할 수 있습니다.
+- **설정 복잡성**: `react-query`의 개념을 충분히 이해해야 제대로 설정할 수 있습니다.
 
 ---
 
-## 2. @tanstack/react-query의 `useQuery` 사용 예제
+## 2. `useQuery` + 페이지 상태
 
 ```tsx
 import React, { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-
-interface Photo {
-  id: number
-  title: string
-  url: string
-  thumbnailUrl: string
-}
 
 const fetchPhotos = async (page: number): Promise<Photo[]> => {
   const res = await fetch(`https://jsonplaceholder.typicode.com/photos?_page=${page}&_limit=10`)
@@ -153,28 +150,23 @@ const InfiniteScroll: React.FC = () => {
 
   return (
     <div>
-      <h1>Infinite Scroll</h1>
-      <div>
-        {photos.map((photo) => (
-          <div key={photo.id}>
-            <img src={photo.thumbnailUrl} alt={photo.title} />
-            <p>{photo.title}</p>
-          </div>
-        ))}
-      </div>
+      {photos.map((photo) => (
+        <div key={photo.id}>
+          <img src={photo.thumbnailUrl} alt={photo.title} />
+          <p>{photo.title}</p>
+        </div>
+      ))}
       {isLoading && <p>Loading...</p>}
       <div ref={observerRef} style={{ height: '1px' }}></div>
     </div>
   )
 }
-
-export default InfiniteScroll
 ```
 
 ### 장점
 
-- **간단한 로직 구현**: 페이지네이션 로직을 단순하게 짜낼 수 있습니다.
-- **상태 관리**: `useState`로 상태를 다루기 때문에 흐름이 직관적입니다.
+- **간단한 로직**: 페이지 번호를 직접 들고 있어 흐름이 눈에 보입니다.
+- **상태 관리**: `useState`라 다른 상태와 엮기 쉽습니다.
 
 ### 단점
 
@@ -183,18 +175,10 @@ export default InfiniteScroll
 
 ---
 
-## 3. SWR의 `useSWR` 사용 예제
+## 3. `useSWR`
 
 ```tsx
-import React, { useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
-
-interface Photo {
-  id: number
-  title: string
-  url: string
-  thumbnailUrl: string
-}
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -214,51 +198,274 @@ const InfiniteScroll: React.FC = () => {
     }
   }, [data])
 
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setPage((prevPage) => prevPage + 1)
-      }
-    })
-
-    if (observerRef.current) {
-      observer.observe(observerRef.current)
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observer.unobserve(observerRef.current)
-      }
-    }
-  }, [])
-
-  if (error) return <div>Failed to load</div>
-
-  return (
-    <div>
-      <h1>Infinite Scroll</h1>
-      <div>
-        {photos.map((photo) => (
-          <div key={photo.id}>
-            <img src={photo.thumbnailUrl} alt={photo.title} />
-            <p>{photo.title}</p>
-          </div>
-        ))}
-      </div>
-      <div ref={observerRef} style={{ height: '1px' }}></div>
-    </div>
-  )
+  // ... IntersectionObserver 로 setPage(p => p + 1)
 }
-
-export default InfiniteScroll
 ```
 
 ### 장점
 
-- **간단한 설정**: `SWR`은 데이터 패칭과 캐싱을 자동으로 처리해 설정이 간결하고 쓰기 편합니다.
-- **자동화된 데이터 관리**: 데이터를 효율적으로 받아오고 캐싱합니다.
+- **간단한 설정**: 데이터 패칭과 캐싱을 자동으로 처리합니다.
 
 ### 단점
 
-- **무한 스크롤 추가 로직 필요**: 무한 스크롤은 별도 로직을 직접 붙여야 합니다.
-- **내장 옵션 부족**: `react-query`처럼 다음 페이지 데이터를 명확하게 다루는 내장 옵션이 부족합니다.
+- **무한 스크롤 추가 로직 필요**: 별도 로직을 직접 붙여야 합니다.
+
+---
+
+## 4. 실무에서 안 통했던 지점
+
+여기서부터가 실제로 넣어보고 안 기록입니다. **세 예제 모두 브라우저에서 "돌아가긴" 합니다.** 그래서 처음엔 문제를 못 느꼈어요.
+
+### ① 3절의 단점은 사실이 아니었다
+
+먼저 위 글의 오류를 정정합니다. 원래 이렇게 적어놨었어요.
+
+> *"react-query처럼 다음 페이지 데이터를 명확하게 다루는 내장 옵션이 부족합니다."*
+
+**틀렸습니다.** SWR에는 `useSWRInfinite`가 있고, 그게 정확히 `useInfiniteQuery`에 대응하는 API입니다.
+
+```tsx
+const getKey = (pageIndex: number, previousPageData: Photo[] | null) => {
+  if (previousPageData && !previousPageData.length) return null   // 끝
+  return `.../photos?_page=${pageIndex + 1}&_limit=10`
+}
+const { data, size, setSize } = useSWRInfinite<Photo[]>(getKey, fetcher)
+```
+
+`getKey`가 `null`을 반환하면 끝이라는 신호입니다. `useInfiniteQuery`의 `getNextPageParam`이 `undefined`를 반환하는 것과 같은 역할이에요.
+
+**"내가 안 찾아본 것"과 "라이브러리에 없는 것"을 구분하지 않고 단점 칸에 적었습니다.** 비교 글에서 제일 하지 말아야 할 일이었어요.
+
+### ② 2·3번 예제에는 종료 조건이 없다
+
+```tsx
+const observer = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting) {
+    setPage((prevPage) => prevPage + 1)   // 끝인지 안 봄
+  }
+})
+```
+
+**마지막 페이지에 도달해도 계속 페이지를 올립니다.** 서버는 빈 배열을 계속 돌려주고, 관측 대상은 화면에 남아 있으니 요청이 멈추지 않아요.
+
+1번 예제는 `hasNextPage`가 있어서 이 문제가 없습니다. **`useInfiniteQuery`의 진짜 값어치가 "코드가 짧다"가 아니라 "끝났다는 상태를 라이브러리가 관리한다"** 는 걸 여기서 알았습니다.
+
+### ③ 2·3번 예제는 항목이 중복된다
+
+```tsx
+useEffect(() => {
+  if (data) {
+    setPhotos((prev) => [...prev, ...data])
+  }
+}, [data])
+```
+
+**`data`가 바뀔 때마다 이어붙이는데, `data`가 바뀌는 이유가 "새 페이지"만이 아닙니다.**
+
+- StrictMode에서 이펙트가 두 번 실행되면 같은 페이지가 두 번 붙습니다.
+- `keepPreviousData`가 켜져 있으면 전환 과정에서 이전 값이 한 번 더 흘러들어옵니다.
+- 캐시된 페이지로 되돌아가도 `data`가 바뀌며 또 붙습니다.
+
+증상은 **같은 사진이 두 번 보이고 콘솔에 `key` 중복 경고**가 뜨는 것이었습니다. "가끔 중복된다"라서 원인 찾는 데 시간이 걸렸어요.
+
+> **"서버 데이터를 `useState` 배열에 누적"은 무한 스크롤에서 가장 흔한 함정입니다.** 누적된 배열은 서버 상태의 사본인데, 사본은 원본이 바뀔 때마다 어긋납니다. `useInfiniteQuery`의 `data.pages`는 라이브러리가 관리하는 원본 자체예요.
+
+### ④ v5에서는 2번 예제가 아예 안 돈다
+
+```tsx
+// v4 문법 — v5에서 제거됨
+useQuery(['photos', page], () => fetchPhotos(page), { keepPreviousData: true })
+
+// v5
+useQuery({
+  queryKey: ['photos', page],
+  queryFn: () => fetchPhotos(page),
+  placeholderData: keepPreviousData,   // keepPreviousData 옵션도 대체됨
+})
+```
+
+1번 예제도 v5에서는 **`initialPageParam`이 필수**입니다. `({ pageParam = 1 })`처럼 기본값으로 때우는 건 v4 방식이에요.
+
+버전이 올라가면서 문법이 바뀐 건 예제의 잘못이 아니지만, **"어느 버전 기준인지 안 적은 것"은 잘못**입니다. 라이브러리 비교 글에 버전이 없으면 나중에 그대로 복사한 사람이 헤맵니다.
+
+### ⑤ `getNextPageParam`을 길이로 판정하면 요청이 한 번 더 나간다
+
+```tsx
+// 예제
+getNextPageParam: (lastPage, allPages) => (lastPage.length ? allPages.length + 1 : undefined)
+```
+
+**마지막 페이지가 정확히 `_limit`만큼 찼을 때** `lastPage.length`가 참이라 다음 페이지를 요청합니다. 그 요청이 빈 배열을 받고 나서야 끝난 걸 알아요. **끝을 확인하기 위한 빈 요청이 항상 한 번 나갑니다.**
+
+실제 프로젝트에서는 서버가 페이지 정보를 주기 때문에 이렇게 씁니다.
+
+```ts
+getNextPageParam: (lastPage) => {
+  if (!lastPage?.data) return undefined;
+  const { currentPage, totalPages } = lastPage.data;
+  return currentPage < totalPages ? currentPage + 1 : undefined;
+}
+```
+
+**서버가 총 페이지 수를 알려준다면 그걸 쓰는 게 맞습니다.** 길이로 추론하는 건 그 정보가 없을 때의 차선책이에요. API 설계 단계에서 `totalPages`를 요청해둘 값어치가 있습니다.
+
+### ⑥ `isFetchingNextPage` 가드가 없으면 연타된다
+
+```tsx
+// 예제
+if (entries[0].isIntersecting && hasNextPage) {
+  fetchNextPage()
+}
+```
+
+관측 대상이 화면에 남아 있는 동안 **`fetchNextPage`가 여러 번 불립니다.** 특히 페이지 크기가 작아서 새 데이터를 붙여도 관측 대상이 여전히 보이면, 요청이 우르르 나가요.
+
+```tsx
+// 실제 코드
+if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+  fetchNextPage();
+}
+```
+
+### ⑦ cleanup에서 `ref.current`를 다시 읽으면 안 된다
+
+```tsx
+// 예제 — cleanup 시점에 ref.current 가 이미 null 일 수 있다
+return () => {
+  if (observerRef.current) {
+    observer.unobserve(observerRef.current)
+  }
+}
+```
+
+```tsx
+// 실제 코드 — 이펙트 실행 시점의 값을 캡처해둔다
+const currentObserverRef = observerRef.current;
+if (currentObserverRef) observer.observe(currentObserverRef);
+
+return () => {
+  if (currentObserverRef) observer.unobserve(currentObserverRef);
+  observer.disconnect();
+};
+```
+
+`observer.disconnect()`를 같이 부르는 게 확실합니다. `unobserve`는 대상 하나만 떼지만 `disconnect`는 관측을 통째로 끝내요.
+
+---
+
+## 5. 그리고 실제로 두 번 물렸다
+
+여기까지는 예제를 보며 알게 된 것이고, 배포 뒤에 실제로 물린 게 둘 있습니다.
+
+### ① 의존성 배열에 빠진 값이 옛 함수를 붙잡고 있었다
+
+일정 목록 화면에는 탭이 둘(전체/공유)이고 검색 모드가 따로 있습니다. 그래서 `fetchNextPage`가 상황에 따라 갈립니다.
+
+```tsx
+const fetchNextPage = isSearching
+  ? fetchNextSearchPage
+  : selectedTab === 'all'
+    ? fetchNextAllPage
+    : fetchNextSharedPage;
+```
+
+그런데 옵저버를 다는 `useEffect`의 의존성 배열이 이랬어요.
+
+```tsx
+}, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+```
+
+**`isSearching`과 `selectedTab`이 빠져 있습니다.** 탭을 바꾸거나 검색으로 들어가도 이펙트가 다시 안 돌고, 옵저버 콜백은 **처음 잡은 클로저**를 그대로 씁니다. 그래서 전체 탭에서 스크롤하면 공유 탭의 다음 페이지를 부르거나, 아무것도 안 불렀어요.
+
+```tsx
+}, [fetchNextPage, hasNextPage, isFetchingNextPage, isSearching, selectedTab]);
+```
+
+두 개를 추가한 게 수정 전부입니다.
+
+**삼항 연산자로 파생된 값은 의존성 배열에서 빠뜨리기 쉽습니다.** `fetchNextPage`라는 이름 하나만 보이니까요. ESLint의 `exhaustive-deps`도 이 경우엔 `fetchNextPage`만 요구하고 그 안의 조건은 못 봅니다.
+
+### ② 모달 안에서만 무한 스크롤이 안 됐다
+
+목록은 잘 되는데 **"내 일정에 담기" 모달 안의 목록만** 다음 페이지를 안 불러왔습니다. 모달은 `IntersectionObserver`가 아니라 `onScroll`로 바닥을 판정하고 있었어요.
+
+```tsx
+onScroll={(e) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+  if (scrollHeight - scrollTop === clientHeight && hasNextPage && !isFetchingNextPage) {
+    fetchNextPage();
+  }
+}}
+```
+
+**`===` 로 바닥을 판정하고 있었습니다.**
+
+`scrollTop`은 정수가 아닙니다. 브라우저 확대/축소, HiDPI 디스플레이, 관성 스크롤에서 **소수점 값**이 나와요. 그러면 `scrollHeight - scrollTop`이 `clientHeight`와 정확히 같아지는 일이 거의 없습니다. 바닥에 닿아도 조건이 거짓이에요.
+
+```tsx
+const tolerance = 1;
+if (scrollHeight - scrollTop <= clientHeight + tolerance && hasNextPage && !isFetchingNextPage) {
+  fetchNextPage();
+}
+```
+
+`<=` 로 바꾸고 1px 톨러런스를 뒀습니다.
+
+> **화면 좌표를 등호로 비교하지 않습니다.** 부동소수점이고, 브라우저·배율·OS마다 다릅니다. "닿았다"는 판정은 항상 범위로 합니다.
+
+이건 왜 내 컴퓨터에서만 재현이 안 됐는지도 설명해줍니다. 배율 100%의 일반 디스플레이에서는 정수로 떨어질 때가 많거든요.
+
+---
+
+## 6. 그래서 뭘 쓸 것인가
+
+실제 프로젝트에서는 **세 방식을 화면에 따라 다르게** 쓰고 있습니다. 하나로 통일하지 못한 게 아니라, 화면마다 필요한 게 달랐어요.
+
+| 화면 | 방식 | 이유 |
+|---|---|---|
+| 일정 목록 (전체/공유/검색) | `useInfiniteQuery` | 페이지 누적·종료 판정을 라이브러리에 맡김. 서버가 `totalPages`를 줌 |
+| 여행지 탐색 목록 | `useQuery` + 페이지 상태 | 페이지 번호가 **URL·필터와 엮여야** 함. 목록↔상세 왕복에서 페이지를 복원해야 하는데 `useInfiniteQuery`의 누적 구조와 안 맞았음 |
+| 일정 편집의 여행 루트 | `useInView` + Zustand | **BFF에서 병합된 데이터**라 서버 페이지와 클라이언트 순서가 섞임. react-query로 하다 병합 이슈로 되돌림 |
+
+세 번째 코드에는 당시 판단이 주석으로 남아 있습니다.
+
+```tsx
+// 무한 스크롤 준비
+// 이전에는 react-query로 했었음
+// 병합 이슈로 인하여 zustand만 살리기로!
+const { ref, inView } = useInView();
+```
+
+**되돌린 기록을 코드에 남긴 게 잘한 일이었어요.** 안 남겼으면 "왜 여기만 react-query를 안 쓰지?" 하고 누군가(주로 나중의 나) 다시 react-query로 바꿨을 겁니다.
+
+### 고르는 기준
+
+- **서버가 페이지의 끝을 알려주고, 받은 그대로 쌓으면 되는가** → `useInfiniteQuery`
+- **페이지 번호를 URL·필터·다른 상태와 엮어야 하는가** → `useQuery` + 페이지 상태
+- **서버 페이지와 클라이언트 가공 결과가 섞이는가** → 페이징을 클라이언트 스토어가 맡고, 관측만 훅으로
+
+관측 자체는 직접 `IntersectionObserver`를 쓰든 `react-intersection-observer`의 `useInView`를 쓰든 상관없었습니다. **`useInView`가 나은 점은 4절 ⑦의 cleanup 실수를 애초에 못 하게 한다**는 것 정도예요.
+
+---
+
+## 7. 남은 것
+
+- **예제 코드에 버전을 안 적었습니다.** v4/v5에서 문법이 갈리는데 이 글에는 기준이 없습니다.
+- **모달 쪽만 `onScroll`을 씁니다.** `IntersectionObserver`로 통일하면 5절 ②번 부류의 문제가 구조적으로 사라지는데 안 했어요.
+- **`useSWRInfinite`는 결국 안 써봤습니다.** 3절의 비교는 여전히 추정이에요.
+- 중복 항목 문제(4절 ③)를 정량으로 재본 적이 없습니다.
+
+---
+
+## 정리
+
+- **`useInfiniteQuery`의 값어치는 코드가 짧은 게 아니라 "끝났다"를 관리해준다는 것입니다.**
+- **서버 데이터를 `useState` 배열에 누적하지 않습니다.** 사본은 원본이 바뀔 때마다 어긋납니다.
+- **끝 판정은 길이 추론보다 서버의 `totalPages`가 낫습니다.** 길이로 하면 확인용 빈 요청이 한 번 더 나갑니다.
+- **`!isFetchingNextPage` 가드 없이는 연타됩니다.**
+- **cleanup에서 `ref.current`를 다시 읽지 말고 캡처해둡니다.**
+- **삼항으로 파생된 값은 의존성 배열에서 빠뜨리기 쉽습니다.** 조건까지 배열에 넣어야 합니다.
+- **화면 좌표를 `===`로 비교하지 않습니다.** 소수점이 나옵니다.
+- 그리고 — **"라이브러리에 없다"고 쓰기 전에 찾아봅니다.** `useSWRInfinite`는 처음부터 있었습니다.
+
+관련 글: [무한 스크롤 비교](/blog/무한-스크롤-비교) · [무한 스크롤에서는 왜 이슈가 생긴 걸까](/blog/무한-스크롤에서는-왜-이슈가-생긴-걸까) · [인증이 확정되기 전에 쏜 요청](/blog/인증-확정-전-요청과-갈린-react-query-캐시-키)

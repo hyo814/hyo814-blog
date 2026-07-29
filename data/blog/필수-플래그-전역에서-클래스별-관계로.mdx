@@ -1,0 +1,239 @@
+---
+title: 플래그를 잘못된 테이블에 달아뒀다 — 전역 필수 여부를 관계 행으로 옮긴 회고
+date: '2026-07-24'
+tags: [기술노트]
+draft: false
+summary: '속성에 달려 있던 is_mandatory를 클래스-속성 관계 행으로 옮긴 작업입니다. 같은 속성이 클래스마다 필수/선택으로 갈리는데 전역 플래그로는 표현할 수 없었어요. 이관 마이그레이션을 짜다 PostgreSQL의 pending trigger events에 걸렸고, 제약을 백필보다 먼저 만드는 순서로 풀었습니다.'
+---
+
+# 플래그를 잘못된 테이블에 달아뒀다 — 전역 필수 여부를 관계 행으로 옮긴 회고
+
+메타클래스는 여러 속성으로 구성됩니다. 그중 어떤 건 필수고 어떤 건 선택이에요. 이 "필수 여부"가 **속성 테이블**에 달려 있었습니다.
+
+```python
+class MetaClassProperty(models.Model):
+    name = ...
+    is_mandatory = models.BooleanField(default=False)   # ← 여기
+```
+
+문장으로 읽으면 자연스럽습니다. *"이 속성은 필수다."* 그런데 실제 도메인은 이렇게 말하지 않아요.
+
+> `dct:title`은 **Message 클래스에서는** 필수고, **DataElement 클래스에서는** 선택입니다.
+
+같은 속성이 **어느 클래스에서 쓰이느냐에 따라** 필수 여부가 갈립니다. 전역 플래그로는 표현할 수 없는 얘기였어요.
+
+---
+
+## 1. 잘못된 위치라는 걸 어떻게 알았나
+
+사실 이 플래그는 오랫동안 조용했습니다. 화면에 "필수" 표시를 붙이려고 데이터를 열어보고 나서야 이상하다는 걸 알았어요.
+
+```python
+MetaClassProperty.objects.filter(is_mandatory=True).count()
+# 2      ← 966건 중 2건
+```
+
+**966개 속성 중 2개만 True**였습니다. 사실상 아무도 안 쓰고 있었던 거예요. 표준 원본에는 클래스별 필수 항목이 분명히 정의돼 있는데, 그게 이 컬럼에 안 들어오고 있었습니다.
+
+당연했습니다. 담을 수가 없었으니까요. 표준이 *"Message에서 title은 필수"* 라고 말하는데, 우리 스키마는 *"title은 필수"* 밖에 표현하지 못합니다. 정보를 넣으려다 보면 어느 클래스 기준으로 넣을지 정할 수 없고, 결국 아무도 안 채우게 된 거예요.
+
+**안 쓰이는 컬럼은 대개 기능이 없어서가 아니라, 쓸 수가 없어서 안 쓰입니다.**
+
+---
+
+## 2. 옮길 곳 — 이미 있던 관계 테이블
+
+클래스와 속성은 M2M이고, 그 사이에 조인 모델이 이미 있었습니다.
+
+```python
+class MetaClassMetadata(models.Model):
+    metaclass = models.ForeignKey(MetaClass, related_name="metadata_links", ...)
+    metaclassproperty = models.ForeignKey(MetaClassProperty, related_name="metaclass_metadata_links", ...)
+```
+
+필수 여부는 여기에 속합니다. **"이 클래스에서의 이 속성"** 이라는 개념이 정확히 이 행이니까요.
+
+| 방법 | 문제 |
+|---|---|
+| ① 속성에 클래스별 JSON 맵 (`{"Message": true, ...}`) | 조인·필터가 안 됨. "필수 속성만 조회"가 JSON 순회 |
+| ② 클래스마다 별도 필수 목록 테이블 신설 | **이미 있는 관계 테이블과 중복.** 두 테이블이 어긋날 여지 |
+| ③ 기존 관계 테이블에 컬럼 추가 | 없음 — 개념상 정확히 그 자리 | 
+
+③은 사실 고민할 게 없었습니다. 헷갈렸던 건 옮길 곳이 아니라 **어떻게 옮기느냐**였어요.
+
+```python
+# 필수 여부는 속성 자체가 아니라 '이 클래스에서의 이 속성'의 성격이다.
+# 같은 속성이 클래스마다 필수/선택으로 갈리므로 조인 행에 둔다.
+is_required = models.BooleanField(default=False, verbose_name="필수 여부")
+```
+
+---
+
+## 3. 같이 옮긴 것 — 인스턴스 이름의 원천
+
+작업하다 보니 같은 성격의 하드코딩이 하나 더 있었습니다. **인스턴스 이름을 무엇으로 정할 것인가**요.
+
+인스턴스는 `name`을 가지는데, 이 값을 사용자가 따로 입력하는 게 아니라 속성 값 중 하나에서 가져옵니다. 그런데 어느 속성에서 가져올지가 코드에 `dct:title`로 박혀 있었어요. 클래스마다 이름 역할을 하는 속성이 다를 수 있는데도요.
+
+이것도 정확히 같은 문제입니다. **"이 클래스에서 이름 역할을 하는 속성"** 이니 관계 행에 속해요.
+
+```python
+# 인스턴스 이름(MetaClassInstance.name)의 원천 슬롯 — 클래스당 최대 1개.
+is_name_source = models.BooleanField(default=False, verbose_name="이름 사용 여부")
+```
+
+### 제약 세 개
+
+플래그를 옮기니 지켜야 할 규칙이 드러났습니다. 전역 플래그일 때는 물어볼 수조차 없던 것들이에요.
+
+**① 이름 원천은 필수여야 한다.** 이름으로 쓸 속성이 선택이면, 값이 비었을 때 인스턴스 이름이 빕니다.
+
+**② 객체 속성은 이름 원천이 될 수 없다.** 이름은 리터럴 텍스트인데, 클래스를 참조하는 슬롯은 값이 다른 인스턴스라 이름으로 쓸 수 없어요.
+
+```python
+def clean(self):
+    super().clean()
+    if not self.is_name_source:
+        return
+    if not self.is_required:
+        raise ValidationError({"is_name_source": "이름으로 사용할 속성은 필수여야 합니다."})
+    # 이름은 리터럴 텍스트라 객체 속성(range=클래스 참조) 슬롯은 원천이 될 수 없다.
+    range_id = ...
+    if range_id:
+        raise ValidationError(...)
+```
+
+**③ 클래스당 이름 원천은 최대 하나.** 이건 `clean()`이 아니라 **DB 제약**으로 걸었습니다. 앞의 두 개와 성격이 다르거든요. ①·②는 한 행만 보면 판단되지만, ③은 **다른 행들과의 관계**라 앱 레벨에서 검사하면 동시 요청에 뚫립니다.
+
+```python
+migrations.AddConstraint(
+    model_name="metaclassmetadata",
+    constraint=models.UniqueConstraint(
+        condition=models.Q(("is_name_source", True)),   # 부분 UNIQUE INDEX
+        fields=("metaclass",),
+        name="uniq_metaclass_name_source",
+    ),
+)
+```
+
+`condition`을 준 부분 인덱스라 **`is_name_source=True`인 행들 사이에서만** 유일성을 요구합니다. False인 행은 클래스당 얼마든지 있어야 하니까요.
+
+---
+
+## 4. 마이그레이션 — 순서에서 한 번 넘어졌다
+
+이관은 두 단계로 나눴습니다.
+
+- **0020** — 새 컬럼 추가 + 제약 + 기존 값 백필
+- **0021** — 옛 컬럼(`is_mandatory`) 제거
+
+한 마이그레이션에 다 넣을 수도 있었지만 나눴어요. 0020까지만 배포하면 **두 컬럼이 공존**하는 상태라, 뭔가 잘못돼도 옛 컬럼이 그대로 있습니다. 되돌릴 자리를 하나 남겨둔 셈이에요. 실제로 `backward()`가 단순한 것도 그래서입니다.
+
+```python
+def backward(apps, schema_editor):
+    # 이관 전 상태(is_mandatory)가 아직 남아 있으므로 플래그만 비우면 된다.
+    MetaClassMetadata.objects.update(is_required=False, is_name_source=False)
+```
+
+백필은 두 갈래였습니다.
+
+```python
+def forward(apps, schema_editor):
+    """전역 필수 플래그를 클래스별 조인 플래그로 이관한다.
+
+    ① is_mandatory 속성의 구성 링크 → is_required
+    ② dct:title 링크 → 이름 원천 (현재 하드코딩 동작을 그대로 보존)
+    """
+    MetaClassMetadata.objects.filter(
+        metaclassproperty__is_mandatory=True,
+    ).update(is_required=True)
+
+    MetaClassMetadata.objects.filter(
+        metaclassproperty__namespace__prefix="dct",
+        metaclassproperty__name="title",
+    ).update(is_required=True, is_name_source=True)
+```
+
+②가 중요합니다. 코드에 박혀 있던 `dct:title` 하드코딩을 **데이터로 옮기면서 동작은 그대로 유지**했어요. 마이그레이션 직후에도 시스템은 똑같이 동작합니다. 구조만 바뀌고 행동은 안 바뀌는 것 — 이관에서 제일 중요한 성질이라고 생각합니다.
+
+### 넘어진 지점 — pending trigger events
+
+처음엔 순서를 자연스럽게 잡았습니다. *컬럼 추가 → 백필 → 제약 추가.* 데이터를 채운 다음 제약을 거는 게 상식적이니까요.
+
+PostgreSQL이 거부했습니다.
+
+```
+django.db.utils.OperationalError: cannot CREATE INDEX "..." on table "..."
+because it has pending trigger events
+```
+
+같은 트랜잭션 안에서 `RunPython`의 UPDATE가 실행된 뒤에는, 그 테이블에 인덱스를 만들 수 없습니다. 아직 처리되지 않은 트리거 이벤트가 남아 있다는 이유예요.
+
+우회 방법이 몇 가지 있었습니다. 마이그레이션을 `atomic = False`로 두거나, 제약을 별도 마이그레이션으로 분리하거나. 결국 **순서를 뒤집는 게** 제일 깔끔했습니다.
+
+```python
+operations = [
+    migrations.AddField(... "is_required" ...),
+    migrations.AddField(... "is_name_source" ...),
+    # 제약(부분 UNIQUE INDEX)을 백필보다 먼저 만든다. PostgreSQL은 같은 트랜잭션에서
+    # RunPython 의 UPDATE 뒤에 CREATE INDEX 를 하면 "pending trigger events" 로 거부한다.
+    # 이 시점엔 is_name_source 가 전부 False 라 부분 인덱스가 빈 집합이라 항상 성공하고,
+    # 이어지는 백필 UPDATE 는 이 제약을 준수해 실행된다(위반 시 즉시 실패=안전).
+    migrations.AddConstraint(...),
+    migrations.RunPython(forward, backward),
+]
+```
+
+제약을 먼저 거는 게 위험해 보이지만, 여기서는 **오히려 더 안전합니다.**
+
+- 이 시점에 `is_name_source`는 전부 False라 부분 인덱스가 **빈 집합**입니다. 항상 성공해요.
+- 그리고 이어지는 백필 UPDATE가 **이 제약을 지키면서** 실행됩니다. 만약 한 클래스에 `dct:title` 링크가 둘 이상 있어서 이름 원천이 중복되면, 백필이 **즉시 실패**합니다.
+
+순서를 뒤집기 전에는 "일단 데이터를 다 넣고 제약을 걸었다가 실패하면 그때 정리"였는데, 뒤집고 나니 "규칙을 먼저 세우고 그 안에서만 데이터를 넣는" 게 됐습니다. 에러 때문에 어쩔 수 없이 바꾼 순서가 결과적으로 더 나은 순서였어요.
+
+---
+
+## 5. 화면 — 표현도 같이 바꿨다
+
+구조가 바뀌니 화면 표현도 따라갔습니다.
+
+처음엔 구성 속성 표를 **필수 그룹 / 선택 그룹**으로 나누고 그룹 헤더 행을 뒀습니다. 그런데 이게 어색했어요. 표에 헤더 행이 끼어들면서 정렬이 깨지고, 필수가 0건인 클래스에서는 그룹 구분 자체가 무의미했습니다.
+
+**필수 여부를 열로** 바꿨습니다. 그냥 표의 한 컬럼이 된 거예요. 정렬은 필수 우선, 선택은 가나다순으로 두고요. 그룹으로 나눌 만큼 두 부류가 다른 게 아니라, **속성의 한 속성일 뿐**이라는 게 열로 두니 더 정확해 보였습니다.
+
+---
+
+## 6. 검증
+
+| 항목 | 결과 |
+|---|---|
+| 0020 백필 | `is_mandatory=True` 링크 → `is_required` 이관 |
+| 하드코딩 이관 | `dct:title` 링크 → 이름 원천으로, **동작 무변경** |
+| 부분 UNIQUE | 한 클래스에 이름 원천 2건 시도 → DB에서 거부 |
+| `clean()` ① | 이름 원천인데 필수 아님 → ValidationError |
+| `clean()` ② | 객체 속성을 이름 원천으로 → ValidationError |
+| 0021 | `is_mandatory` 제거 후 참조 잔재 0건 |
+| 롤백 | 0020 backward 실행 → 플래그만 비워지고 옛 컬럼 그대로 |
+| 화면 | 구성 속성 표 필수 여부 열, 인스턴스 정렬(필수 우선·선택 가나다순) |
+| 시드 | 구성 속성 시드에 필수·이름 원천 플래그 반영 |
+
+---
+
+## 7. 한계
+
+- **`clean()` 제약 두 개는 여전히 앱 레벨입니다.** 3절 ①·②는 한 행만 보면 판단되니 `CheckConstraint`로 DB에 걸 수 있는데, ②는 다른 테이블(`MetaClassProperty.range_id`)을 봐야 해서 단순 CHECK로는 안 됩니다. 트리거를 쓸지, 아니면 저장 경로를 하나로 모을지 정해야 해요.
+- **백필이 `dct:title` 기준입니다.** 그 시점의 하드코딩을 그대로 옮긴 거라, 실제로 이름 역할을 하는 속성이 다른 클래스가 있으면 손으로 고쳐야 합니다. 이관은 "현재 동작 보존"이 목표였고 "올바른 값 채우기"는 별개 작업이에요.
+- **`is_required`가 데이터로 아직 덜 채워져 있습니다.** 구조는 생겼지만 표준 원본의 클래스별 필수 항목을 적재하는 건 다음 단계입니다. 지금은 그릇만 만든 상태예요.
+
+---
+
+## 8. 회고
+
+- **안 쓰이는 컬럼을 보면 "필요 없나?"보다 "쓸 수가 없나?"를 먼저 물어야 했습니다.** 966건 중 2건이라는 숫자가 기능 미사용이 아니라 **모델링 오류의 증상**이었어요.
+- **플래그가 붙을 자리는 "그 플래그가 무엇에 대한 서술인가"로 정해집니다.** "이 속성은 필수다"가 아니라 "이 클래스에서 이 속성은 필수다"였으니, 조인 행이 답이었어요. 문장으로 읽어보는 게 의외로 정확한 판정법이었습니다.
+- **관계별 제약은 앱이 아니라 DB에.** 한 행만 보면 되는 규칙과 여러 행을 봐야 하는 규칙은 걸 자리가 다릅니다. 후자를 `clean()`에 두면 동시 요청에 뚫려요. 부분 UNIQUE 인덱스는 이럴 때 정확한 도구였습니다.
+- **이관 마이그레이션의 목표는 "올바른 값"이 아니라 "동작 보존"입니다.** 하드코딩을 데이터로 옮기되 결과는 똑같게 — 그래야 이관 자체를 의심하지 않고 다음 단계로 갈 수 있어요.
+- **제약을 먼저, 데이터를 나중에.** PostgreSQL 에러 때문에 어쩔 수 없이 바꾼 순서였는데, 결과적으로 "규칙 안에서만 데이터를 넣는" 더 나은 구조가 됐습니다. 에러 메시지가 설계를 고쳐준 경우였어요.
+- **이관과 제거를 나눈 게 마음이 편했습니다.** 0020까지만 배포하면 옛 컬럼이 살아 있어서 되돌릴 자리가 있었거든요.
+
+플래그 하나 옮기는 작업으로 시작했는데, 결국 *"이 정보는 무엇에 대한 서술인가"* 를 세 번쯤 다시 물은 작업이 됐습니다. 필수 여부, 이름 원천, 그리고 제약을 어디에 걸 것인가까지요.

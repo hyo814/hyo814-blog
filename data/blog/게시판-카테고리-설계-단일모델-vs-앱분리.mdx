@@ -183,10 +183,88 @@ def board_list(request, category):
 
 ---
 
+## 9. 나중에 이 판단 기준을 다시 써봤다
+
+이 글의 기준을 **다른 프로젝트에서 그대로 적용해볼 기회**가 있었습니다. 표준데이터 시스템에 FAQ 게시판을 추가해야 했는데, 이미 공지사항용 `Post` 모델이 있었어요.
+
+기준을 대보니 결론이 같았습니다 — **새 모델을 안 만들고 기존 `Post` + 카테고리**로. 필드 차이가 없고(제목·본문·노출 상태), CRUD 화면을 그대로 재사용할 수 있었으니까요. 그 과정은 [새 모델 없이 Post + 카테고리로 FAQ 게시판 만들기](/blog/faq-자주묻는질문-게시판-만들기)에 적었습니다.
+
+그런데 **한 가지는 반대로 갔습니다.** 6.2절에서 이렇게 썼었죠.
+
+> `CATEGORY_CHOICES`가 상수로 박혀 있어서 (…) 관리자가 직접 카테고리를 추가하는 서비스였다면 테이블로 뺐을 겁니다.
+
+FAQ 쪽은 실제로 **`Category` 테이블**을 썼습니다. 게시판 종류를 운영 중에 늘릴 여지가 있었거든요. 이 글이 예측한 분기점이 실제로 나타난 셈이라, 기준 자체는 잘 작동했습니다.
+
+**다만 테이블로 빼니 이 글에는 없던 위험이 생겼어요.**
+
+```python
+# 상수 방식 — 오타는 choices 검증에서 걸린다
+category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+
+# 테이블 방식 — 쿼리에서 이름 문자열로 참조하게 된다
+Post.objects.filter(category__name__exact="FAQ")
+```
+
+**이름을 바꾸면 에러 없이 목록이 빈 채로 뜹니다.** 상수 방식이었다면 `Post.CATEGORY_CHOICES`를 통해 한곳에서 관리되니 오타가 나기 어려운데, 테이블로 빼는 순간 참조가 문자열이 돼요. 유연성을 얻는 대가로 **조용히 깨질 자리**가 생긴 겁니다.
+
+이 글에 이 트레이드오프를 안 적었던 게 아쉽습니다. 6.2절은 *"상수는 유연하지 않다"* 까지만 말하는데, **"테이블은 참조가 느슨해진다"** 가 짝으로 있어야 했어요.
+
+---
+
+## 10. 지금 다시 보면 보강할 것
+
+**① `choices`는 DB 제약이 아닙니다.**
+
+```python
+category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+```
+
+Django의 `choices`는 **폼과 `full_clean()` 단계의 검증**입니다. 벌크 적재나 `update()`로 넣으면 아무 문자열이나 들어가요. 단일 모델 방식의 핵심 안전장치가 앱 레벨에만 있는 셈입니다.
+
+```python
+class Meta:
+    constraints = [
+        models.CheckConstraint(
+            check=models.Q(category__in=[c[0] for c in CATEGORY_CHOICES]),
+            name="post_category_valid",
+        )
+    ]
+```
+
+카테고리가 상수라면 이렇게 DB에도 못 박을 수 있습니다. **앱 레벨 제약은 우회 경로가 있으면 제약이 아니라는 것**을 이후에 여러 번 배웠어요.
+
+**② 404 검사가 뷰마다 반복됩니다.**
+
+```python
+def board_list(request, category):
+    if category not in VALID_CATEGORIES:
+        raise Http404()
+```
+
+목록·작성·상세 세 뷰에 같은 줄이 들어가고, 뷰가 늘면 계속 늘어납니다. 커스텀 path converter를 만들면 **라우팅 단계에서 걸러져서** 뷰가 이 검사를 몰라도 됩니다.
+
+```python
+class CategoryConverter:
+    regex = "|".join(dict(Post.CATEGORY_CHOICES))
+    def to_python(self, value): return value
+    def to_url(self, value): return value
+
+register_converter(CategoryConverter, "category")
+# path('<category:category>/', ...)  → 잘못된 값은 URL 매칭 자체가 안 됨
+```
+
+**③ 체크리스트에 구멍이 있습니다.**
+
+*"4개 이상 예스면 단일 모델, 2개 이하면 앱 분리"* 라고 적었는데 **3개일 때가 빠져 있습니다.** 항목이 5개니 3개는 충분히 나올 수 있는 값이에요. 애매한 구간이 있다는 걸 인정하고 *"3개면 단일 모델로 시작하되 분리 시점을 문서로 정해둔다"* 정도로 채웠어야 했습니다.
+
+---
+
 ## 정리
 
 - **필드 차이가 작고 공통 화면이 많은 게시판**은 단일 모델 + category 필드가 제일 싸고 단순
 - **상속(B)** 은 OOP적으로 예쁘지만 ORM 복잡도가 늘어 실익이 적음
 - **앱 분리(A)** 는 카테고리별 필드 차이가 클 때만
+- **카테고리를 상수로 둘지 테이블로 뺄지**는 별개의 결정입니다. 상수는 참조가 단단하고, 테이블은 유연한 대신 문자열 참조가 조용히 깨질 수 있어요
+- `choices`는 앱 레벨 검증이라, 상수로 둔다면 **`CheckConstraint`로 DB에도 걸어두는 게** 안전합니다
 - "나중의 확장성" 을 핑계로 지금 복잡도를 키우지 않는다
 - 단일 모델의 한계(필드 분기, 런타임 카테고리)가 실제로 닥치면 그때 마이그레이션

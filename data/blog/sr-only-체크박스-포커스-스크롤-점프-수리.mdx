@@ -1,0 +1,209 @@
+---
+title: 토글 한 번에 화면이 튀는 이유 두 가지 — sr-only 포커스와 scroll anchoring
+date: '2026-07-14'
+tags: [기술노트]
+draft: false
+summary: '값 유형 토글을 누를 때마다 화면이 튀었습니다. 하나 고쳤는데 증상이 남아서 다시 팠더니 원인이 둘이었어요. sr-only로 숨긴 체크박스가 일으키는 focus scroll, 그리고 tbody 전면 재렌더로 scroll anchoring 기준이 사라지는 문제. 각각 어떤 대안들을 놓고 무엇을 골랐는지, 그리고 "안 튀는 것 같다"를 숫자로 바꾼 검증까지 정리합니다.'
+---
+
+# 토글 한 번에 화면이 튀는 이유 두 가지 — sr-only 포커스와 scroll anchoring
+
+용어 편집 화면에서 속성의 값 유형을 **데이터 유형 ↔ 클래스 참조**로 바꾸는 토글을 붙였습니다. 프로젝트 공통 토글 스위치 스타일(`checkBoxToToggleBtn`)을 그대로 쓴, 흔한 체크박스 기반 토글이에요.
+
+기능은 잘 됐는데 클릭할 때마다 화면이 **위로 훅 올라갔다가** 돌아옵니다. 폼이 긴 화면이라 방금 보던 행을 놓치게 되니 꽤 거슬렸어요.
+
+원인을 하나 잡고 "됐다" 했는데 여전히 튀었습니다. 결국 **서로 다른 두 개의 원인**이 같은 증상으로 보이고 있었습니다.
+
+---
+
+## 1. 증상과 관찰
+
+- 값 유형 토글 클릭 → 관리자 화면 내부 스크롤 컨테이너가 임의 위치로 점프
+- 키보드(Tab → Space)로 토글할 때는 상대적으로 덜 튐
+- 토글 자체 동작(값 전환, 반대 필드 초기화)은 전부 정상
+
+두 번째 항목이 첫 단서였습니다. **마우스와 키보드에서 다르게 동작한다면 포커스 처리가 개입한다**는 뜻이에요. 키보드로 Tab을 눌러 도달할 땐 이미 그 요소를 향해 스크롤이 정리된 상태니까 티가 안 났던 겁니다.
+
+---
+
+## 2. 원인 ① — sr-only 체크박스의 focus scroll
+
+토글 스위치는 보통 이렇게 만듭니다. 진짜 `<input type="checkbox">`는 시각적으로 숨기고, 옆의 `<div>`를 CSS로 스위치처럼 그리는 방식이죠.
+
+```html
+<!-- 변경 전: sr-only 로 체크박스를 숨김 -->
+<label class="checkBoxToToggleBtn relative inline-flex cursor-pointer items-center">
+  <input type="checkbox" class="peer sr-only" data-value-kind-toggle />
+  <div class="h-6 w-11 rounded-full bg-gray-600 peer-checked:bg-primary ..."></div>
+</label>
+```
+
+`sr-only`는 스크린 리더에는 읽히되 화면에서는 안 보이게 하는 관용구인데, 구현은 대략 이렇습니다.
+
+```css
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+```
+
+**1px로 클리핑된 요소**라는 게 핵심입니다. 이 체크박스를 클릭하면 브라우저는 포커스를 주면서 "포커스된 요소를 보이게" 스크롤합니다(focus scroll). 그런데 그 요소의 실제 좌표는 클리핑된 1px 지점이라, 브라우저가 계산한 "보이게 할 위치"가 우리가 보고 있는 스위치와 어긋납니다. 그래서 엉뚱한 곳으로 화면이 끌려가요.
+
+### 고려한 방법
+
+| 방법 | 문제 | 판단 |
+|---|---|---|
+| ① `focus({ preventScroll: true })` | **클릭으로 생기는 포커스에는 안 먹힘.** 이 옵션은 스크립트가 `.focus()`를 직접 호출할 때만 적용됨 | ✗ |
+| ② `tabindex="-1"`로 포커스 자체 제거 | 키보드로 토글 불가 — **접근성을 버리는 수정** | ✗ |
+| ③ `sr-only` 대신 `opacity-0` 실물 크기 오버레이 | 없음. 크기·위치가 실제 그대로라 스크롤할 이유가 사라짐 | **✓ 채택** |
+
+①은 이름만 보면 정확히 이 문제를 위한 옵션 같아서 제일 먼저 시도했는데, `preventScroll`은 **프로그래매틱 포커스 전용**입니다. 마우스 클릭으로 브라우저가 스스로 주는 포커스에는 개입할 수 없어요. 삽질했지만 이 경계를 명확히 알게 된 건 소득이었습니다.
+
+②는 아예 후보가 아니었습니다. 애초에 진짜 체크박스를 쓰는 이유가 키보드와 스크린 리더 때문인데, 그걸 없애면 토글 스위치를 `<div>`로 그리는 것과 다를 게 없어요.
+
+### 채택 — 클리핑 대신 투명 오버레이
+
+숨기는 방식을 바꿨습니다. 1px로 잘라내는 대신, 라벨 전체를 덮는 **투명한 실물 크기 체크박스**로요.
+
+```html
+<!-- 변경 후: 라벨 위 투명 오버레이 -->
+<label class="checkBoxToToggleBtn relative inline-flex w-max cursor-pointer items-center text-sm"
+       title="값 유형 전환">
+  데이터 유형&nbsp;
+  <!-- sr-only(1px 클리핑) 대신 라벨 위 투명 오버레이 — sr-only 는 클릭 포커스 시
+       브라우저가 클리핑된 좌표로 스크롤해 화면이 점프한다(focus scroll). -->
+  <input type="checkbox" data-value-kind-toggle
+         class="peer absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+  <div class="relative h-6 w-11 rounded-full bg-gray-600 transition-colors peer-checked:bg-primary
+              after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full
+              after:border after:bg-white after:transition-all after:content-['']
+              peer-checked:after:translate-x-full"></div>
+  &nbsp;클래스 참조
+</label>
+```
+
+`opacity-0`은 요소를 **투명하게 만들 뿐 크기와 위치는 그대로**입니다. 포커스가 가도 브라우저가 스크롤할 이유가 없어요. `peer-checked:` 스타일링도 그대로 동작하고, 라벨 영역 전체가 클릭 영역이 되는 덤도 있었습니다.
+
+여기에 마우스 조작에 한해 포커스 이동 자체를 한 번 더 막았습니다.
+
+```javascript
+// 값 유형 토글을 마우스로 누를 때 체크박스로 포커스가 가며 생기는 focus scroll 차단
+// — 폼이 뷰포트보다 넓으면 브라우저가 포커스 요소를 보이려 화면을 끌고 간다.
+// preventDefault 는 mousedown 의 포커스 이동만 막고 click(토글)은 그대로 동작한다.
+tbody.addEventListener("mousedown", function (e) {
+  if (e.target && e.target.closest && e.target.closest("label.checkBoxToToggleBtn"))
+    e.preventDefault();
+});
+```
+
+`mousedown`의 기본 동작만 막는 거라 **click 이벤트와 키보드 경로는 그대로**입니다. 이벤트를 `tbody`에 위임한 건 행이 계속 재렌더되기 때문이에요. 개별 라벨에 걸었으면 렌더될 때마다 다시 붙여야 했습니다.
+
+---
+
+## 3. 원인 ② — tbody 전면 재렌더와 scroll anchoring
+
+여기까지 하고 다시 눌러봤는데, 폭은 줄었지만 **여전히 튑니다.**
+
+두 번째 원인은 **렌더 방식**이었습니다. 값 유형을 바꾸면 반대쪽 입력(데이터 유형 셀렉트 ↔ 클래스 피커)을 갈아끼워야 해서 `renderForm()`이 `tbody` 전체를 다시 그립니다.
+
+브라우저에는 **scroll anchoring**이라는 기능이 있습니다. 스크롤 중 위쪽 콘텐츠가 바뀌어도 보고 있던 위치가 밀리지 않게, 화면에 보이는 요소 하나를 기준점(anchor)으로 잡아 보정해 주는 거예요. 평소엔 고마운 기능인데, **기준으로 삼던 요소가 통째로 사라지면** 브라우저는 기준을 잃고 스크롤을 임의 위치로 옮겨버립니다. tbody를 전부 새로 그리니 앵커 후보가 전멸한 셈이었죠.
+
+### 고려한 방법
+
+| 방법 | 장점 | 포기하는 것 | 판단 |
+|---|---|---|---|
+| ① `overflow-anchor: none` | 한 줄 | 스크롤 컨테이너가 관리자 레이아웃 공용이라 **다른 화면의 앵커링까지 꺼짐** | ✗ |
+| ② 부분 렌더로 전환 (바뀐 행만 교체) | 근본 해결. 앵커가 살아 있음 | `renderForm` 전면 재작성. 이 작업 범위를 크게 넘음 | 후속 과제 |
+| ③ 렌더 전후로 스크롤 위치 캡처·복원 | 재렌더 구간에만 국소적으로 적용 | 근본 원인(전면 재렌더)은 남음 | **✓ 채택** |
+
+①은 가장 짧지만 **영향 범위가 이 화면 밖까지 나갑니다.** 토글 하나 고치자고 관리자 전체의 스크롤 보정을 끄는 건 교환 비율이 안 맞았어요.
+
+②가 정답인 건 알고 있었습니다. 다만 지금 하는 작업은 "토글 UI 교체"였고, 여기서 렌더 구조를 갈아엎으면 리뷰도 검증도 어려워집니다. **범위를 지키고 후속 과제로 남기는 쪽**을 골랐어요.
+
+③은 근본 해결이 아니라는 걸 알고 고른 타협입니다. 대신 부작용이 재렌더 구간 안에 갇혀 있어서, 나중에 ②로 갈 때 그냥 지우면 되는 코드예요.
+
+### 채택 — 캡처·복원
+
+먼저 실제로 스크롤을 담당하는 조상 요소를 찾습니다. 이 화면은 `window`가 아니라 `main > .overflow-y-auto`가 스크롤 컨테이너인데, 셀렉터를 하드코딩하면 레이아웃이 바뀔 때 조용히 깨지니 위로 올라가며 탐색하게 했습니다.
+
+```javascript
+function scrollContainerOf(el) {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const s = window.getComputedStyle(p);
+    if (/(auto|scroll|overlay)/.test(s.overflowY + s.overflowX)) return p;
+  }
+  return null;
+}
+```
+
+그리고 `renderForm()` 앞뒤를 감쌉니다.
+
+```javascript
+function renderForm(data) {
+  // tbody 전체 재렌더로 scroll anchoring 기준 요소가 사라지면 브라우저가 스크롤을
+  // 임의 위치로 옮긴다(값 유형 토글 전환 시 점프) — 렌더 전 위치를 잡아 복원한다.
+  const scroller = scrollContainerOf(tbody);
+  const scrollTop = scroller ? scroller.scrollTop : 0;
+  const scrollLeft = scroller ? scroller.scrollLeft : 0;
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
+
+  // ... tbody 전체 재렌더 ...
+
+  if (scroller) {
+    scroller.scrollTop = scrollTop;
+    scroller.scrollLeft = scrollLeft;
+  }
+  window.scrollTo(scrollX, scrollY);
+}
+```
+
+컨테이너와 `window` 둘 다 복원하는 이유는, 화면 폭에 따라 어느 쪽이 스크롤 주체가 되는지 달라지기 때문입니다. 어느 쪽인지 분기해서 판단하는 것보다 둘 다 챙기는 게 쌉니다.
+
+---
+
+## 4. 검증 — "안 튀는 것 같다"를 숫자로
+
+이런 버그는 눈으로 보는 판정을 믿기 어렵습니다. 폭이 작아지면 "고쳐진 것 같다"고 느껴지거든요. 실제로 원인 ①만 고쳤을 때 제가 그렇게 착각할 뻔했고요. 그래서 Playwright로 좌표를 직접 쟀습니다.
+
+```javascript
+// 1680×800, 폼을 중간까지 스크롤한 상태에서 4연속 전환
+const scroller = page.locator("main .overflow-y-auto");
+await scroller.evaluate((el) => (el.scrollTop = 822));
+
+const tops = [];
+for (let i = 0; i < 4; i++) {
+  await page.locator("label.checkBoxToToggleBtn").first().click();   // raw click
+  tops.push(await scroller.evaluate((el) => el.scrollTop));
+}
+console.log(tops);   // [822, 822, 822, 822]
+```
+
+`click()`을 쓸 때 Playwright가 요소를 보이게 하려고 자체적으로 스크롤하면 측정이 오염되니, 이미 보이는 위치에 두고 raw click으로 눌렀습니다.
+
+| 항목 | 결과 |
+|---|---|
+| 4연속 전환 후 `scrollTop` | **822 고정** (수정 전엔 매 클릭 변동) |
+| 값 유형(kind) 전환 | 매번 정상 |
+| 키보드 Tab → Space 경로 | 토글 동작 유지 |
+| ESLint / `node --check` | 0건 / 통과 |
+| Tailwind 재빌드 | 신규 유틸 클래스 컴파일 확인 |
+
+숫자가 고정되는 걸 보고 나서야 마음이 놓였어요.
+
+---
+
+## 5. 회고
+
+- **하나 고쳤는데 증상이 남았다면, 원인이 하나가 아닐 수 있습니다.** 이번 건은 focus scroll과 scroll anchoring이라는 완전히 다른 두 메커니즘이 같은 증상으로 보였습니다. 첫 수정 후 "많이 나아졌다"에서 멈췄으면 절반만 고친 채로 넘어갔을 거예요.
+- `sr-only`는 "읽히되 안 보이게"를 위한 관용구지, **"클릭을 받는 컨트롤을 숨기기"용이 아닙니다.** 클릭 대상은 `opacity-0` + 실물 크기 오버레이가 안전합니다.
+- 접근성 패턴이 UX 버그를 만들었다고 접근성을 걷어내면 안 됩니다. `preventDefault`를 `mousedown`에만 건 것도, `tabindex="-1"`을 후보에서 뺀 것도 같은 이유예요.
+- **근본 해결과 국소 타협 중에 타협을 골랐다면, 그 사실을 코드와 기록에 남깁니다.** 캡처·복원은 전면 재렌더가 남아 있는 한 계속 필요한 코드고, 부분 렌더로 가면 지워야 할 코드입니다. 주석에 이유를 적어둔 게 그 표시예요.
+- **"느낌" 버그일수록 숫자로 재는 검증을 붙여둡니다.** 재발했을 때 바로 알 수 있고, 무엇보다 절반만 고친 상태에서 스스로를 속이지 않게 해줍니다.
+
+`renderForm`이 tbody를 통째로 다시 그리는 구조라는 게 진짜 원인에 가깝습니다. 지금은 캡처·복원으로 덮어뒀지만, 편집 중인 행만 교체하는 방향으로 렌더 범위를 좁히는 게 다음 숙제예요.

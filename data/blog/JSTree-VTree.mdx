@@ -1,326 +1,98 @@
 ---
-title: JSTree & VTree 사전 조사
+title: JSTree & VTree 사전 조사 — 그리고 1년 뒤 무엇이 살아남았나
 date: '2025-04-24'
 tags: [기술노트]
 draft: false
-summary: '깊이의 차이를 어떻게 구현을 진자 템플릿에서 해야할지에 대한 고민을 담다..'
+summary: '트리 구조 시각화를 위해 jsTree와 VTree를 조사하고 Django Jinja 템플릿에 붙였던 기록입니다. 1년 넘게 운영한 지금 답을 알고 있습니다 — jsTree는 살아남아 트리 화면의 기본이 됐고, VTree는 걷어내고 D3 직접 구현으로 갔어요. 갈린 기준과 함께, 당시 코드에서 지금 보면 걸리는 지점들(텍스트 기반 라우팅, 템플릿 리터럴 JSON 주입)을 정리했습니다.'
 ---
 
-# Django Jinja 기반 JSTree & VTree 시각화 및 AJAX 처리 실무 정리
+# JSTree & VTree 사전 조사 — 그리고 1년 뒤 무엇이 살아남았나
 
-참고한 URL:
-- https://www.jstree.com/
+표준데이터 관리 시스템에서 트리 구조(메타 클래스 계층, ASN.1, 개념 그래프)를 시각화해야 해서 두 라이브러리를 조사하고 붙였던 기록입니다. 당시의 조사 내용을 두고, **1년 넘게 운영한 뒤의 결말**과 **당시 코드에서 지금 보면 걸리는 지점**을 뒤에 붙였습니다.
 
-- https://opendata.mofa.go.kr/lod/dataNavigation.do
+## 1. 두 라이브러리의 성격
+
+| | jsTree | VTree |
+|---|---|---|
+| 기반 | jQuery 플러그인 | D3 래퍼 |
+| 잘하는 것 | **깊은 뎁스의 목록형 탐색** — 접기/펼치기, 선택, 아이콘 | **관계의 시각적 표현** — 노드를 공간에 배치 |
+| 데이터 | `{text, children}` JSON | 일반 JSON을 reader로 변환 |
+
+## 2. jsTree 기본 사용
+
+Jinja 템플릿에서 서버 데이터를 받아 초기화하는 형태로 썼습니다.
+
+```js
+$(`#{{ jstree_id }}`).jstree({
+  core: {
+    data: jsonObj,
+    themes: { name: 'proton', responsive: true },
+  },
+  types: {
+    default: { icon: 'far fa-folder text-primary' },
+    file: { icon: 'far fa-file text-primary' },
+  },
+  plugins: ['types'],
+});
+
+// 노드 선택 → 해당 클래스의 속성 테이블을 AJAX로 조회
+$('#classTree').on('select_node.jstree', (e, data) => {
+  showMetaClassTable(data.node.id, data.node.text);
+});
+```
+
+자주 쓴 이벤트만 추리면:
+
+| 이벤트 | 시점 | 용도 |
+| --- | --- | --- |
+| `select_node.jstree` | 노드 클릭/선택 | 상세 조회 트리거 — 가장 많이 씀 |
+| `changed.jstree` | 선택 집합 변경 | 다중 선택 감지 |
+| `open_node.jstree` / `close_node.jstree` | 펼침/접힘 | 지연 로딩, 상태 저장 |
+| `loaded.jstree` | 초기 로드 완료 | `open_all`, 첫 노드 자동 선택 |
+| `refresh.jstree` | `.refresh()` 호출 | 새로고침 버튼 연동 |
+
+기본 사용법과 모달 연동은 별도 글로 정리했습니다: [Jstree 기본](/blog/Jstree-basic) · [컨텍스트 메뉴와 모달](/blog/jstree-contextmenu-modal)
+
+## 3. VTree 사용
+
+```js
+const vt = new VTree(vtreeEl);
+vt.width(width).height(height);
+const reader = new VTree.reader.Object();   // 일반 JSON → VTree 구조로 변환
+vt.data(reader.read(jsonData)).update();
+```
+
+브라우저 크기를 재서 영역을 잡고, reader로 JSON을 변환해 렌더하는 구조입니다. 조사 시점의 판단은 "jsTree는 깊은 뎁스, VTree는 관계 표현"이라는 분업이었습니다.
 
 ---
 
-## 개요
+## 4. 1년 뒤 — 무엇이 살아남았나
 
-- **목적**: JSTree와 VTree를 활용한 트리 구조 시각화 및 AJAX 데이터 연동 흐름을 실무 기준으로 정리
-- **적용 기술**: Django, Jinja2 Template, jQuery, jsTree, VTree, AJAX
+지금 코드베이스를 검색하면 결말이 명확합니다.
 
-### 1. 적용 위치
+- **jsTree: 생존, 오히려 확대.** 메타 클래스 트리, OID 트리, 인스턴스 트리 등 10개 이상의 화면에서 트리 탐색의 기본이 됐습니다. 인라인 스크립트였던 초기 코드는 ES 모듈(`metaClassTree.js` + 공용 유틸)로 재편됐고요.
+- **VTree: 완전 제거.** `new VTree`는 코드베이스에 한 줄도 없습니다. 관계 시각화는 전부 **D3 직접 구현**으로 갔어요 — 관계도 연쇄 탐색, 선버스트, 데이터 맵, 워드클라우드.
 
-### JSTree 사용 위치
+갈린 기준을 지금 말로 정리하면 이렇습니다.
 
-| 파일 경로 | ID / 대상 | 설명 |
-| --- | --- | --- |
-| `asn1_tree_list.html.j2` | `{{ jstree_id }}` | ASN.1 트리 |
-| `concept_graph_list.html.j2` | `{{ jstree_id }}` | 개념 그래프 트리 |
-| `meta_class_tree.html.j2` | `{{ jstree_id }}` | 메타 클래스 트리 |
-| `concept_json_detail.html.j2` | `{{ jstree_id }}` | JSON 기반 개념 트리 시각화 |
+> **정형화된 상호작용(목록형 트리 탐색)은 라이브러리가 이기고, 표현 자체가 요구사항인 화면(관계 시각화)은 래퍼가 진다.**
 
-```jsx
-<script type="text/javascript" defer>
-  /*
-    [개념 그래프 트리 시각화 스크립트]
-    - 서버에서 전달된 JSON 데이터를 기반으로 jsTree 초기화
-    - 노드 클릭 시 해당 노드에 대한 시각화 페이지로 이동
-  */
-  window.addEventListener("load", () => {
+jsTree가 이긴 이유는 트리 탐색의 요구사항이 어느 프로젝트나 비슷해서입니다 — 접고 펼치고 선택하고. 반면 관계 시각화는 화면마다 요구가 달랐습니다. 연쇄 탐색은 [노드 겹침을 힘 시뮬레이션으로 풀어야 했고](/blog/관계도-연쇄-탐색과-땅콩-모양-노드-겹침), ASN.1 트리는 [Graphviz에서 D3로 옮기며](/blog/asn1-트리-렌더링-graphviz에서-d3로) 렌더링을 처음부터 설계했어요. VTree 같은 래퍼는 이 요구들 앞에서 "래퍼가 지원하는 것까지만 가능"이라는 천장이 됐고, 어차피 D3를 배워야 한다면 래퍼를 끼울 이유가 없었습니다.
 
-    // 1. jsTree 기본 설정 (core.data를 true로 설정: 일부 jQuery 버전에서 방어적)
-    $.jstree.defaults.core.data = true;
+## 5. 당시 코드에서 지금 보면 걸리는 것
 
-    // 2. 백엔드(Jinja)에서 전달된 JSON 데이터 파싱
-    const jsonObj = JSON.parse(
-      `{{ (data.concept_graph_root_nodes if data.concept_graph_root_nodes else []) | safe }}`
-    );
+사전 조사 단계의 코드라 지금 기준으로는 손볼 게 많았고, 실제로 대부분 이후에 고쳐졌습니다. 뭐가 문제였는지 남겨둡니다.
 
-    // 3. 트리 대상 DOM 요소(jsTree ID가 삽입된 위치)에 트리 초기화
-    $(`#{{ jstree_id }}`).jstree({
-      'core': {
-        'data': jsonObj, // 3-1. 트리 구조 데이터 설정
-        'themes': { 'name': 'proton', 'responsive': true } // 3-2. 테마 설정 (proton + 반응형)
-      },
-      'types': {
-        'default': {
-          'icon': 'far fa-folder text-primary' // 폴더 아이콘
-        },
-        'file': {
-          'icon': 'far fa-file text-primary'   // 파일 아이콘
-        }
-      },
-      'plugins': ['types'] // 4. 아이콘 적용을 위한 types 플러그인 사용
-    });
+- **노드의 표시 텍스트를 URL 식별자로 썼습니다.** `location.href = \`/…/concept_graph/${선택 노드의 text}/\`` — 이름이 중복되거나 특수문자가 들어가면 깨집니다. 화면에 보이는 문자열과 리소스 식별자는 다른 것인데 섞어 썼어요. 현재 코드는 `node.id` 기반으로 바뀌었습니다.
+- **서버 JSON을 템플릿 리터럴로 주입했습니다.** `` JSON.parse(`{{ data | safe }}`) `` — 데이터에 백틱이나 `${`가 들어오는 순간 스크립트가 통째로 깨지고, `| safe`라 이스케이프도 없으니 XSS 표면이기도 합니다. Django에는 정확히 이 용도의 `json_script` 필터가 있고, 그게 정석입니다.
+- **초기화를 두 번 하는 줄에 "완전 초기화 마무리"라는 주석을 달아놨습니다.** `.on(…).jstree()` — 이미 초기화된 트리에 인자 없이 재호출하면 아무 일도 안 일어납니다. 동작을 이해 못 한 채로 "되니까 두는" 코드에 그럴듯한 주석까지 붙인 사례라, 지금 보면 제일 뜨끔한 부분이에요.
+- **이벤트 17종 전부에 console.log를 바인딩**한 디버그 코드가 그대로 실려 있었고, AJAX 결과를 **문자열 연결 innerHTML**로 그려서 서버 텍스트가 이스케이프 없이 DOM에 들어갔습니다.
+- 응답 필드명에 `is_mandatary` **오타**가 있었습니다(테이블에 undefined로 렌더될 자리). 현재 코드베이스에는 이 오타가 0건 — 고쳐졌습니다.
+- 원문의 VTree "공식 문서" 링크는 사실 **d3-selection 이벤트 문서**였습니다. 조사 글의 참고 링크가 잘못돼 있으면 조사 자체의 신뢰가 흔들리는데, VTree가 D3 래퍼다 보니 뒤섞어 적은 거였어요.
 
-    // ───────────────────────────────────────────────
-    // 5. 노드 선택 이벤트 핸들링
-    // ───────────────────────────────────────────────
-    $(`#{{ jstree_id }}`)
-      .on("changed.jstree", (e, data) => {
-        const r = data.selected.map(id => data.instance.get_node(id).text); // 선택된 노드들의 텍스트 추출
+---
 
-        // 5-1. 선택 결과를 #event_result 요소에 표시 (디버깅 또는 UI 피드백용)
-        $("#event_result").html("Selected: " + r.join(", "));
+## 돌아보면
 
-        // 5-2. 선택된 첫 번째 노드의 이름을 URL에 포함시켜 이동
-        //      ※ jsTree에서는 여러 개 선택 가능하지만 여기선 단일 선택 가정
-        if (r.length > 0) {
-          location.href = `/std-data/visualization/concept_graph/${r[0]}/`;
-        }
-      })
-
-      // 6. 체이닝으로 jsTree 완전 초기화 마무리 (.on 뒤에 붙임)
-      .jstree();
-  });
-</script>
-
-```
-
-## JSTREE 이벤트 목록
-
-| 이벤트 이름 | 언제 발생하는지 | 설명 |
-| --- | --- | --- |
-| `before_open.jstree` | **노드를 열기 직전** | 열기 전 뭔가 검사를 하거나 조건을 걸고 싶을 때 |
-| `open_node.jstree` | **노드가 열릴 때** | 실제로 열렸을 때 UI가 반응하게 만들고 싶을 때 |
-| `after_open.jstree` | **노드가 열리고 난 후** | 완전히 펼쳐진 이후 실행됨 (UI 반응 다 끝난 시점) |
-| `close_node.jstree` | **노드가 닫힐 때** | 노드가 접히는 순간 |
-| `after_close.jstree` | **노드가 닫힌 이후** | 닫힘 완료 후 후처리할 때 |
-| `activate_node.jstree` | **노드가 포커스되었을 때** | 트리에서 해당 노드에 커서가 이동한 경우 |
-| `enable_node.jstree` | **노드가 활성화될 때** | disabled 상태였던 노드를 enable 했을 때 |
-| `disable_node.jstree` | **노드가 비활성화될 때** | 어떤 조건으로 노드를 비활성화할 때 |
-| `hide_node.jstree` | **노드 숨김 처리할 때** | 보통 `.hide_node()` 같은 메서드로 노드 숨길 때 |
-| `show_node.jstree` | **숨겨졌던 노드를 다시 보일 때** | `.show_node()`로 노드를 다시 보이게 만들 때 |
-| `select_node.jstree` | **노드를 선택했을 때** | 마우스 클릭하거나 `.select_node()` 호출했을 때 |
-| `deselect_node.jstree` | **선택이 해제될 때** | 다른 노드 선택되면서 기존 노드 선택 해제될 때 |
-| `changed.jstree` | **선택이 변경됐을 때 전반적으로** | 여러 노드가 선택/해제된 변화 감지용 |
-| `refresh.jstree` | **트리 전체를 다시 불러올 때** | `.refresh()` 호출 시 발생 |
-
-```jsx
- <script>
-  /*
-    [ClassTree 및 클래스 속성 테이블 렌더링 스크립트]
-    - jsTree로 클래스 트리 렌더링
-    - 노드 선택 시 해당 클래스의 속성 정보를 AJAX로 조회하여 테이블에 표시
-    - waitMe를 활용한 로딩 애니메이션 적용
-  */
-
-  // ───────────────────────────────────────────────
-  // 1. 로딩 애니메이션 실행 함수 정의 (waitMe 플러그인 사용)
-  // ───────────────────────────────────────────────
-  function run_waitMe(el) {
-    el.waitMe({
-      effect: "ios",
-      text: "Please wait...",
-      bg: "rgba(255,255,255,0.7)",
-      color: "#000",
-      maxSize: "",
-      textPos: "vertical",
-      fontSize: "",
-      onClose: function () {
-        // 로딩 애니메이션 종료 후 실행될 콜백 (현재는 사용 안 함)
-      }
-    });
-  }
-
-  // ───────────────────────────────────────────────
-  // 2. 클래스 속성 테이블을 AJAX로 조회하여 렌더링
-  // ───────────────────────────────────────────────
-  function showMetaClassTable(classURI, text) {
-    $("#classname").html(text); // 선택한 클래스 이름 표시
-    var uri = "{{ 'std-data:meta-class-property-list' | url }}" + "?metaclass_id=" + encodeURIComponent(classURI);
-    console.log("uri=" + uri);
-
-    $.ajax({
-      url: uri,
-      beforeSend: function () {
-        run_waitMe($("table#classInfo")); // 로딩 애니메이션 시작
-      },
-      success: function (json) {
-        var innerHtml = "";
-        $.each(json.data, function (index, value) {
-          innerHtml += "<tr class=\"text-center\">";
-          innerHtml += "<td>" + value.id + "</td>";
-          innerHtml += "<td>" + value.name + "</td>";
-          innerHtml += "<td>" + value.metakeytype + "</td>";
-          innerHtml += "<td>" + value.definition + "</td>";
-          innerHtml += "<td>" + value.domain + "</td>";
-          innerHtml += "<td>" + value.range + "</td>";
-          innerHtml += "<td>" + value.is_mandatary + "</td>";
-          innerHtml += "<td>" + value.description + "</td>";
-          innerHtml += "</tr>";
-        });
-
-        $("table#classInfo tbody").html(innerHtml);
-      },
-      error: function (request, status, err) {
-        alert("code:" + request.status + "\n" + "error:" + err + "\n" + "message:" + request.responseText);
-      },
-      complete: function () {
-        $("table#classInfo").waitMe("hide"); // 로딩 애니메이션 종료
-      }
-    });
-  }
-
-  // ───────────────────────────────────────────────
-  // 3. 문서 로드 후 트리 초기화 및 이벤트 설정
-  // ───────────────────────────────────────────────
-  $(document).ready(function () {
-    $.jstree.defaults.core.data = true;
-
-    {% autoescape off %}
-    // 백엔드(Jinja)에서 받은 JSON 데이터를 jsTree용으로 변환
-    const jsonStr = `{{ (data.core if data.core else []) | safe }}`;
-    const jsonObj = JSON.parse(jsonStr, function (k, v) {
-      if (k === "data") {
-        this.text = v.name; // jsTree에서 사용하는 필드 이름 'text'로 변경
-        return;
-      }
-      return v;
-    });
-    console.log(JSON.stringify(jsonObj, null, 2));
-    {% endautoescape %}
-
-    // ────────── 트리 초기화 ──────────
-    $("#classTree").jstree({
-      "core": {
-        "data": jsonObj,
-        "themes": { "name": "proton", "responsive": true }
-      },
-      "types": {
-        "default": { "icon": "far fa-folder text-primary" },
-        "file": { "icon": "far fa-file text-primary" }
-      },
-      "plugins": ["types"]
-    })
-      .bind("loaded.jstree", function (event, data) {
-        $(this).jstree("open_all");             // 전체 노드 열기
-        $(this).jstree("select_node", "ul > li:first"); // 첫 노드 자동 선택
-      });
-
-    // ───────────────────────────────────────────────
-    // 4. jsTree 이벤트 바인딩 (노드 인터랙션 처리 및 로깅)
-    // ───────────────────────────────────────────────
-    const events = [
-      "before_open", "open_node", "after_open",
-      "close_node", "after_close", "activate_node",
-      "enable_node", "disable_node", "hide_node", "show_node",
-      "hover_node", "dehover_node", "deselect_node",
-      "refresh_node", "refresh", "changed", "select_node"
-    ];
-
-    events.forEach(eventName => {
-      $("#classTree").on(`${eventName}.jstree`, function (e, data) {
-        if (eventName === "select_node") {
-          const selected = data.selected.map(id => data.instance.get_node(id).text);
-          console.log(`select_node.jstree`);
-          console.log("node:", JSON.stringify(data.node));
-          showMetaClassTable(data.node.id, data.node.text); // 속성 조회
-        } else if (eventName === "changed") {
-          const selected = data.selected.map(id => data.instance.get_node(id).text);
-          console.log(`changed.jstree selected: ${selected.join(", ")}`);
-        } else {
-          console.log(`${eventName}.jstree`);
-          console.log("node:", JSON.stringify(data.node));
-        }
-      });
-    });
-
-    // ───────────────────────────────────────────────
-    // 5. [보기 새로고침] 버튼 클릭 시 트리 리프레시
-    // ───────────────────────────────────────────────
-    $("#classView").on("click", function () {
-      $("#classTree").jstree(true).refresh();
-    });
-  });
-</script>
-
-```
-
-### 2. VTree
-
-공식 문서 : https://d3js.org/d3-selection/events
-
-### VTree 사용 위치
-
-| 파일 경로 | 설명 |
-| --- | --- |
-| `concept_graph_detail.html.j2` | 브라우저 사이즈 기반 D3 기반 VTree 시각화 |
-
-- `jstree`: 깊은 뎁스 가능함
-- `vtree`: 뎁스보다 **시각적인 관계 표현**에 초점
-
-| 이벤트 이름 | 주요 용도 |
-| --- | --- |
-| `click` | 노드를 클릭했을 때 데이터 조회, 트리 확장, UI 반응 처리 |
-| `mouseover` | 툴팁 표시, 노드 강조 등 인터랙션용 |
-| `mouseout` | 마우스를 뗐을 때 강조 해제, 툴팁 제거 등 |
-| `dblclick` | 상세 정보 페이지 이동, 추가 시각화 트리거 |
-| `contextmenu` | 마우스 우클릭 시 커스텀 메뉴 열기 (예: "상세 보기", "삭제" 등) |
-
-```jsx
-<script>
-  /*
-    [VTree 시각화 초기화 및 트리 데이터 렌더링]
-    - 페이지 로드 시, 백엔드에서 전달된 JSON 데이터를 기반으로 트리 시각화 구성
-    - 브라우저 크기에 맞춰 트리 영역 동적 설정
-    - updateTree 함수를 통해 트리 갱신 가능
-  */
-  window.addEventListener("load", () => {
-
-    // 1. Jinja에서 전달된 JSON 문자열 추출 (raw-safe 처리)
-    const jsonStr = `{{ (data.core if data.core else []) | safe }}`;
-
-    // 2. JSON 파싱 (초기 선언용, 실제로는 updateTree에서 사용)
-    const jsonObj = JSON.parse(jsonStr);  // 현재는 사용되지 않음
-
-    // 3. 현재 브라우저 크기 측정 → 트리 시각화 영역 크기 지정용
-    const width = document.body.clientWidth;
-    const height = document.body.clientHeight;
-
-    // 4. 트리 시각화 대상 DOM 요소 가져오기 (ID는 서버에서 주입)
-    const vtreeEl = document.getElementById(`{{ vtree_id }}`);
-
-    // 5. VTree 인스턴스 생성 및 크기 설정
-    const vt = new VTree(vtreeEl);
-    vt.width(width);     // 너비 설정
-    vt.height(height);   // 높이 설정
-
-    // 6. VTree용 Object reader 생성 (일반 JSON → VTree 데이터로 변환)
-    const reader = new VTree.reader.Object();
-
-    // 7. 트리를 갱신하는 함수 정의 (외부에서도 호출 가능하게 전역으로 선언)
-    updateTree = (jsonStr) => {
-      try {
-        const jsonData = JSON.parse(jsonStr);   // 문자열을 JSON 객체로 파싱
-        const data = reader.read(jsonData);     // VTree가 이해할 수 있는 구조로 변환
-        vt.data(data).update();                 // 데이터 설정 후 화면 갱신
-      } catch (e) {
-        // JSON 파싱이나 렌더링 중 오류 발생 시 무시 (silent fail)
-      }
-    };
-
-    // 8. 최초 로드 시 1회 트리 렌더링 실행
-    updateTree(jsonStr);
-  });
-</script>
-
-```
-
-## 참고 자료
-
-- JSTree 공식 문서: [https://www.jstree.com/](https://www.jstree.com/)
-- VTree (D3 기반): [https://d3js.org/d3-selection/events](https://d3js.org/d3-selection/events)
-- AJAX 기본 흐름: jQuery.ajax()
+- **사전 조사의 답은 조사가 아니라 운영이 알려줬습니다.** "jsTree는 뎁스, VTree는 관계"라는 당시 결론에서 앞쪽만 살아남았어요. 래퍼 라이브러리를 고를 때는 "지금 되는가"보다 **"요구가 래퍼의 천장을 넘으면 어떻게 되는가"**를 물었어야 했습니다.
+- **한계** — jsTree도 무비용이 아닙니다. jQuery 의존이 그대로 남았고, 노드 수천 개 규모에서의 렌더 성능은 검증하지 않았습니다(현재 화면들은 수백 노드 수준). jQuery 없는 대안(가상 스크롤 트리 등)으로의 이전은 필요가 생기기 전까지는 하지 않기로 한 상태입니다.

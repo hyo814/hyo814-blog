@@ -1,0 +1,258 @@
+---
+title: 없는 관계를 prefetch하고 있었다 — 다운로드 4종을 죽인 한 단어
+date: '2026-07-20'
+tags: [기술노트]
+draft: false
+summary: '카탈로그 PNG 다운로드가 500을 뱉어서 들어갔는데, 원인은 성능 최적화라고 믿고 있던 prefetch_related의 인자 하나였습니다. Dataset에 없는 관계명이라 QuerySet 평가 시점에 AttributeError가 났고, 지연 평가 때문에 선언부가 아니라 버튼 클릭에서 터졌어요. 같은 파일 안에서 따옴표 표기가 갈려 grep이 한쪽만 잡은 이야기와, AST로 인자 478건을 전수 대조한 기록입니다.'
+---
+
+# 없는 관계를 prefetch하고 있었다 — 다운로드 4종을 죽인 한 단어
+
+카탈로그 화면에서 PNG 다운로드 버튼이 500을 뱉는다는 얘기를 들었습니다. 이미지 렌더링 쪽이겠거니 하고 들어갔는데, 범인은 **성능 최적화라는 이름을 달고 있던 `prefetch_related` 인자 한 개**였어요.
+
+```python
+# std_data/managers/catalog_manager.py
+queryset = self.catalog.datasets.prefetch_related(
+    "concepts", "concepts__scheme", "tags", "metadata"   # ← 이 하나
+).select_related("creator", "owner_organization")
+```
+
+`Dataset`에는 `metadata`라는 관계가 없습니다. 있는 건 이것들이에요.
+
+```python
+class Dataset(models.Model):
+    ...
+    metadata_created  = models.DateTimeField(null=True, blank=True)   # 필드
+    metadata_modified = models.DateTimeField(null=True, blank=True)   # 필드
+    concepts = models.ManyToManyField(Concept, ...)
+    tags     = models.ManyToManyField(Tag, ...)
+```
+
+`DatasetMetadata`라는 모델이 따로 있긴 한데, 그건 `Dataset`이 아니라 `DatasetMetaClass`를 가리키고 역참조 이름도 `metadata_values`입니다. `metadata`는 **어디에도 없는 이름**이었어요.
+
+---
+
+## 1. 왜 선언부가 아니라 버튼에서 터졌나
+
+가장 헷갈렸던 부분입니다. 저 코드는 꽤 오래 있었는데 서버가 뜰 때도, `manage.py check`에서도, 마이그레이션에서도 아무 말이 없었어요.
+
+QuerySet이 **지연 평가**되기 때문입니다. `prefetch_related()`는 인자를 문자열로 받아 두기만 하고, 관계가 실제로 있는지는 **QuerySet을 순회하는 순간**에야 확인합니다.
+
+재현이 짧아서 그대로 옮깁니다. Django만 있으면 돌아가요.
+
+```python
+# repro.py
+import django
+from django.conf import settings
+settings.configure(
+    INSTALLED_APPS=["django.contrib.contenttypes", "django.contrib.auth"],
+    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},
+)
+django.setup()
+from django.db import models, connection
+
+
+class Dataset(models.Model):
+    title = models.CharField(max_length=64)
+    class Meta:
+        app_label = "auth"
+
+
+class DatasetMetadata(models.Model):
+    dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE,
+                                related_name="metadata_values")   # ← 'metadata' 아님
+    class Meta:
+        app_label = "auth"
+
+
+with connection.schema_editor() as se:
+    se.create_model(Dataset)
+    se.create_model(DatasetMetadata)
+Dataset.objects.create(title="ITS 표준 데이터셋")
+
+qs = Dataset.objects.prefetch_related("metadata")   # 여기선 아무 일도 안 일어난다
+print("선언 통과:", qs.query.model.__name__)
+
+try:
+    list(qs)                                        # 평가 시점에 터진다
+except Exception as e:
+    print(f"{type(e).__name__}: {e}")
+```
+
+```
+선언 통과: Dataset
+AttributeError: Cannot find 'metadata' on Dataset object, 'metadata' is an invalid parameter to prefetch_related()
+```
+
+**선언은 통과하고 평가에서 터집니다.** 그래서 스택 트레이스의 맨 위는 `catalog_manager.py`가 아니라 `rdf_factory.py`의 `for dataset in datasets:` 줄이었어요. 오타를 낸 곳과 터지는 곳이 다른 파일이니 처음엔 그래프 생성 로직을 의심했습니다.
+
+> QuerySet 관련 버그를 볼 때 **"어디서 터졌나"보다 "이 QuerySet을 누가 만들었나"를 먼저 따라가야** 합니다. 지연 평가는 오류의 발생 지점과 원인 지점을 항상 떼어놓습니다.
+
+---
+
+## 2. 하마터면 PNG만 고칠 뻔했다
+
+제보는 "PNG가 안 된다"였습니다. 그런데 `catalog_to_png()`를 읽어보니 이런 모양이었어요.
+
+```python
+def catalog_to_png(self, catalog, request, active_only=False):
+    ...
+    manager = CatalogManager(catalog)
+    datasets = manager.get_datasets(active_only=active_only)   # ← 공통 경유지
+    for dataset in datasets:
+        ...
+```
+
+`serialize_catalog()`(RDF/XML·N3)도, `catalog_to_json()`도 **똑같이 `get_datasets()`를 부릅니다.** 즉 화면의 다운로드 버튼 4개가 전부 죽어 있었는데, 다른 세 개는 아무도 눌러보지 않았을 뿐이었어요.
+
+이걸 확인하는 데엔 grep 한 줄이면 충분했습니다.
+
+```bash
+$ grep -rn "get_datasets(" std_data/ --include="*.py"
+std_data/rdf_factory.py:1060:        datasets = manager.get_datasets(active_only=active_only)
+std_data/rdf_factory.py:1730:        datasets = manager.get_datasets(active_only=active_only)
+std_data/rdf_factory.py:1813:        datasets = manager.get_datasets(active_only=active_only)
+...
+```
+
+**증상 하나를 받으면 고칠 함수의 호출자부터 세어봅니다.** 호출자가 셋이면 제보도 셋이어야 정상인데 하나만 왔다는 건, 나머지 둘은 아직 아무도 안 밟았다는 뜻이지 멀쩡하다는 뜻이 아니에요.
+
+---
+
+## 3. 어떻게 고칠까 — 이름을 바꿀까, 지울까
+
+`metadata`가 오타라면 고칠 방법이 몇 갈래 있었습니다.
+
+| 방법 | 얻는 것 | 포기하는 것 | 판단 |
+|---|---|---|---|
+| ① `"metadata"` → `"metadata_values"`로 교체 | "원래 의도한 관계를 살린다" | **의도가 그것이었다는 근거가 없음.** `metadata_values`는 `Dataset`이 아니라 `DatasetMetaClass`의 역참조라 애초에 못 씀 | 기각 |
+| ② `"metadata"` → `dataset_metaclasses__metadata_values` 같은 경로로 확장 | 실제로 메타데이터를 미리 당겨옴 | **아무도 요구한 적 없는 최적화.** 다운로드 경로가 그 값을 읽지도 않는데 조인만 늘어남 | 기각 |
+| ③ 인자에서 제거 | 최소 변경, 원상 복구 | 없음 — 애초에 아무 효과도 없던 인자 | **채택** |
+| ④ `prefetch_related` 호출 자체를 `try/except`로 감쌈 | 같은 사고 재발 시 화면은 살아남음 | 오타가 조용히 묻힘. 성능 저하로만 나타나 더 못 찾음 | 기각 |
+
+③을 고른 근거는 감이 아니라 **소비처를 읽은 결과**입니다.
+
+```bash
+$ grep -rn "metadata_created\|metadata_modified" std_data/rdf_factory.py
+std_data/rdf_factory.py:339:            Literal(dataset.metadata_created, datatype=XSD.date),
+std_data/rdf_factory.py:345:            Literal(dataset.metadata_modified, datatype=XSD.date),
+std_data/rdf_factory.py:469:            Literal(dataset.metadata_created, datatype=XSD.date),
+std_data/rdf_factory.py:475:            Literal(dataset.metadata_modified, datatype=XSD.date),
+```
+
+`graph_from_dataset()`이 실제로 읽는 건 **관계가 아니라 같은 테이블의 날짜 필드 두 개**였습니다. 필드는 이미 행에 실려 오니 prefetch할 대상이 아니에요. 옆 동네 `DatasetManager`의 같은 메서드도 `concepts`, `tags`만 prefetch하고 있었고요.
+
+정황을 모아 보면 **`metadata_created`/`metadata_modified`라는 필드 이름을 관계 이름으로 착각해 넣은 인자**로 읽힙니다. 이름이 비슷하면 관계인지 필드인지 헷갈리는데, `prefetch_related`는 필드를 넣어도 선언 시점엔 아무 말도 안 해줍니다.
+
+---
+
+## 4. grep이 한쪽만 잡았다
+
+고칠 곳이 두 군데였는데, 처음 grep에는 **한 군데만 걸렸습니다.**
+
+```python
+# get_datasets()
+queryset = self.catalog.datasets.prefetch_related(\
+    "concepts", "concepts__scheme", "tags", "metadata")\      # 큰따옴표
+
+# get_filtered_datasets() — 같은 파일, 40줄 아래
+queryset = Dataset.objects.prefetch_related(
+    'concepts', 'concepts__scheme', 'tags', 'metadata'        # 작은따옴표
+)
+```
+
+같은 파일 안에서 따옴표 표기가 갈려 있었습니다. `grep '"metadata"'`는 위만 잡고 아래를 놓쳐요. 게다가 위쪽은 백슬래시 줄바꿈까지 껴 있어서 `prefetch_related("concepts"` 같은 패턴으로도 안 걸립니다.
+
+**텍스트로 코드를 찾으면 표기 흔들림만큼 놓칩니다.** 그래서 문자열 매칭 대신 AST로 훑었어요.
+
+```python
+# 프로젝트 전체에서 prefetch_related/select_related 문자열 인자가
+# 실재하는 관계명인지 대조한다.
+import ast, os, sys, django
+sys.path.insert(0, os.getcwd())
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sdms.settings")
+django.setup()
+from django.apps import apps
+
+# 모델별 유효 이름 = 정방향 필드명 + 역참조 accessor
+valid = set()
+for m in apps.get_models():
+    for f in m._meta.get_fields():
+        valid.add(f.name)
+        if f.is_relation and hasattr(f, "get_accessor_name"):
+            if acc := f.get_accessor_name():
+                valid.add(acc)
+
+hits = bad = 0
+for root, dirs, files in os.walk("."):
+    dirs[:] = [d for d in dirs if d not in
+               {".git", "node_modules", "sdms-venv", "migrations", "static", "media"}]
+    for fn in files:
+        if not fn.endswith(".py"):
+            continue
+        path = os.path.join(root, fn)
+        try:
+            tree = ast.parse(open(path, encoding="utf-8").read())
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fun = node.func
+            if not (isinstance(fun, ast.Attribute)
+                    and fun.attr in ("prefetch_related", "select_related")):
+                continue
+            for a in node.args:
+                if not (isinstance(a, ast.Constant) and isinstance(a.value, str)):
+                    continue
+                hits += 1
+                head = a.value.split("__")[0]      # 'a__b__c' 는 첫 구간만 검사
+                if head not in valid:
+                    bad += 1
+                    print(f"MISS {path}:{a.lineno} {fun.attr}({a.value!r})")
+
+print(f"문자열 인자 {hits}건 / 어느 모델에도 없는 관계명 {bad}건")
+```
+
+AST는 따옴표 종류도, 줄바꿈도, 백슬래시도 신경 쓰지 않습니다. `ast.Constant`의 `value`만 보니까요.
+
+```
+문자열 인자 478건 / 어느 모델에도 없는 관계명 0건
+```
+
+수정 후 기준 **478건 전수 대조에 잔여 0건**. 처음 돌렸을 때 `catalog_manager.py`의 두 줄이 정확히 나왔고, 그 두 줄이 전부였습니다.
+
+이 스크립트가 **정확한 검사는 아닙니다.** 첫 구간만 보고, 모델별이 아니라 전체 이름 풀에 대해 대조합니다. 즉 "A 모델에는 없지만 B 모델에는 있는 이름"은 통과시켜요. 그래도 지금 필요한 건 "어느 모델에도 없는 이름 찾기"였고, 그 목적엔 충분했습니다. 모델별 정확 대조는 QuerySet의 베이스 모델을 AST로 추론해야 하는데, 매니저·체이닝을 거치면 정적으로는 잘 안 풀려요.
+
+---
+
+## 5. 검증
+
+| 항목 | 결과 |
+|---|---|
+| RDF/XML·N3·JSON·PNG 4개 엔드포인트 | 전부 200 |
+| PNG 응답 바이트 | 매직넘버 `\x89PNG` 확인 (200인데 빈 파일인 경우 배제) |
+| `test_catalog_manager` | 10건 통과 |
+| `std_data` 전체 테스트 | 190건 통과 |
+| AST 전수 대조 | 문자열 인자 478건 / 잔여 0건 |
+
+200만 보고 넘어가지 않은 이유는, 다운로드 뷰는 예외를 잡아 빈 응답을 돌려줘도 200이 나올 수 있어서입니다. **파일을 돌려주는 엔드포인트는 상태 코드가 아니라 바이트를 확인해야** 해요.
+
+---
+
+## 6. 남은 것
+
+- **이 검사를 CI에 넣지 않았습니다.** `django.setup()`이 필요해서 lint 단계에 그냥 얹기 어렵고, 테스트로 넣자니 앱 전체를 walk하는 게 무거워요. 지금은 손으로 돌리는 스크립트로 남아 있고, 이건 "다음에 또 나면 또 손으로 찾는다"는 뜻입니다.
+- 근본적으로는 **`prefetch_related`가 선언 시점에 검증되지 않는다**는 성질이 남아 있습니다. `Prefetch` 객체를 쓰면 queryset을 넘기니 오타가 조금 더 일찍 드러나지만, 문자열 인자를 쓰는 한 이 창은 계속 열려 있어요.
+- 이번 인자는 **아무 효과도 없으면서 이름만 최적화였던 코드**였습니다. 성능 튜닝이라고 적힌 줄일수록 측정 기록이 같이 남아 있는지 봐야 한다는 걸, 없는 관계를 1년 가까이 prefetch하고 나서 배웠습니다.
+
+---
+
+## 정리
+
+- **지연 평가는 원인 지점과 발생 지점을 떼어놓는다.** QuerySet 오류는 터진 줄이 아니라 만든 줄부터 본다.
+- **증상 하나를 받으면 호출자를 세어본다.** 제보 수와 호출자 수가 다르면 나머지는 멀쩡한 게 아니라 안 밟힌 것이다.
+- **표기가 흔들리는 코드는 grep으로 다 못 찾는다.** 구조를 봐야 하면 AST를 쓴다. 20줄이면 된다.
+- **파일을 주는 엔드포인트는 200이 아니라 바이트로 검증한다.**
+
+관련 글: [Django N+1 문제와 해결](/blog/django-n-plus-1) · [표준데이터를 고정 컬럼에서 인스턴스 기반 모델로 전환한 기록](/blog/표준데이터-고정컬럼에서-인스턴스-기반-모델로-전환)

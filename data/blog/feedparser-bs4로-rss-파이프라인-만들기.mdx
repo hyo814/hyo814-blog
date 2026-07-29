@@ -3,70 +3,52 @@ title: feedparser + BeautifulSoup4로 RSS 크롤링 파이프라인 만들기
 date: '2026-04-15'
 tags: [기술노트]
 draft: false
-summary: '한국어 5개 + 영어 4개 RSS 소스에서 Python/Django 관련 글만 골라 수집하고, HTML 정제와 자동 태깅까지 거치는 파이프라인을 Django management command로 정리한 기록입니다.'
+summary: '한국어 5개 + 영어 4개 RSS 소스에서 Python/Django 관련 글만 골라 수집하고, HTML 정제와 자동 태깅까지 거치는 파이프라인을 Django management command로 정리한 기록입니다. 나중에 다시 읽으면서 키워드 부분 문자열 매칭과 한글 slugify에서 결함 세 개를 찾았고, 재현 스크립트까지 같이 적었습니다.'
 ---
 
 # feedparser + BeautifulSoup4로 RSS 크롤링 파이프라인 만들기
 
 [PyNews](https://github.com/hyo814/python-news) 프로젝트의 핵심은 **여러 RSS 소스에서 백엔드 관련 글만 골라 모으는 것**이었습니다. 수집 자체는 `feedparser` 몇 줄이면 되지만, 실제로 쓸 만한 뉴스레터를 만들려면 **필터링, HTML 정제, 중복 제거, 자동 태깅**까지 필요했습니다.
 
-이 글에서는 그 파이프라인 각 단계를 정리합니다.
+이 글에서는 그 파이프라인 각 단계를 정리합니다. 그리고 **마지막 절에서, 나중에 다시 읽으며 찾은 결함 세 개**를 재현 코드와 함께 적었습니다. 셋 다 "부분 문자열 매칭"이라는 같은 뿌리에서 나왔어요.
 
 ---
 
-## 1. RSS 소스 목록 — 설정을 코드에 선언
+## 1. RSS 소스 목록 — 어디에 둘 것인가
 
-소스가 자주 바뀌지는 않아서 DB 테이블로 빼지 않고, 관리 명령 파일 상단에 dict 리스트로 두었습니다.
+소스 설정을 어디에 둘지부터 골라야 했습니다.
+
+| 방법 | 얻는 것 | 포기하는 것 | 판단 |
+|---|---|---|---|
+| ① DB 테이블(`FeedSource` 모델) | 관리자 화면에서 소스 추가 | 모델·마이그레이션·admin 등록. **소스는 몇 달에 한 번 바뀜** | 기각 |
+| ② 환경변수 / `.env` | 배포마다 다르게 | 태그 같은 구조를 담기엔 문자열이 답답함 | 기각 |
+| ③ 별도 `feeds.yaml` | 코드와 설정 분리 | 파일 하나와 파서 의존성이 늘어남. **바뀌면 어차피 배포함** | 기각 |
+| ④ 관리 명령 파일 상단에 dict 리스트 | 제일 짧음, 코드 리뷰에 diff가 그대로 보임 | 소스 추가에 배포 필요 | **채택** |
+
+④의 근거는 **변경 빈도**입니다. 소스를 마지막으로 바꾼 게 언제인지 세어보면 답이 나와요. 몇 달에 한 번 바뀌는 값을 위해 모델을 만들면, 그 모델을 관리하는 화면과 권한과 테스트가 따라 붙습니다.
 
 ```python
 RSS_FEEDS = [
     # 영어 소스
-    {
-        "url": "https://blog.python.org/feeds/posts/default?alt=rss",
-        "source": "Python Blog",
-        "tags": ["Python"],
-    },
-    {
-        "url": "https://www.djangoproject.com/rss/weblog/",
-        "source": "Django Blog",
-        "tags": ["Django"],
-    },
-    {
-        "url": "https://realpython.com/atom.xml",
-        "source": "Real Python",
-        "tags": ["Python"],
-    },
-    {
-        "url": "https://planetpython.org/rss20.xml",
-        "source": "Planet Python",
-        "tags": ["Python"],
-    },
+    {"url": "https://blog.python.org/feeds/posts/default?alt=rss",
+     "source": "Python Blog", "tags": ["Python"]},
+    {"url": "https://www.djangoproject.com/rss/weblog/",
+     "source": "Django Blog", "tags": ["Django"]},
+    {"url": "https://realpython.com/atom.xml",
+     "source": "Real Python", "tags": ["Python"]},
+    {"url": "https://planetpython.org/rss20.xml",
+     "source": "Planet Python", "tags": ["Python"]},
     # 한국어 소스
-    {
-        "url": "https://news.hada.io/rss/news",
-        "source": "GeekNews",
-        "tags": ["Python"],
-    },
-    {
-        "url": "https://meetup.nhncloud.com/rss",
-        "source": "NHN Cloud Meetup",
-        "tags": ["Python"],
-    },
-    {
-        "url": "https://techblog.woowahan.com/feed/",
-        "source": "우아한형제들 기술블로그",
-        "tags": ["Python"],
-    },
-    {
-        "url": "https://engineering.linecorp.com/ko/feed/",
-        "source": "LINE Engineering",
-        "tags": ["Python"],
-    },
-    {
-        "url": "https://toss.tech/rss.xml",
-        "source": "Toss Tech",
-        "tags": ["Toss Tech"],
-    },
+    {"url": "https://news.hada.io/rss/news",
+     "source": "GeekNews", "tags": ["Python"]},
+    {"url": "https://meetup.nhncloud.com/rss",
+     "source": "NHN Cloud Meetup", "tags": ["Python"]},
+    {"url": "https://techblog.woowahan.com/feed/",
+     "source": "우아한형제들 기술블로그", "tags": ["Python"]},
+    {"url": "https://engineering.linecorp.com/ko/feed/",
+     "source": "LINE Engineering", "tags": ["Python"]},
+    {"url": "https://toss.tech/rss.xml",
+     "source": "Toss Tech", "tags": ["Toss Tech"]},
 ]
 ```
 
@@ -78,7 +60,14 @@ RSS_FEEDS = [
 
 Python 공식 블로그나 Real Python은 들어오는 글이 전부 파이썬 관련이지만, **GeekNews나 토스/우아한형제들 기술블로그**는 프론트엔드, 디자인, iOS 같은 다양한 주제가 섞여 있습니다. 그대로 수집하면 뉴스레터의 성격이 흐려집니다.
 
-그래서 한국어 소스에는 키워드 필터를 먼저 태웁니다.
+| 방법 | 얻는 것 | 포기하는 것 | 판단 |
+|---|---|---|---|
+| ① 소스별 카테고리 URL만 구독 | 소스가 알아서 걸러줌 | **카테고리 피드를 제공하는 소스가 절반도 안 됨** | 부분 적용 불가 |
+| ② 키워드 포함 여부로 필터 | 20줄, 의존성 0 | 오탐·미탐. 키워드를 사람이 관리 | **채택** |
+| ③ 분류 모델(임베딩·LLM) | 정확도 | 글 한 편마다 API 호출. **주 1회 크론에 과함**, 비용도 붙음 | 기각 |
+| ④ 안 거르고 다 수집 후 사람이 큐레이션 | 놓치는 글 없음 | 그럴 사람이 없어서 자동화하는 것 | 기각 |
+
+②를 골랐습니다. **틀려도 손해가 작은 판단**이라서요. 오탐이면 뉴스레터에 관계없는 글이 하나 섞이고, 미탐이면 좋은 글 하나를 놓칩니다. 둘 다 복구 가능한 실수예요. ③은 정확도가 올라가는 대신 실패 모드가 "API가 죽어서 이번 주 뉴스레터가 안 나감"으로 바뀌는데, 그건 복구 가능한 실수가 아닙니다.
 
 ```python
 PYTHON_KEYWORDS = [
@@ -92,7 +81,9 @@ def _is_python_related(title: str, summary: str) -> bool:
     return any(kw in haystack for kw in PYTHON_KEYWORDS)
 ```
 
-**제목 + 요약**을 lowercase로 합쳐서 키워드 하나라도 걸리면 통과시킵니다. 정확도는 완벽하지 않지만 노이즈의 90% 이상을 걸러줍니다. 영어 소스는 이 단계를 스킵합니다.
+**제목 + 요약**을 lowercase로 합쳐서 키워드 하나라도 걸리면 통과시킵니다. 정확도는 완벽하지 않지만 체감상 노이즈 대부분이 걸러졌습니다 — **다만 이건 세어본 숫자가 아니라 눈으로 본 인상**입니다. 뒤에서 보겠지만, 세어봤어야 했어요.
+
+영어 소스는 이 단계를 스킵합니다.
 
 ---
 
@@ -102,20 +93,12 @@ def _is_python_related(title: str, summary: str) -> bool:
 
 ```python
 NOISE_PATTERNS = [
-    "Improve Your Python",
-    "Python Tricks",
-    "Get a short & sweet Python Trick",
-    "Click here to learn more",
-    ">> Click here",
-    "delivered to your inbox",
-    "Subscribe to our newsletter",
-    "Sign up for",
-    "Join our mailing list",
-    "Share on Twitter",
-    "Share on Facebook",
-    "Tweet this",
-    "Read the full article",
-    "Continue reading on",
+    "Improve Your Python", "Python Tricks",
+    "Get a short & sweet Python Trick", "Click here to learn more",
+    ">> Click here", "delivered to your inbox",
+    "Subscribe to our newsletter", "Sign up for", "Join our mailing list",
+    "Share on Twitter", "Share on Facebook", "Tweet this",
+    "Read the full article", "Continue reading on",
 ]
 
 def _clean_html(html: str) -> str:
@@ -138,6 +121,8 @@ def _clean_html(html: str) -> str:
 
 1. **태그 단위 제거**: `script`, `style`, `nav`, `aside`는 통째로 날립니다.
 2. **문단 단위 제거**: 노이즈 패턴이 텍스트에 포함된 `p` 태그만 제거합니다. 코드 블록(`<pre>`, `<code>`)이나 본문 HTML 구조는 유지해서, 나중에 마크다운 렌더링이 깨지지 않도록 했습니다.
+
+`readability-lxml` 같은 본문 추출 라이브러리도 후보였는데 안 썼습니다. 그건 **전체 웹페이지에서 본문 영역을 찾는** 도구인데, RSS `summary`는 이미 본문만 들어 있어요. 필요한 건 추출이 아니라 CTA 문단 제거라, 도구의 문제 정의가 우리 문제와 달랐습니다.
 
 ---
 
@@ -171,15 +156,125 @@ def _auto_tag(title: str, content: str) -> list[str]:
     return matched
 ```
 
-설계 포인트 몇 가지:
+설계 의도는 이랬습니다.
 
 - **중복 매칭 허용**: 한 글이 "Django + Testing" 태그를 동시에 가질 수 있습니다. 실제로 "Django 앱 pytest 테스트" 같은 글은 두 태그 모두 해당됩니다.
-- **`"sql "` 뒤 공백**: 그냥 `"sql"`을 넣으면 `postgresql`이나 `mysql` 같은 단어가 모두 걸립니다. 공백을 넣어 독립 단어일 때만 매칭되게 했습니다. 작지만 중요한 디테일입니다.
+- **`"sql "` 뒤 공백**: 그냥 `"sql"`을 넣으면 `postgresql`이나 `mysql` 같은 단어가 모두 걸린다고 생각해서, 공백을 붙여 독립 단어일 때만 매칭되게 했습니다.
 - **한영 키워드 혼용**: 영어 소스와 한국어 소스를 동일한 로직으로 처리하기 위해 양쪽 키워드를 한 리스트에 섞어 넣었습니다.
+
+**두 번째는 틀렸습니다.** 다음 절에서 확인합니다.
 
 ---
 
-## 5. 중복 방지 — `source_url` + `slug`
+## 5. 다시 읽으며 찾은 결함 셋
+
+이 글을 정리하면서 위 코드를 직접 돌려봤습니다. 짧은 스크립트 하나면 됩니다.
+
+```python
+from django.utils.text import slugify
+
+# ① "sql " 공백 트릭이 정말 postgresql 을 거르는가
+for s in ["PostgreSQL 인덱스 튜닝", "MySQL performance", "SQL 기초", "raw sql, orm 비교"]:
+    print(f'{s!r:36} "sql " in? {"sql " in s.lower()}')
+
+# ② "orm" 부분 문자열이 무엇을 잡는가
+DB = ["postgres", "mysql", "sqlite", "database", "sql ", "orm",
+      "sqlalchemy", "데이터베이스", "migration"]
+for s in ["Platform engineering at scale", "Improving performance of our API",
+          "Transformers explained", "Information architecture",
+          "Formatting Python code with black"]:
+    print(f'{s!r:44} Database 매칭 → {[k for k in DB if k in s.lower()]}')
+
+# ③ 한글 제목 slugify
+for t in ["파이썬 비동기 입문", "장고 ORM 최적화", "Django ORM tips"]:
+    print(f'{t!r:24} -> {slugify(t)!r}')
+```
+
+```
+'PostgreSQL 인덱스 튜닝'                "sql " in? True
+'MySQL performance'                  "sql " in? True
+'SQL 기초'                            "sql " in? True
+'raw sql, orm 비교'                   "sql " in? False
+
+'Platform engineering at scale'       Database 매칭 → ['orm']
+'Improving performance of our API'    Database 매칭 → ['orm']
+'Transformers explained'              Database 매칭 → ['orm']
+'Information architecture'            Database 매칭 → ['orm']
+'Formatting Python code with black'   Database 매칭 → ['orm']
+
+'파이썬 비동기 입문'          -> ''
+'장고 ORM 최적화'            -> 'orm'
+'Django ORM tips'       -> 'django-orm-tips'
+```
+
+### ① `"sql "` 공백 트릭은 아무것도 안 막는다
+
+4절에서 자랑스럽게 적어둔 그 디테일이 **양쪽으로 다 틀렸습니다.**
+
+- `postgresql 튜닝`을 소문자로 만들면 끝의 네 글자가 정확히 `sql `입니다. **막으려던 걸 그대로 통과시켜요.**
+- 반대로 `raw sql, orm 비교`처럼 뒤에 쉼표가 오면 안 걸립니다. **잡으려던 걸 놓칩니다.**
+
+게다가 애초에 무의미했습니다. `postgres`와 `mysql`이 **이미 같은 리스트에 있어서**, 통과시키든 말든 `Database` 태그는 붙어요. 없어도 되는 트릭을, 있으면 도움이 된다고 믿고 글에까지 적은 겁니다.
+
+**부분 문자열 매칭에 경계 조건을 넣고 싶으면 공백이 아니라 정규식 단어 경계를 씁니다.**
+
+```python
+import re
+# 앞뒤가 영숫자가 아닐 때만 매칭
+if re.search(rf"(?<![a-z0-9]){re.escape(kw)}(?![a-z0-9])", haystack):
+```
+
+### ② `"orm"` 하나가 영어 글 대부분에 `Database` 태그를 붙인다
+
+이게 훨씬 심각합니다. `orm`은 흔한 영어 단어들 안에 통째로 들어 있어요.
+
+| 단어 | 왜 걸리나 |
+|---|---|
+| platf**orm** | 플랫폼 |
+| perf**orm**ance | 성능 |
+| transf**orm**er | AI/ML 글 |
+| inf**orm**ation | 정보 |
+| f**orm**at / f**orm**atting | 포맷 |
+
+즉 **"performance"라는 단어가 한 번이라도 나오는 영어 글은 전부 `Database` 태그를 답니다.** 그리고 `_auto_tag`는 `title + content`를 보는데, `content`는 3절의 `_clean_html`이 돌려준 **HTML 문자열**이에요. 태그 속성(`class="post-format"`)이나 링크 URL까지 매칭 대상에 들어갑니다. 오탐 확률이 본문만 볼 때보다 훨씬 높습니다.
+
+`transformer`는 특히 고약합니다. **AI/ML 태그를 붙이려고 넣은 키워드가 동시에 Database 태그를 유발**해요. 태그 두 개를 다는 게 의도였는데, 그중 하나가 항상 틀립니다.
+
+### ③ 한글 제목은 slug가 전부 빈 문자열이다
+
+```python
+slug = slugify(entry.title)[:200]
+if Post.objects.filter(slug=slug).exists():
+    slug = f"{slug}-{uuid.uuid4().hex[:6]}"
+```
+
+Django의 `slugify()`는 기본이 `allow_unicode=False`라 **비ASCII 문자를 전부 버립니다.** `"파이썬 비동기 입문"` → `''`.
+
+그래서 실제로 벌어지는 일은 이렇습니다.
+
+1. 첫 한글 글: `slug = ''`로 저장.
+2. 두 번째 한글 글부터: `filter(slug='')`가 항상 참 → **매번 `-a1b2c3` 꼬리가 붙습니다.**
+3. 결과적으로 **한국어 소스에서는 slug 중복 체크가 한 번도 동작하지 않습니다.** 늘 "중복"이라 판정하고 늘 새 slug를 만들어요.
+
+한 술 더 떠서 `"장고 ORM 최적화"`는 `'orm'`이 됩니다. 한글만 사라지고 영문만 남으니까요.
+
+고치는 건 인자 하나입니다.
+
+```python
+slug = slugify(entry.title, allow_unicode=True)[:200]
+```
+
+다만 이러면 URL에 한글이 들어갑니다. 그게 싫으면 slug를 제목이 아니라 **`source_url`의 해시**로 만드는 쪽이 낫습니다. 어차피 1차 체크가 `source_url`이니 기준이 하나로 모이고요.
+
+### 셋의 공통 원인
+
+세 결함이 전부 **"부분 문자열이 들어 있으면 같은 것으로 친다"** 는 하나의 전제에서 나왔습니다. 그리고 셋 다 **조용히 틀립니다** — 예외도, 로그도, 눈에 띄는 이상 동작도 없어요. `Database` 태그가 많이 붙어도 "파이썬 글에 DB 얘기가 많나 보다" 하고 넘어가게 됩니다.
+
+> **분류 로직은 틀려도 안 터집니다.** 그래서 테스트가 없으면 틀린 채로 오래 갑니다. 태그 규칙 하나하나에 "이건 붙어야 한다 / 이건 안 붙어야 한다" 예시를 두 개씩만 적어뒀어도 ②는 첫날 잡혔을 겁니다.
+
+---
+
+## 6. 중복 방지 — `source_url` + `slug`
 
 같은 소스를 주 1회 돈다고 해도, 같은 글이 RSS에 며칠간 남아 있으면 중복 수집됩니다. 두 단계로 막았습니다.
 
@@ -194,12 +289,14 @@ if Post.objects.filter(slug=slug).exists():
     slug = f"{slug}-{uuid.uuid4().hex[:6]}"
 ```
 
-- 1차: **원본 URL이 같으면 같은 글**이라고 간주합니다. 가장 확실한 기준입니다.
-- 2차: URL이 다른데 제목이 같은 케이스(예: 한 글이 여러 소스에 배포됨)는 `slug`로 잡되, 완전히 스킵하지 않고 **해시 꼬리를 붙여서 저장**합니다. 일부러 다른 소스의 글도 모으고 싶을 때를 위한 타협점입니다.
+- 1차: **원본 URL이 같으면 같은 글**이라고 간주합니다. 가장 확실한 기준이고, 여기가 실질적으로 중복을 다 막고 있습니다.
+- 2차: URL이 다른데 제목이 같은 케이스(예: 한 글이 여러 소스에 배포됨)를 `slug`로 잡되, 완전히 스킵하지 않고 **해시 꼬리를 붙여 저장**합니다. 일부러 다른 소스의 글도 모으고 싶을 때를 위한 타협점이었어요.
+
+**단, 2차는 5절 ③ 때문에 한국어 소스에서 의미가 없습니다.** 지금 중복 방지는 사실상 1차 하나로 돌고 있고, 그건 `source_url`에 유니크 제약을 거는 것으로 대신할 수 있습니다. **앱에서 `exists()`로 확인하고 저장하는 건 동시에 두 번 돌면 뚫립니다** — 크론이 겹칠 일이 없어서 여태 문제가 없었던 것뿐이에요.
 
 ---
 
-## 6. `handle()` — 전체 파이프라인 엔트리
+## 7. `handle()` — 전체 파이프라인 엔트리
 
 management command의 `handle()` 메서드는 의외로 단순합니다. 각 단계를 `_process_feed()`로 위임하고, 총 카운트만 집계합니다.
 
@@ -221,14 +318,18 @@ def handle(self, *args, **options):
     )
 ```
 
-두 가지 옵션이 쓸모 있었습니다:
+두 가지 옵션이 쓸모 있었습니다.
 
 - `--days 7`: 최근 N일 이내 글만 수집. 매주 월요일에 도는 크론이라 7로 두면 딱 맞습니다.
 - `--dry-run`: DB에 저장하지 않고 수집 결과만 출력. 소스 추가/필터 수정 시 먼저 `--dry-run`으로 확인한 뒤 실제 실행합니다.
 
+`--dry-run`은 결과적으로 이 명령에서 제일 잘한 선택이었습니다. **분류 규칙을 바꿀 때 DB를 안 건드리고 결과를 볼 수 있다**는 게, 5절 같은 문제를 실제로 확인하는 유일한 수단이거든요. 다만 지금은 출력이 "몇 건 수집"이라 **어떤 태그가 왜 붙었는지는 안 보입니다.** `--dry-run`에서 글마다 매칭된 키워드를 같이 찍었다면 ②는 그 자리에서 보였을 거예요.
+
+`datetime.now()`도 눈에 걸립니다. Django에서 `USE_TZ=True`면 `timezone.now()`를 써야 하고, 여기 비교 대상인 feedparser의 `published_parsed`는 UTC 기준이에요. 소스가 전부 UTC 근처거나 며칠 단위 컷오프라 티가 안 났지만, **naive/aware를 섞는 코드**인 건 맞습니다.
+
 ---
 
-## 7. 파이프라인 전체 흐름 요약
+## 8. 파이프라인 전체 흐름 — 그리고 순서 문제
 
 ```
 RSS URL
@@ -236,22 +337,56 @@ RSS URL
 엔트리 리스트 (title, link, summary, published)
   ↓ cutoff 날짜 필터
 최근 N일 이내 글만
-  ↓ (한국어 소스만) PYTHON_KEYWORDS 필터
+  ↓ (한국어 소스만) PYTHON_KEYWORDS 필터   ← summary 가 아직 HTML 원본
 파이썬 관련 글만
   ↓ BeautifulSoup4 정제
 노이즈 제거된 HTML
   ↓ 중복 체크 (source_url, slug)
 새 글만
-  ↓ 자동 태깅
+  ↓ 자동 태깅                              ← content 가 HTML 문자열
 Post 객체 저장 (기본 태그 + 자동 태그)
 ```
 
-각 단계가 독립적이라 나중에 **특정 단계만 교체**(예: BeautifulSoup → readability-lxml)하거나 **소스별로 다른 필터**를 끼우기 쉽습니다.
+각 단계가 독립적이라 나중에 **특정 단계만 교체**하거나 **소스별로 다른 필터**를 끼우기 쉽습니다. 그런데 이 그림을 그리고 나서야 순서 문제가 보였어요.
+
+**키워드 필터가 정제보다 앞에 있습니다.** 즉 `_is_python_related()`가 보는 `summary`는 **HTML 원본**이에요. `<a href="https://.../python/...">` 같은 링크 하나만 있어도 통과합니다. 사이드바나 CTA에 파이썬 관련 링크가 붙는 소스면 **전 글이 통과**해요.
+
+같은 이유로 자동 태깅도 HTML을 봅니다(5절 ②).
+
+정리하면 **텍스트 판정을 하는 단계 둘이 모두 마크업을 보고 있습니다.** 고치는 건 순서를 바꾸거나, 판정용 평문을 한 번 만들어 두 단계가 같이 쓰는 겁니다.
+
+```python
+plain = BeautifulSoup(summary, "html.parser").get_text(" ", strip=True)
+# 필터도 태깅도 plain 을 본다. 저장은 정제된 HTML 을 그대로.
+```
+
+**판정에 쓰는 텍스트와 저장에 쓰는 텍스트를 분리**하는 게 요점입니다. 저장은 HTML이 필요하고, 판정은 평문이 필요해요. 하나로 쓰려니 둘 다 어긋났습니다.
+
+---
+
+## 9. 한계와 다음에 할 것
+
+정직하게 남은 것들:
+
+- **분류 정확도를 한 번도 안 쟀습니다.** 2절의 "노이즈 대부분이 걸러진다"는 인상이고, 5절 ②는 그 인상이 틀릴 수 있음을 보여줍니다. 수집한 글 50건만 손으로 라벨링해도 오탐률이 나옵니다.
+- **키워드 매칭에 단어 경계가 없습니다.** 5절 ①의 정규식으로 전 키워드를 옮겨야 합니다.
+- **`allow_unicode=True`, 혹은 slug를 URL 해시로.** 한국어 소스의 2차 중복 체크가 지금은 죽어 있습니다.
+- **`source_url`에 DB 유니크 제약이 없습니다.** 앱 레벨 `exists()`는 동시 실행에 뚫립니다.
+- **`--dry-run` 출력에 매칭 근거를 안 찍습니다.** 분류를 튜닝하는 도구인데 정작 왜 그렇게 분류됐는지를 안 보여줘요.
+- 판정용 평문과 저장용 HTML을 분리해야 합니다(8절).
 
 ---
 
 ## 정리
 
-RSS 크롤링은 `feedparser` 호출만으로는 부족하고, **"의미 있는 뉴스레터 콘텐츠"로 만들기 위한 정제 단계**가 더 많았습니다. 특히 한국어 소스의 파이썬 관련 필터, HTML 내 CTA 제거, 키워드 기반 자동 태깅 세 가지는 도메인별로 직접 튜닝해야 하는 부분이었습니다.
+RSS 크롤링은 `feedparser` 호출만으로는 부족하고, **"의미 있는 뉴스레터 콘텐츠"로 만들기 위한 정제 단계**가 더 많았습니다. 한국어 소스의 파이썬 관련 필터, HTML 내 CTA 제거, 키워드 기반 자동 태깅 세 가지는 도메인별로 직접 튜닝해야 하는 부분이었어요.
 
-다음 글에서는 이 `crawl_news`를 포함한 **Django management command 4종**(`crawl_news`, `send_newsletter`, `seed_editorial`, `backfill_urls`)을 어떻게 역할별로 나눠 설계했는지 정리하겠습니다.
+그런데 이 글을 다시 정리하면서 얻은 게 더 큽니다.
+
+- **부분 문자열 매칭은 조용히 틀린다.** `orm`이 `platform`을 잡는 걸 아무도 안 알려줍니다.
+- **경계를 주고 싶으면 공백이 아니라 단어 경계를 쓴다.** `"sql "`은 막으려던 것도 못 막고 잡으려던 것도 놓쳤습니다.
+- **판정용 텍스트와 저장용 텍스트를 분리한다.** HTML로 판정하면 마크업이 판정에 참여합니다.
+- **분류 로직은 안 터지므로 테스트가 없으면 틀린 채로 간다.** 규칙마다 양성·음성 예시 하나씩이면 충분합니다.
+- **`slugify()`는 기본이 ASCII다.** 한글 제목 프로젝트에서 이건 언젠가 밟습니다.
+
+다음 글에서는 이 `crawl_news`를 포함한 **Django management command 4종**(`crawl_news`, `send_newsletter`, `seed_editorial`, `backfill_urls`)을 어떻게 역할별로 나눠 설계했는지 정리합니다. → [Django management command 4종 설계기](/blog/django-management-command-4종-설계기)

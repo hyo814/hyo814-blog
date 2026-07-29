@@ -1,38 +1,35 @@
 ---
-title: 자바스크립트 useState 구현
+title: 자바스크립트로 useState 구현해 보기 — 그리고 내가 만든 건 useState가 아니었다
 date: '2025-01-03'
 tags: [기술노트]
 draft: false
-summary: '자바스크립트로 useState 구현 해보기'
+summary: 'useState를 바닐라 JS로 흉내 내봤던 스터디 글입니다. 다시 보니 두 가지가 보여요 — 내가 만든 건 사실 useState가 아니라 구독 기반 외부 스토어(zustand 쪽)였다는 것, 그리고 진짜 useState의 핵심(훅 호출 순서로 상태 슬롯을 찾는 커서)은 하나도 구현하지 않았다는 것. 원 코드를 두고 그 간극을 정리했습니다.'
 ---
 
+# 자바스크립트로 useState 구현해 보기
+
+React 없이 `useState`를 흉내 내보자는 스터디였습니다. 당시 코드를 그대로 싣고, **다시 보니 보이는 것들**을 뒤에 붙였습니다.
+
+## 1. 당시의 구현
+
 ```jsx
-// 자바스크립트로 useState를 구현한 예제
 function createStateManager() {
-  let state // 현재 상태를 저장
-  let listeners = [] // 상태 변경을 구독하는 리스너 목록
+  let state
+  let listeners = []
 
   function useState(initialValue) {
-    // 초기 상태 설정
     if (state === undefined) {
       state = initialValue
     }
 
     function setState(newValue) {
-      // 새로운 상태 설정
-      if (typeof newValue === 'function') {
-        state = newValue(state) // 함수형 업데이트 처리
-      } else {
-        state = newValue
-      }
-      listeners.forEach((listener) => listener(state)) // 모든 리스너에 상태 변경 알림
+      state = typeof newValue === 'function' ? newValue(state) : newValue
+      listeners.forEach((listener) => listener(state))
     }
 
     function subscribe(listener) {
-      // 상태 변경을 구독
       listeners.push(listener)
       return () => {
-        // 구독 취소
         listeners = listeners.filter((l) => l !== listener)
       }
     }
@@ -43,22 +40,61 @@ function createStateManager() {
   return { useState }
 }
 
-// 사용 예제
 const stateManager = createStateManager()
 const [count, setCount, subscribe] = stateManager.useState(0)
 
-// 상태 변경 구독
-const unsubscribe = subscribe((newCount) => {
-  console.log('상태가 업데이트됨:', newCount)
-})
-
-// 상태 업데이트
-setCount(1) // 출력: "상태가 업데이트됨: 1"
-setCount((prevCount) => prevCount + 1) // 출력: "상태가 업데이트됨: 2"
-
-// 구독 해제
+const unsubscribe = subscribe((newCount) => console.log('상태가 업데이트됨:', newCount))
+setCount(1)                      // "상태가 업데이트됨: 1"
+setCount((prev) => prev + 1)     // "상태가 업데이트됨: 2" — 함수형 업데이트 동작
 unsubscribe()
-
-// 구독 해제 이후에는 상태 변경 로그가 출력되지 않음
-setCount(5)
 ```
+
+함수형 업데이트(`prev => prev + 1`)와 구독/해제는 동작합니다. 그런데.
+
+## 2. 다시 보니 ① — 내가 만든 건 useState가 아니라 스토어다
+
+반환값을 보면 `[state, setState, subscribe]` — **3번째 요소가 정체를 폭로합니다.** React의 useState에는 subscribe가 없어요. 구독이 필요 없는 이유는 **리렌더 자체가 구독의 역할**을 하기 때문입니다(상태가 바뀌면 컴포넌트 함수가 다시 실행되어 새 값을 받음).
+
+구독 콜백으로 변경을 통지받는 이 구조는 사실 **외부 스토어 패턴**입니다 — zustand의 `createStore`, Redux의 `store.subscribe`가 정확히 이 모양이에요. 실제로 zustand를 실무([TripTune](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발)의 상태 관리)에서 쓰고 나서 다시 보니, 그때 만든 게 뭐였는지 이름을 정확히 붙일 수 있게 됐습니다. 흉내 내려던 것(useState)과 만들어진 것(스토어)이 달랐고, **그 차이를 몰랐다는 게 당시 이해의 한계**였어요.
+
+## 3. 다시 보니 ② — 진짜 useState의 핵심은 하나도 없다
+
+이 구현에는 `state` 변수가 **하나**뿐입니다. `useState`를 두 번 호출하면?
+
+```jsx
+const [name] = stateManager.useState('kim')   // state는 이미 0 — 'kim'은 무시됨
+```
+
+두 상태가 한 변수를 공유해 버립니다. React가 이 문제를 푸는 방식이 useState의 진짜 핵심인데 — **컴포넌트별 상태 슬롯 배열 + 호출 순서 커서**입니다. 렌더마다 커서를 0으로 리셋하고, `useState`가 호출될 때마다 커서를 증가시키며 "몇 번째 호출이니 몇 번째 슬롯"으로 상태를 찾아요.
+
+```jsx
+// 핵심만 흉내 낸 커서 모델
+let slots = []
+let cursor = 0
+
+function useState(initial) {
+  const i = cursor++
+  if (slots[i] === undefined) slots[i] = initial
+  const setState = (v) => {
+    slots[i] = typeof v === 'function' ? v(slots[i]) : v
+    rerender()                    // 컴포넌트 함수 재실행 → 커서 리셋 → 새 값 반환
+  }
+  return [slots[i], setState]
+}
+
+function rerender() {
+  cursor = 0                      // 이게 있어야 다음 렌더에서 같은 슬롯을 같은 순서로 찾음
+  Component()
+}
+```
+
+이 모델이 있어야 **"훅은 조건문 안에서 부르면 안 된다"는 규칙의 이유**도 설명됩니다 — 호출 순서가 곧 상태의 주소라서, 순서가 흔들리면 엉뚱한 슬롯을 집기 때문이에요. 원래 구현은 이 규칙이 왜 있는지 답할 수 없는 구현이었습니다.
+
+## 4. 하나 더 — 반환된 값은 스냅샷이다
+
+원 코드의 사용 예제에서 `setCount(1)` 후에도 변수 `count`는 **여전히 0**입니다. 구조 분해로 받은 값은 호출 시점의 스냅샷이니까요. React에서 최신 값을 받는 방법이 "리렌더에서 useState를 다시 호출하는 것"인 이유가 여기 있고, 원래 예제는 로그로만 확인하고 `count`를 다시 읽지 않아서 이 문제가 **드러나지 않았을 뿐** 있었습니다.
+
+## 정리
+
+- 흉내 구현의 가치는 "돌아간다"가 아니라 **원본과의 차이를 정확히 아는 것**이었는데, 당시엔 돌아가는 데서 멈췄습니다.
+- useState의 본질은 상태 저장이 아니라 **호출 순서 기반 슬롯 찾기 + 리렌더 트리거**였고, 그걸 빼고 만들면 자연스럽게 외부 스토어가 됩니다 — 그것대로 유용한 패턴이지만, 이름은 정확히 불러야 했어요.

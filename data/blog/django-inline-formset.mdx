@@ -148,9 +148,87 @@ document.getElementById('add-form').addEventListener('click', function () {
 
 ---
 
+## 실무에 붙이면서 고친 것들
+
+위 예제를 실제 화면(표준데이터 부가정보 입력)에 쓰면서 세 군데를 고쳤습니다.
+
+### ① `commit=False`를 쓰면 삭제가 동작하지 않는다
+
+가장 오래 못 찾은 버그였습니다. `can_delete=True`로 삭제 체크박스를 넣었는데 **체크하고 저장해도 항목이 안 지워졌어요.**
+
+원인은 저장 코드였습니다.
+
+```python
+instances = formset.save(commit=False)
+for obj in instances:
+    obj.dataset = dataset
+    obj.save()
+formset.save_m2m()
+```
+
+`save(commit=False)`는 **새로 만들거나 수정된 객체만** 돌려줍니다. **삭제 대상은 `formset.deleted_objects`에 따로 담기고, 직접 지워줘야 해요.** `save_m2m()`은 M2M만 처리하지 삭제와는 무관하고요.
+
+```python
+instances = formset.save(commit=False)
+for obj in instances:
+    obj.save()
+for obj in formset.deleted_objects:   # ← 이게 빠져 있었다
+    obj.delete()
+formset.save_m2m()
+```
+
+그리고 하나 더 — **`obj.dataset = dataset`은 애초에 필요 없습니다.** 바로 위에서 *"`instance=dataset`을 전달하면 FK가 자동으로 연결된다"* 고 써놓고 코드에서는 수동으로 다시 넣고 있었어요. 글 안에서 설명과 코드가 어긋난 셈입니다.
+
+`commit=False`가 필요한 이유(저장 전에 뭔가 손대야 함)가 없다면 **그냥 `formset.save()` 한 줄**이 맞습니다. 그러면 삭제도 알아서 처리돼요.
+
+### ② 동적 폼 추가는 `empty_form`으로
+
+예제의 JS는 첫 번째 행을 복제합니다.
+
+```javascript
+const newForm = document.querySelector('.form-row').cloneNode(true);
+newForm.innerHTML = newForm.innerHTML.replace(/form-\d+/g, `form-${formCount}`);
+```
+
+두 가지가 문제입니다. **첫 행에 이미 입력된 값이 같이 복제**되고(빈 폼이 아니라 복사본), `innerHTML`을 문자열로 갈아끼우니 **그 안의 이벤트 리스너가 전부 날아갑니다.**
+
+Django가 이걸 위한 빈 폼을 제공합니다. `formset.empty_form`은 인덱스 자리에 `__prefix__`가 들어간 템플릿이에요.
+
+```django
+<div id="empty-form" class="d-none">
+    {{ formset.empty_form.as_p }}   {# form-__prefix__-name ... #}
+</div>
+```
+
+```javascript
+const total = document.getElementById('id_form-TOTAL_FORMS');
+document.getElementById('add-form').addEventListener('click', function () {
+    const index = parseInt(total.value, 10);
+    const html = document.getElementById('empty-form').innerHTML
+                   .replace(/__prefix__/g, index);
+    document.getElementById('formset-container')
+            .insertAdjacentHTML('beforeend', html);
+    total.value = index + 1;
+});
+```
+
+**빈 폼의 정의를 서버가 갖고 있게** 두는 게 핵심입니다. 필드가 추가돼도 JS를 안 고쳐도 되고요.
+
+### ③ `extra`는 작을수록 좋았다
+
+처음에 `extra=3`으로 뒀습니다. 예제들이 대체로 그렇게 쓰기도 하고, 넉넉하면 편할 거라 생각했어요.
+
+실제로는 반대였습니다. **대부분의 사용자가 한 건만 입력**하는데 빈 행 세 개가 먼저 보이니 *"세 개를 다 채워야 하나"* 로 읽혔습니다. 화면도 그만큼 길어지고요.
+
+`extra=1`로 줄이고 "행 추가" 버튼을 두는 쪽으로 바꿨습니다. **빈 칸을 미리 깔아두는 것과 필요할 때 늘리는 것은 사용자에게 다른 메시지**를 줍니다. 전자는 요구고 후자는 선택이에요.
+
+---
+
 ## 언제 무엇을 쓸까?
 
 - **Formset**: 독립적인 여러 객체를 한 번에 처리할 때 (태그 일괄 등록, 설문 답변 일괄 저장)
 - **Inline Formset**: 부모와 자식 관계가 명확할 때 (주문-상품, 게시글-첨부파일, 데이터셋-세부항목)
 
 Inline Formset은 `instance`만 넘기면 FK 연결을 알아서 처리해주기 때문에, 부모-자식 관계라면 Inline Formset이 훨씬 간편합니다.
+
+정리하면 **`formset.save()`로 끝낼 수 있으면 그렇게 하고**, `commit=False`를 쓴다면 삭제 처리까지 직접 챙겨야 합니다. 그 한 줄이 빠지면 "삭제가 안 되는" 조용한 버그가 됩니다.
