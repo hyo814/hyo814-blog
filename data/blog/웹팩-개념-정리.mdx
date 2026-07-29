@@ -296,6 +296,15 @@ module.exports = {
 
 ---
 
+## 이 중 실무에 실제로 쓴 것
+
+강의 정리는 여기까지고, 이후 실제 프로젝트(Django + jQuery 레거시에 웹팩 도입)에서 **실제로 꺼내 쓴 것과 한 번도 안 쓴 것**을 구분해 둡니다.
+
+- **실제로 쓴 것** — Entry 다중 구성(화면별 번들), `DefinePlugin`(백엔드 템플릿 주입을 대체), `ProvidePlugin`(jQuery 전역 노출), MiniCssExtractPlugin + CSS import 순서 관리, `[contenthash]` + manifest 추적. 이 조합에서 걸린 함정들은 [설정 변경 시 주의사항](/blog/webpack-변경-시-주의사항)에 따로 정리했습니다.
+- **배웠지만 안 쓴 것** — Module Federation, SSR 연동, 동적 `import()` 코드 스플리팅. 서버 렌더링 + 화면별 엔트리 구조에서는 필요가 생기지 않았어요. 강의의 "최적화 기법" 절이 실무에서는 **번들 크기보다 레거시 공존(전역 변수·CSS 순서)이 먼저**라는 걸 도입해 보고 알았습니다.
+
+그리고 이 글 안의 **자기 불일치 하나** — 2.3절 로더 예시는 `url-loader`를 쓰는데, 5절 종합 예시는 `type: 'asset'`을 씁니다. webpack 5부터 `url-loader`/`file-loader`는 **asset modules로 대체**돼 신규 설정에서는 후자가 맞습니다. 강의(webpack 4 시절 내용 포함)를 정리하며 두 시대의 코드를 한 글에 섞어놓고 눈치채지 못했던 거라, 5절 방식을 기준으로 삼으면 됩니다.
+
 ## **정리**
 1. **Webpack**은 복잡해 보이지만, 각 **핵심 개념(Entry, Output, Loader, Plugin, Dev Server, Mode)** 을 이해하면 훨씬 수월하다.
 2. 규모가 커질수록 **코드 스플리팅**, **Tree Shaking**, **Caching** 등 기법을 적극적으로 도입해 최적화 성능을 확보한다.

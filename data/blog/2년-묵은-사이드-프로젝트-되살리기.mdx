@@ -1,0 +1,293 @@
+---
+title: 2년 묵은 사이드 프로젝트 되살리기 — lockfile 두 개, 죽은 Jest, 타입 충돌
+date: '2026-07-21'
+tags: [기술노트]
+draft: false
+summary: 'yarn 프로젝트에 package-lock.json이 남아 있어 dependabot 보안 경보가 두 배로 잡히고 있었습니다. Jest는 moduleNameMapper 순서와 tsconfig 때문에 애초에 못 돌고 있었고, Cypress의 chai 타입이 jest-dom 매처 타입을 덮고 있었어요. Next 14→15 메이저 업그레이드까지 한 번에 처리한 기록입니다.'
+---
+
+# 2년 묵은 사이드 프로젝트 되살리기
+
+[TripTune](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발)은 2024년 6월에 시작해서 MVP를 6개월 만에 냈습니다. 그 뒤로도 계속 만졌지만, **의존성과 테스트는 계속 미뤘어요.**
+
+GitHub 저장소를 열면 dependabot 보안 경보가 쌓여 있고, `yarn test`는 언제부터인지 모르게 안 돌고 있었습니다. 하루 잡고 한 번에 정리했습니다.
+
+정리하고 보니 **문제는 "오래됐다"가 아니라 "구조가 어긋나 있다"** 였습니다.
+
+---
+
+## 1. 경보가 두 배로 잡히고 있었다
+
+먼저 dependabot 경보를 봤는데, 같은 패키지가 두 번씩 올라와 있었습니다. 저장소에 lockfile이 **둘** 있었거든요.
+
+```
+package-lock.json    ← npm
+yarn.lock            ← yarn
+```
+
+이 프로젝트는 **yarn만 씁니다.** `package-lock.json`은 어느 시점에 `npm install`을 한 번 쳐서 생긴 것이고, 그 뒤로 아무도 안 쓰는데 커밋돼 있었어요.
+
+dependabot은 lockfile을 보고 취약점을 찾습니다. **두 개가 있으면 같은 취약점을 두 번 보고**하고, 게다가 **실제로 설치되지도 않는 트리**(npm 쪽)의 취약점까지 보고합니다.
+
+```
+package-lock.json | 13959 ------------------------------------
+```
+
+지웠습니다. 13,959줄이 사라지고 경보 절반이 같이 사라졌어요.
+
+> **패키지 매니저를 하나 고르는 건 취향 문제지만, 두 개의 lockfile을 두는 건 그냥 버그입니다.** 하나는 반드시 거짓말을 하고 있어요.
+
+### 남은 취약점은 전이 의존성이었다
+
+직접 의존성은 대부분 최신이었고, 걸린 건 전부 **전이 의존성**이었습니다. `websocket-driver`, `brace-expansion`, `minimatch`, `js-yaml`, `ajv`, `joi`, `yaml`, `@babel/core`, `postcss` 같은 것들이요.
+
+이런 건 `yarn upgrade`로 안 올라갑니다. 상위 패키지가 낡은 버전을 고정해두고 있으니까요.
+
+| 방법 | 얻는 것 | 포기하는 것 | 판단 |
+|---|---|---|---|
+| ① 상위 패키지(`eslint-config-next` 등)를 올린다 | 정석 | **`eslint-config-next`는 Next 버전에 묶여 있음.** 올리려면 Next를 올려야 함 | 일부만 가능 |
+| ② `yarn.lock`을 직접 편집 | 즉시 해결 | 다음 `yarn install`에 되돌아감 | 기각 |
+| ③ 취약점 무시(`dependabot ignore`) | 경보 사라짐 | **경보만 사라지고 취약점은 남음** | 기각 |
+| ④ `resolutions`로 전이 의존성 버전을 강제 | lockfile에 고정됨, 재현 가능 | 상위 패키지가 그 버전과 안 맞으면 깨질 수 있음 | **채택** |
+
+```json
+"resolutions": {
+  "postcss": "^8.5.10",
+  "**/@next/eslint-plugin-next/glob": "10.5.0",
+  "**/eslint-config-next/**/minimatch": "9.0.9",
+  "**/eslint-config-next/minimatch": "9.0.9"
+}
+```
+
+**경로를 좁게 잡은 게 의도적입니다.** `"minimatch": "9.0.9"`라고 전역으로 박으면 `minimatch`를 쓰는 모든 패키지가 영향을 받아요. `**/eslint-config-next/**/minimatch`로 **문제가 있는 경로에만** 걸면, 나중에 `eslint-config-next`를 올렸을 때 이 줄이 무의미해질 뿐 다른 곳을 안 건드립니다.
+
+`minimatch` 항목이 두 줄인 것도 이유가 있습니다. `**/eslint-config-next/**/minimatch`는 **손자 이하**를 잡고, 직접 자식은 `**/eslint-config-next/minimatch`로 따로 잡아야 했어요. 글롭 하나로 둘 다 잡히지 않습니다.
+
+> `resolutions`는 **부채를 명시적으로 적어두는 자리**입니다. 여기 줄이 늘어나면 "상위 패키지를 올려야 한다"는 신호예요. 지우기 쉽게 경로를 좁게 씁니다.
+
+---
+
+## 2. Next 14 → 15, swiper 11 → 14
+
+메이저를 두 개 올렸습니다. 미루면 다음에 더 크게 온다는 걸 이미 이 프로젝트에서 배웠고요.
+
+```
+next    14.2.35 -> 15.5.18
+swiper  11.2.8  -> 14.0.5
+lodash  4.17.21 -> 4.18.1
+tmp     0.2.5   -> 0.2.7
+js-cookie 3.0.5 -> 3.0.7
+axios   1.9.0   -> 1.18.1  (dev)
+```
+
+Next 15 업그레이드가 비교적 순했던 건 **[라이트하우스 작업 때 App Router 경계를 이미 정리해뒀기](/blog/루트-레이아웃에-use-client가-붙어-있었다)** 때문입니다. 그때 루트 레이아웃에서 `'use client'`를 걷어내고 `metadata`를 제대로 쓰게 해뒀어요. 그 정리를 안 했으면 15로 올릴 때 한꺼번에 터졌을 겁니다.
+
+**미룬 일이 서로를 붙잡고 있다**는 게 이런 프로젝트의 특징입니다. 3월에 한 구조 정리가 7월 업그레이드 비용을 깎았어요.
+
+### 그리고 dependabot을 다시 설정했다
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # 버전 업데이트 PR은 열지 않고, 보안 업데이트만 하나의 PR로 묶는다
+    open-pull-requests-limit: 0
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+```
+
+`open-pull-requests-limit: 0`이 핵심입니다. **일반 버전 업데이트 PR을 아예 안 열게** 했어요.
+
+이유는 단순합니다. 이 프로젝트에서 dependabot PR은 **읽히지 않았습니다.** 주마다 3~5개씩 열리고, 사이드 프로젝트라 아무도 안 보고, 쌓이면 더 안 봅니다. 그 상태에서는 **진짜 보안 PR도 같이 묻혀요.**
+
+`applies-to: security-updates` + `patterns: ['*']`로 **보안 업데이트만, 그것도 하나의 PR로** 묶었습니다. 이제 PR이 하나 열리면 그건 볼 이유가 있는 PR입니다.
+
+> **알림은 무시되기 시작하면 없는 것보다 나쁩니다.** 볼 수 있는 양으로 줄이는 게 알림을 늘리는 것보다 낫습니다.
+
+---
+
+## 3. `yarn test`가 애초에 안 돌고 있었다
+
+여기가 이번 정리에서 제일 놀란 부분입니다. 테스트가 "깨진" 게 아니라 **한 번도 제대로 안 돌았던** 흔적이었어요.
+
+### ① `moduleNameMapper` 순서 때문에 CSS 목이 안 먹었다
+
+```js
+// 전
+moduleNameMapper: {
+  '^@/(.*)$': '<rootDir>/src/$1',
+  '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+}
+```
+
+`moduleNameMapper`는 **선언 순서대로** 매칭을 시도하고, **처음 걸린 것에서 멈춥니다.**
+
+컴포넌트가 `import styles from '@/styles/Layout.module.css'`를 하면 — `^@/(.*)$`가 **먼저 걸립니다.** 그래서 CSS 파일이 `identity-obj-proxy`가 아니라 **진짜 `.css` 파일로 해석**되고, `ts-jest`가 CSS를 파싱하다 죽어요.
+
+```js
+// 후 — CSS 규칙을 앨리어스보다 먼저
+moduleNameMapper: {
+  '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+  '^@/(.*)$': '<rootDir>/src/$1'
+}
+```
+
+두 줄의 **순서만** 바꿨습니다. 확장자로 거는 규칙은 경로로 거는 규칙보다 **좁으니까 먼저** 와야 해요.
+
+**객체 리터럴의 키 순서가 동작을 바꾸는 설정**이라 눈에 잘 안 들어옵니다. 포매터가 알파벳순으로 정렬하기라도 하면 그날 깨져요.
+
+### ② `tsconfig`의 `jsx: preserve`를 ts-jest에 그대로 물렸다
+
+```js
+// 전
+globals: { 'ts-jest': { tsconfig: 'tsconfig.json', isolatedModules: true } }
+```
+
+Next.js 프로젝트의 `tsconfig.json`은 `"jsx": "preserve"`입니다. **JSX를 변환하지 말고 그대로 두라**는 뜻이에요 — Next의 SWC가 나중에 처리하니까요.
+
+그런데 Jest에는 그 다음 단계가 없습니다. `ts-jest`가 JSX를 `preserve`로 남기면 **Node가 JSX 문법을 그대로 받아서** 죽어요.
+
+```js
+// 후 — 테스트에서만 실제 변환
+globals: { 'ts-jest': { tsconfig: { jsx: 'react-jsx' }, isolatedModules: true } }
+```
+
+**빌드 설정과 테스트 설정이 같아야 한다는 직관이 여기서는 틀립니다.** 빌드에는 뒷단이 있고 테스트에는 없어요.
+
+### ③ MSW v2가 jsdom에서 못 돈다
+
+```js
+// 후
+testEnvironment: 'jest-fixed-jsdom',
+testEnvironmentOptions: { customExportConditions: [''] },
+```
+
+MSW v2는 `fetch`·`Request`·`Response`·`TextEncoder` 같은 **웹 표준 전역**을 씁니다. jsdom은 이 중 일부를 안 주거나 자체 구현으로 덮어써서, MSW가 가로채야 할 `fetch`를 못 잡아요.
+
+`jest-fixed-jsdom`은 jsdom에 **Node의 표준 전역을 되돌려주는** 환경입니다. `customExportConditions: ['']`는 패키지의 `exports` 필드에서 브라우저 전용 진입점 대신 기본 진입점을 고르라는 뜻이고요.
+
+빠져 있던 devDependency도 셋 채웠습니다 — `jest-environment-jsdom`(Jest 28부터 별도 패키지), `@testing-library/jest-dom`, `jest-fixed-jsdom`.
+
+**`jest-environment-jsdom`이 없는데 `testEnvironment: 'jsdom'`이라고 적혀 있었다**는 게 이 설정이 실제로 안 돌았다는 증거입니다. 돌려봤으면 첫 줄에서 못 찾는다고 했을 거예요.
+
+---
+
+## 4. Cypress의 `chai` 타입이 jest-dom을 덮고 있었다
+
+Jest를 살리고 나니 이번엔 타입 에러가 났습니다.
+
+```ts
+expect(screen.getByText('로그인')).toBeInTheDocument();
+//                                  ^^^^^^^^^^^^^^^^ 이런 속성이 없습니다
+```
+
+원인은 루트 `tsconfig.json`이었습니다.
+
+```json
+"typeRoots": ["node_modules/@types", "node_modules/cypress/types"],
+"include": [..., "cypress/**/*.ts", "cypress/**/*.tsx"]
+```
+
+`typeRoots`에 Cypress 타입 경로가 들어 있어서, **Cypress가 쓰는 `chai`의 전역 `expect` 타입이 프로젝트 전체에 로드**됩니다. 그러면 단위 테스트의 `expect`도 chai 것으로 해석되고, `@testing-library/jest-dom`이 확장한 매처(`toBeInTheDocument` 등)는 안 보여요.
+
+**두 테스트 도구가 같은 전역 이름(`expect`)을 서로 다른 타입으로 선언**하는 상황입니다. 한 tsconfig 안에서는 공존할 수 없어요.
+
+```json
+// tsconfig.json — Cypress를 밀어낸다
+"include": ["**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/**/*.ts", "src/**/*.tsx"],
+"exclude": ["node_modules", "cypress", "cypress.config.ts"]
+```
+
+```json
+// cypress/tsconfig.json — 여기서만 chai 타입
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["cypress", "@testing-library/cypress", "node"],
+    "isolatedModules": false
+  },
+  "include": ["**/*.ts", "../cypress.config.ts"]
+}
+```
+
+**타입 스코프를 폴더로 나눴습니다.** `typeRoots`처럼 전역에 영향을 주는 옵션을 쓰는 대신, 필요한 폴더에서만 `types`를 명시하는 쪽이 맞아요.
+
+> **전역 타입을 추가하는 설정(`typeRoots`, `types`)은 폴더 단위로 격리해서 씁니다.** 루트에 두면 그 타입을 쓸 일이 없는 파일까지 전부 영향을 받고, 증상은 "왜 이 매처가 없지?" 같은 엉뚱한 모양으로 나타납니다.
+
+---
+
+## 5. 그리고 Cypress를 지웠다
+
+타입까지 격리해놓고 나서, **Cypress를 아예 걷어냈습니다.** E2E는 별도 Playwright 프로젝트로 옮겼거든요.
+
+```
+cypress/e2e/auth.cy.ts        |  57 ---
+cypress/e2e/join.cy.ts        |  74 ---
+cypress/e2e/travel.cy.ts      | 111 ---
+cypress/support/commands.ts   | 118 ---
+...
+yarn.lock                     | 1012 +---
+13 files changed, 32 insertions(+), 1452 deletions(-)
+```
+
+순서가 거꾸로처럼 보이는데, 실제로는 이랬습니다. **타입을 격리해보고 나서야 "이걸 유지할 값어치가 있나"가 판단됐어요.** 격리 전에는 "Cypress 때문에 Jest가 안 돈다"는 문제였고, 격리 후에는 "Cypress 스펙 3개를 유지할 것인가"라는 질문이 남았습니다. 후자는 답하기 쉬웠고요.
+
+같이 지운 것 — 삭제된 컴포넌트를 참조하던 오래된 테스트 스위트 3개(`Login.integration.test.tsx`, `Join.integration.test.tsx`, `Travel.integration.test.tsx`, 합계 322줄). **컴포넌트가 사라졌는데 테스트만 남아 있었습니다.** 테스트가 안 돌고 있었으니 아무도 몰랐죠.
+
+> **안 도는 테스트는 0점이 아니라 마이너스입니다.** 있는 줄 알고 안심하게 만들고, 리팩터링 때 같이 안 지워집니다.
+
+---
+
+## 6. `.nvmrc` 한 줄
+
+```
+22
+```
+
+Netlify 빌드가 로컬과 다른 Node로 돌고 있었습니다. **Node 버전은 명시하지 않으면 플랫폼 기본값을 따라가고, 그 기본값은 예고 없이 바뀝니다.**
+
+한 줄짜리 파일이지만, 이게 없으면 "어제까지 되던 빌드가 오늘 안 됨"이 언젠가 옵니다. 그리고 그때 커밋 히스토리에는 아무 변화가 없어요.
+
+---
+
+## 7. 검증
+
+| 항목 | 결과 |
+|---|---|
+| dependabot 경보 | 열린 것 전부 해소 |
+| 삭제한 줄 | `package-lock.json` 13,959 + Cypress 1,452 + 낡은 테스트 322 |
+| `yarn test` | **다시 돎** (그전엔 환경 패키지가 없어 기동 자체가 안 됐음) |
+| `yarn build` | Next 15로 통과 |
+| 타입 | `yarn typecheck` 통과, jest-dom 매처 인식 |
+
+**"몇 건이 몇 건이 됐다"를 못 적는 게 아쉽습니다.** dependabot 경보 수를 시작 시점에 캡처해두지 않았어요. [라이트하우스 때와 같은 실수](/blog/루트-레이아웃에-use-client가-붙어-있었다)를 반복했습니다.
+
+---
+
+## 8. 남은 것
+
+- **`react-beautiful-dnd`, `dayjs`, `react-ga4`, `install`** — 선언만 되고 `src/`에서 참조가 0건입니다. 특히 `install`은 `npm install install`을 친 흔적이에요. 이번에 경보만 보느라 **안 쓰는 패키지는 안 봤습니다.**
+- `@types/sockjs-client`, `@types/styled-components`가 `dependencies`에 있습니다.
+- **테스트를 살려놨지만 커버리지가 낮습니다.** 낡은 스위트 3개를 지우면서 남은 게 얼마 없어요. "살렸다"와 "쓸 만하다"는 다릅니다.
+- `resolutions` 4줄은 `eslint-config-next`를 올리면 없앨 수 있습니다.
+
+---
+
+## 정리
+
+- **lockfile은 하나만.** 두 개면 하나는 반드시 거짓말을 하고, 경보가 두 배로 잡힙니다.
+- **`resolutions`는 경로를 좁게 써서 부채를 명시합니다.** 전역으로 박으면 나중에 못 지웁니다.
+- **`moduleNameMapper`는 순서가 동작을 바꿉니다.** 좁은 규칙(확장자)을 넓은 규칙(경로 앨리어스)보다 먼저.
+- **빌드 tsconfig를 테스트에 그대로 물리면 안 됩니다.** 빌드에는 뒷단이 있고 테스트에는 없어요(`jsx: preserve`).
+- **전역 타입을 넣는 설정은 폴더로 격리합니다.** `typeRoots`가 루트에 있으면 엉뚱한 곳에서 매처가 사라집니다.
+- **안 도는 테스트는 0점이 아니라 마이너스입니다.**
+- **알림은 볼 수 있는 양으로 줄이는 게 늘리는 것보다 낫습니다.**
+- 그리고 — **미룬 일은 서로를 붙잡고 있습니다.** 3월에 한 구조 정리가 7월 메이저 업그레이드를 싸게 만들었어요.
+
+관련 글: [TripTune 프로젝트 회고](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발) · [루트 레이아웃에 use client가 붙어 있었다](/blog/루트-레이아웃에-use-client가-붙어-있었다)

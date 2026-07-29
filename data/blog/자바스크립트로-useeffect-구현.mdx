@@ -1,10 +1,16 @@
 ---
-title: 자바스크립트로 useEffect 구현
+title: 자바스크립트로 useEffect 구현해 보기 — 버그 두 개를 품고 있던 코드
 date: '2025-01-01'
 tags: [기술노트]
 draft: false
-summary: '자바스크립트로 useEffect 구현 해보기'
+summary: 'useEffect를 바닐라 JS로 흉내 냈던 스터디 글입니다. 개고하며 돌려보니 버그가 둘 있었어요 — deps 비교가 "배열 전체 vs 항목 하나"를 비교해 항상 변경으로 판정되고, 정작 첫 호출에는 effect가 실행되지 않습니다. 원 코드와 버그 분석, 그리고 커서 모델로 고친 버전을 실었습니다.'
 ---
+
+# 자바스크립트로 useEffect 구현해 보기
+
+`useEffect`의 deps 비교와 클린업을 바닐라 JS로 흉내 내보자는 스터디였습니다. 당시 코드를 싣고, **개고하며 실제로 돌려보고 찾은 버그 두 개**와 고친 버전을 붙였습니다.
+
+## 1. 당시의 구현
 
 ```jsx
 class Component {
@@ -13,63 +19,86 @@ class Component {
     this.cleanupFunctions = []
   }
 
-  // useEffect 구현
   useEffect(effect, dependencies) {
-    const hasNoDeps = !dependencies // 의존성 배열이 없는 경우
+    const hasNoDeps = !dependencies
     const prevDeps = this.effects.length ? this.effects.map((e) => e.dependencies) : []
     const hasChangedDeps = prevDeps.some(
       (prevDep, index) => JSON.stringify(prevDep) !== JSON.stringify(dependencies[index])
     )
 
     if (hasNoDeps || hasChangedDeps) {
-      // 이전 클린업 함수 실행
-      if (this.cleanupFunctions.length) {
-        this.cleanupFunctions.forEach((cleanup) => cleanup())
-        this.cleanupFunctions = []
-      }
+      this.cleanupFunctions.forEach((cleanup) => cleanup())
+      this.cleanupFunctions = []
 
-      // 새 effect 실행
       const cleanup = effect()
-      if (typeof cleanup === 'function') {
-        this.cleanupFunctions.push(cleanup)
-      }
+      if (typeof cleanup === 'function') this.cleanupFunctions.push(cleanup)
 
       this.effects.push({ effect, dependencies })
     }
   }
+}
+```
 
-  // 수동으로 컴포넌트 업데이트를 트리거
-  update() {
-    this.effects.forEach(({ effect, dependencies }) => {
-      const cleanup = effect()
-      if (typeof cleanup === 'function') {
-        this.cleanupFunctions.push(cleanup)
-      }
-    })
-  }
+## 2. 돌려보니 — 버그 두 개
 
-  // 컴포넌트 정리
-  unmount() {
-    this.cleanupFunctions.forEach((cleanup) => cleanup())
-    this.cleanupFunctions = []
+### 버그 ① 첫 호출에 effect가 실행되지 않는다
+
+deps를 준 첫 호출을 따라가 봅시다. `this.effects`가 비어 있으니 `prevDeps = []`, 빈 배열의 `.some()`은 **항상 `false`**. `hasNoDeps`도 `false`(deps를 줬으니까). 결과: **`effect()`가 실행되지 않습니다.** React의 useEffect는 첫 렌더에 무조건 한 번 실행되는데, 이 구현은 정반대예요. 사용 예제에서 `update()`를 수동으로 불러서 로그가 찍혔기 때문에 이 버그가 가려져 있었습니다.
+
+### 버그 ② 비교 대상이 어긋나 있다 — 배열 전체 vs 항목 하나
+
+두 번째 호출부터는 반대 문제가 터집니다. `prevDeps`는 `effects.map(e => e.dependencies)` — 즉 **"deps 배열들의 배열"** 입니다. 그런데 비교식은 `prevDep`(deps 배열 전체)과 `dependencies[index]`(이번 deps의 **항목 하나**)를 비교해요:
+
+```jsx
+// 실제로 일어나는 비교
+JSON.stringify([1, 2]) !== JSON.stringify(1)   // "[1,2]" !== "1" → 항상 true
+```
+
+배열과 스칼라를 비교하니 **deps가 안 바뀌어도 항상 "변경됨"** 이 됩니다. 매 호출마다 effect가 재실행되니, deps 비교를 만들었는데 deps 비교가 없는 것과 같은 동작이에요. 게다가 `this.effects.push`는 호출마다 누적이라 "이전 deps"를 찾는 기준 자체가 없었습니다 — 같은 effect의 이전 호출을 식별할 방법(슬롯)이 없었던 거죠.
+
+두 버그의 뿌리는 같습니다. [useState 구현 글](/blog/자바스크립트-usestate-구현)에서와 똑같이, **훅의 핵심인 "호출 순서 커서"를 빼먹은 것**입니다. 몇 번째 useEffect 호출인지 알아야 그 자리의 이전 deps와 비교할 수 있는데, 그 주소 체계 없이 배열에 push만 하니 비교가 성립할 수 없었어요.
+
+## 3. 커서 모델로 고친 버전
+
+```jsx
+let effectSlots = []   // 슬롯: { deps, cleanup }
+let cursor = 0
+
+function useEffect(effect, deps) {
+  const i = cursor++
+  const prev = effectSlots[i]
+
+  const changed =
+    !prev ||                                   // 첫 렌더 → 무조건 실행 (버그 ① 수정)
+    !deps ||                                   // deps 없음 → 매번 실행
+    deps.some((d, j) => !Object.is(d, prev.deps[j]))  // 항목별 비교 (버그 ② 수정)
+
+  if (changed) {
+    prev?.cleanup?.()                          // 이 슬롯의 이전 클린업만 실행
+    const cleanup = effect()
+    effectSlots[i] = { deps, cleanup: typeof cleanup === 'function' ? cleanup : undefined }
   }
 }
 
-// 컴포넌트 사용 예제
-const MyComponent = new Component()
+function render(ComponentFn) {
+  cursor = 0
+  ComponentFn()
+}
 
-// 첫 번째 useEffect
-MyComponent.useEffect(() => {
-  console.log('Component mounted or updated!')
-
-  return () => {
-    console.log('Cleanup on dependency change or unmount.')
-  }
-}, [1, 2]) // 의존성 배열
-
-// 업데이트 트리거
-MyComponent.update()
-
-// 컴포넌트 제거
-MyComponent.unmount()
+function unmount() {
+  effectSlots.forEach((s) => s.cleanup?.())
+  effectSlots = []
+}
 ```
+
+원본과의 차이가 곧 배운 점입니다:
+
+- **슬롯 인덱스(`i`)가 "같은 effect의 이전 호출"을 찾는 주소** — 비교가 비로소 성립합니다.
+- `!prev`가 첫 렌더 실행을 보장합니다.
+- 비교는 `JSON.stringify`가 아니라 **항목별 `Object.is`** — React의 실제 방식이고, stringify는 함수·순환 참조가 deps에 들어오는 순간 깨집니다.
+- 클린업은 전역 목록이 아니라 **자기 슬롯의 것만** 실행합니다. 원본은 effect A가 재실행될 때 effect B의 클린업까지 전부 불러버리는 구조였어요.
+
+## 정리
+
+- 이 글의 원본 코드는 "클린업과 deps 비교라는 **개념**"은 담았지만, 실행하면 첫 호출엔 안 돌고 그 뒤엔 매번 도는 — 즉 **useEffect의 동작은 하나도 재현하지 못하는** 코드였습니다. 스터디 글도 돌려보고 실어야 한다는 걸 이 글이 스스로 증명하고 있었어요.
+- useState와 useEffect 흉내 구현이 **같은 지점(커서 부재)에서 같은 방식으로** 무너졌다는 게 수확입니다. 훅의 본질이 개별 API가 아니라 "호출 순서를 주소로 쓰는 슬롯 체계"라는 뜻이니까요.

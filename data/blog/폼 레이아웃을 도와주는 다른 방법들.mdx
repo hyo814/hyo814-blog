@@ -1,181 +1,99 @@
 ---
-title: 폼 레이아웃을 도와주는 다른 방법들
-date: '2022-08-05'
+title: Django 폼 레이아웃을 도와주는 방법들 — 조사, 그리고 실제로 고른 조합
+date: '2025-04-23'
 tags: [기술노트]
 draft: false
-summary: '장고에서는 데이터 폼셋이라고 데이터 폼을 쉽고 빠르게 형성은 해주지만 레이아웃에 대한 배치를 도울 뿐 커스텀은 js 나 jtree 기반의 커스텀을 통해 구조화 해야한다.'
+summary: 'Django 폼 렌더링을 돕는 라이브러리 5종(crispy-forms, widget-tweaks, formify, bootstrap5, dynamic-formset)을 비교 조사했던 글입니다. 결말을 붙였어요 — 실제 프로젝트는 이 중 하나가 아니라 둘(crispy + widget-tweaks)을 역할을 나눠 같이 씁니다. 비교표를 만들 때는 후보들이 경쟁 관계인 줄 알았는데, 절반은 보완 관계였습니다. (원래 2022-08로 게시돼 있던 날짜는 본문이 Django 5.2 문서를 참조해 불가능한 날짜라 조사 시점 기준으로 교정했습니다.)'
 ---
 
-# 폼 레이아웃을 도와주는 다른 방법들(Form.py)
+# Django 폼 레이아웃을 도와주는 방법들
 
-**공식 문서 :**
+Django의 폼(formset 포함)은 데이터 바인딩과 검증까지는 해주지만, **레이아웃과 스타일**은 결국 별도의 방법이 필요합니다. 그 방법들을 조사했던 글이고, 뒤에 **실제로 고른 조합**을 붙였습니다.
 
-https://docs.djangoproject.com/en/5.2/topics/forms/modelforms/
+> **날짜 정정** — 이 글은 원래 2022-08-05로 게시돼 있었는데, 본문이 Django 5.2 문서(2025-04 출시)와 django-formify(2024 공개)를 참조하므로 성립할 수 없는 날짜입니다. 같은 시기의 다른 사전 조사 글들과 함께 2025-04로 교정합니다.
 
-https://django-crispy-forms.readthedocs.io/en/latest/
+공식 문서: [ModelForm](https://docs.djangoproject.com/en/5.2/topics/forms/modelforms/) · [django-crispy-forms](https://django-crispy-forms.readthedocs.io/en/latest/)
 
-[https://django-tailwind.readthedocs.io/en/latest/](https://django-tailwind.readthedocs.io/en/latest/)
+## 1. 후보 비교
 
-https://forum.djangoproject.com/t/django-formify-a-django-form-rendering-package-for-tailwind-css-enthusiasts/34904
-
-https://django-formify.readthedocs.io/en/latest/
-
-기타사항.
-
-[https://github.com/elo80ka/django-dynamic-formset](https://github.com/elo80ka/django-dynamic-formset)
-
-[https://github.com/jazzband/django-widget-tweaks](https://github.com/jazzband/django-widget-tweaks/)
-
-[https://github.com/elo80ka/django-dynamic-formset](https://github.com/elo80ka/django-dynamic-formset)
-
-https://django-bootstrap5.readthedocs.io/en/latest/
-
-| 라이브러리 | 구조 제어 | 스타일 프레임워크 연동 | 주요 특징 |
+| 라이브러리 | 구조 제어 | 스타일 연동 | 주요 특징 |
 | --- | --- | --- | --- |
-| django-crispy-forms | ✅ | Bootstrap / Tailwind | Python 코드로 레이아웃 제어 |
-| django-formify | ✅ | Tailwind 전용 | 컴포넌트 기반 구조 설계 |
-| django-widget-tweaks | ❌ | 자유 (템플릿에서 조작) | 템플릿에서 필드 속성 조작 |
-| django-bootstrap5 | ❌ | Bootstrap 전용 | 자동 렌더링, 커스터마이징은 제한 |
-| django-dynamic-formset | ❌ | 자유 (JS 조작 중심) | 클라이언트에서 Form 행 추가/삭제 |
+| django-crispy-forms | ✅ | Bootstrap / Tailwind | **Python 코드로** 레이아웃 제어 (`Layout`, `Row`, `Column`) |
+| django-formify | ✅ | Tailwind 전용 | 컴포넌트 기반 구조 |
+| django-widget-tweaks | ❌ | 자유 | **템플릿에서** 필드 속성·클래스 조작 |
+| django-bootstrap5 | ❌ | Bootstrap 전용 | 자동 렌더링, 커스터마이징 제한 |
+| django-dynamic-formset | ❌ | 자유 | 클라이언트(JS)에서 폼 행 추가/삭제 |
 
----
+## 2. 라이브러리 없이 하는 기본기
 
-### 1. 위젯(`widget`) 커스터마이징
+어느 쪽을 고르든 밑바탕은 같습니다 — 위젯 `attrs`와 `Meta` 옵션.
 
 ```python
+# 위젯 커스터마이징 — 클래스·placeholder·HTML 제약을 서버에서 지정
 forms.CharField(
     widget=forms.TextInput(attrs={
         "class": "input input-bordered",
         "placeholder": "이름을 입력하세요",
-        "autocomplete": "off",
         "maxlength": "30",
-        "required": "required"
     })
 )
-
 ```
 
-### 자주 사용하는 HTML 속성 (Tailwind 포함)
-
-- `class`, `placeholder`, `type`, `autocomplete`, `maxlength`, `required`, `readonly`, `disabled`, `id`, `data-*`
-- `<textarea>` 전용: `rows`, `cols`
-- 입력 제한: `min`, `max`, `minlength`, `pattern`, `step`
-
----
-
-### 2. `forms.Field` 공통 속성 확장
-
-| 속성 | 설명 |
-| --- | --- |
-| `label` | 레이블 텍스트 |
-| `help_text` | 입력 안내 문구 |
-| `error_messages` | 유효성 검사 실패 시 메시지 |
-| `initial` | 기본값 |
-| `required` | 필수 여부 (기본값: True) |
-| `disabled` | 비활성화 설정 |
-| `widget` | 위젯 지정 |
-| `validators` | 커스텀 유효성 검사 함수 리스트 |
-| `localize` | 로컬라이징 포맷 사용 여부 |
-| `input_formats` | 날짜/시간 허용 포맷 리스트 |
-
----
-
-### 3. `ModelForm.Meta` 속성 정리
-
-| 속성 | 설명 |
-| --- | --- |
-| `model` | 연결할 모델 클래스 |
-| `fields` | 포함할 필드 목록 |
-| `exclude` | 제외할 필드 목록 |
-| `widgets` | 필드별 위젯 커스터마이징 |
-| `labels` | 필드 레이블 지정 |
-| `help_texts` | 필드별 안내 문구 |
-| `error_messages` | 필드별 에러 메시지 |
-| `localized_fields` | 포맷 로컬라이징할 필드 |
-| `field_classes` | 필드 클래스 직접 지정 |
-
----
-
-### 4. `crispy_forms` + `ModelForm` Layout 구성
-
 ```python
-self.helper.layout = Layout(
-    Row(
-        Column('username', css_class='w-full'),
-        Column('email', css_class='w-full'),
-    ),
-    Row(
-        Column('birth_date', css_class='w-full'),
-        Column('phone', css_class='w-full'),
-    ),
-    Submit('submit', '저장하기', css_class='btn btn-primary w-full')
-)
-
-```
-
-### 그룹화 및 커스텀 HTML 삽입 예시
-
-```python
-self.helper.layout = Layout(
-    HTML("<h3 class='text-lg font-bold mb-4'>기본 정보</h3>"),
-    Row(Column('username'), Column('email')),
-    HTML("<h3 class='text-lg font-bold mt-6 mb-4'>기타 정보</h3>"),
-    Row(Column('birth_date'), Column('phone')),
-    Submit('submit', '수정하기')
-)
-
-```
-
----
-
-### 5. 조건부 렌더링 및 필드 처리
-
-```python
-def __init__(self, *args, **kwargs):
-    user = kwargs.pop('user', None)
-    super().__init__(*args, **kwargs)
-    if not user.is_staff:
-        self.fields.pop('phone')
-    self.fields['email'].widget = forms.HiddenInput()
-    self.fields['username'].disabled = True
-
-```
-
----
-
-### 6. `Form` vs `ModelForm` 비교 요약
-
-| 항목 | `forms.Form` | `forms.ModelForm` |
-| --- | --- | --- |
-| 모델 연결 | 없음 | 있음 (`Meta.model`) |
-| 필드 정의 | 수동 정의 | 모델 기반 자동 생성 |
-| Meta 클래스 | 선택 | 필수 |
-| 저장 방식 | `.cleaned_data` 직접 처리 | `.save()` 자동 저장 |
-| 활용 예 | 검색, 문의, 확인 입력 등 | 등록, 수정, 저장 필요 폼 |
-
----
-
-### 7. 예시 코드: `forms.Form`
-
-```python
-class ContactForm(forms.Form):
-    name = forms.CharField(max_length=30)
-    message = forms.CharField(widget=forms.Textarea)
-
-```
-
-### 8. 예시 코드: `forms.ModelForm`
-
-```python
+# ModelForm — 모델 기반 자동 생성 + 필드별 위젯 오버라이드
 class PostForm(forms.ModelForm):
     class Meta:
         model = Post
         fields = ['title', 'content']
         widgets = {
-            'content': forms.Textarea(attrs={
-                "class": "w-full p-3 border rounded-md",
-                "placeholder": "내용을 입력하세요"
-            })
+            'content': forms.Textarea(attrs={"class": "w-full p-3 border rounded-md"}),
         }
+```
+
+```python
+# 조건부 필드 — __init__에서 사용자·상태에 따라 필드를 조작
+def __init__(self, *args, **kwargs):
+    user = kwargs.pop('user', None)
+    super().__init__(*args, **kwargs)
+    if not user.is_staff:
+        self.fields.pop('phone')
+    self.fields['username'].disabled = True
+```
+
+`forms.Field` 공통 속성(`label`, `help_text`, `error_messages`, `initial`, `validators` 등)과 `Meta` 속성(`fields`/`exclude`/`widgets`/`labels` 등)은 문서 표가 잘 정리돼 있어 생략합니다. `Form` vs `ModelForm`의 기준은 단순합니다 — **저장할 모델이 있으면 ModelForm, 검색·문의처럼 모델 없는 입력이면 Form.**
+
+## 3. crispy-forms의 Layout
+
+crispy의 핵심은 레이아웃이 템플릿이 아니라 **Python 코드**에 있다는 것입니다.
+
+```python
+self.helper.layout = Layout(
+    HTML("<h3 class='text-lg font-bold mb-4'>기본 정보</h3>"),
+    Row(Column('username'), Column('email')),
+    Row(Column('birth_date'), Column('phone')),
+    Submit('submit', '저장하기', css_class='btn btn-primary w-full'),
+)
+```
+
+폼 구조가 바뀔 때 템플릿을 안 건드려도 되고, 조건부 레이아웃(`__init__`에서 layout 조립)이 자연스럽습니다.
+
+---
+
+## 4. 실제로 고른 조합 — 하나가 아니라 둘이었다
+
+조사할 때는 표의 다섯 개가 **경쟁 관계**인 줄 알았습니다. 실제 프로젝트(표준데이터 관리 시스템)의 requirements를 보면 결말이 이렇습니다:
 
 ```
+django-crispy-forms==2.3
+crispy-bootstrap5==2024.10
+django-widget-tweaks==1.5.0
+```
+
+**crispy와 widget-tweaks를 같이 씁니다.** 역할이 달라서예요 — 구조가 정형화된 폼(등록·수정 화면)은 crispy의 `Layout`으로 Python에서 조립하고, 템플릿에서 그때그때 클래스 하나 얹거나 속성 하나 바꾸는 미세 조정은 widget-tweaks(`{{ form.field | add_class:"..." }}`)로 합니다. 표의 "구조 제어 ✅ / ❌" 축은 우열이 아니라 **서로 다른 층**이었던 거죠. 비교표를 만들 때 "무엇을 고를까"만 묻고 "**같이 쓸 수 있는가**"를 안 물었던 게 이 조사의 빈틈이었습니다.
+
+**dynamic-formset은 탈락**했습니다 — 첨부파일처럼 행을 추가/삭제하는 formset UI는 필요했지만, 라이브러리 대신 `management_form`의 `TOTAL_FORMS`를 직접 조작하는 jQuery 클론 패턴으로 갔어요. 의존성 하나 값을 못 하는 분량이라서요. 그 패턴은 [1:1 Q&A 게시판 글](/blog/django로-1-on-1-비공개-qna-게시판-만들기)의 첨부 절에, 서버 쪽 inline formset 구성은 [별도 글](/blog/django-inline-formset)에 있습니다.
+
+## 정리
+
+- 폼 레이아웃 도구는 "코드에서 구조를 짤 것인가(crispy)"와 "템플릿에서 조정할 것인가(widget-tweaks)"의 **두 층**이고, 실무 답은 층별로 하나씩이었습니다.
+- 비교표에는 "함께 쓸 수 있는가" 열이 필요했습니다. 경쟁 구도로만 보면 보완 관계를 놓칩니다.

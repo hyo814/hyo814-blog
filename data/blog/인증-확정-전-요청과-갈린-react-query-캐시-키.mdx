@@ -1,0 +1,263 @@
+---
+title: 인증이 확정되기 전에 쏜 요청 — 북마크가 가끔 초기화되던 이유
+date: '2025-07-12'
+tags: [기술노트]
+draft: false
+summary: '여행지 목록에서 상세로 들어가면 북마크가 가끔 빈 상태로 보였습니다. isAuthenticated가 null에서 확정되기 전에 요청이 나갔고, 같은 데이터가 캐시 키 두 개로 갈려 있었어요. 고치긴 했는데 지금 다시 보니 원인 진단과 처방이 어긋나 있고 캐시를 통째로 끄는 코드가 남았습니다.'
+---
+
+# 인증이 확정되기 전에 쏜 요청
+
+[TripTune](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발)에서 제일 재현이 안 되던 버그였습니다.
+
+> 여행지 탐색 목록에서 상세 페이지로 들어가면 **북마크가 가끔 빈 상태로 보인다.** 로그인은 되어 있는데.
+
+"가끔"이라는 게 문제였습니다. 새로고침하면 정상이고, 다시 들어가면 또 멀쩡하고, 어쩌다 한 번 비어 있어요. 이런 건 대개 **타이밍**입니다.
+
+---
+
+## 1. `isAuthenticated`가 세 가지 값을 가진다
+
+인증 훅이 이런 모양이었습니다.
+
+```ts
+const { isAuthenticated } = useAuth();
+// null  — 아직 모름 (쿠키 확인 중)
+// true  — 로그인됨
+// false — 비로그인
+```
+
+**`null`이 있는 게 핵심입니다.** 토큰은 쿠키에 있고, 클라이언트가 마운트된 뒤에야 읽을 수 있어요. 그래서 첫 렌더에는 항상 `null`입니다.
+
+그런데 요청을 보내는 쪽은 이렇게 쓰고 있었습니다.
+
+```ts
+const requiresAuth = isAuthenticated === true;
+```
+
+`null`도 `false`가 됩니다. **"아직 모름"과 "비로그인"이 같은 값으로 뭉개져요.**
+
+그래서 첫 렌더에 `requiresAuth = false`로 요청이 나가고, 서버는 **비로그인 응답**(북마크 필드 없음)을 돌려줍니다. 그다음 쿠키가 읽혀서 `isAuthenticated = true`가 되지만, 화면에는 이미 북마크 없는 데이터가 그려진 뒤예요.
+
+> **3상태(`null`/`true`/`false`)를 2상태처럼 쓰면, "모름"이 항상 둘 중 하나로 잘못 접힙니다.** 그리고 어느 쪽으로 접히느냐에 따라 증상이 달라져요. 여기서는 "비로그인"으로 접혀서 북마크가 사라졌습니다.
+
+---
+
+## 2. 왜 "가끔"이었나
+
+항상 그런 게 아니라 가끔이었던 이유는 **React Query 캐시** 때문입니다.
+
+목록 쿼리의 키는 이랬습니다.
+
+```ts
+queryKey: ['travelList', params, page, requiresAuth],
+```
+
+`requiresAuth`가 키에 들어 있어요. 즉 **같은 목록이 캐시 두 벌**로 존재합니다.
+
+```
+['travelList', {...}, 1, false]   ← 북마크 없는 버전
+['travelList', {...}, 1, true]    ← 북마크 있는 버전
+```
+
+그런데 **상세 페이지의 키에는 `requiresAuth`가 없었습니다.**
+
+```ts
+queryKey: ['travelDetail', placeIdNumber],   // 인증 여부가 키에 없음
+queryFn: async () => {
+  const requiresAuth = isAuthenticated === true;   // 함수 안에서만 씀
+  ...
+}
+```
+
+`queryFn` 안에서만 `requiresAuth`를 읽고 있었어요. React Query 입장에서는 **인증 여부가 달라도 같은 쿼리**입니다. 그래서 비로그인 상태로 한 번 채워진 캐시가 로그인 뒤에도 그대로 재사용됩니다.
+
+"가끔"의 정체가 이거였습니다.
+
+- 캐시가 비어 있으면 → 새로 요청 → 타이밍 따라 다름
+- 캐시에 비로그인 응답이 있으면 → **로그인 상태여도 그걸 보여줌**
+
+> **`queryFn`이 읽는 값은 전부 `queryKey`에 있어야 합니다.** 키에 없는 입력으로 응답이 달라지면, 캐시는 조용히 틀린 답을 돌려줍니다. React Query가 아니라 캐시 일반의 규칙이에요.
+
+---
+
+## 3. 무엇을 고칠 것인가
+
+| 방법 | 얻는 것 | 포기하는 것 | 판단 |
+|---|---|---|---|
+| ① 비로그인 응답을 받으면 로그인 후 무효화(`invalidateQueries`) | 캐시 키는 그대로 | **무효화를 부를 자리를 다 찾아야 함.** 하나 빠지면 재발 | 기각 |
+| ② 인증 확정 전에는 요청을 안 보낸다 (`enabled`) | 잘못된 요청 자체가 사라짐 | 첫 화면에 로딩이 한 박자 늘어남 | **채택** |
+| ③ 캐시 키에 인증 여부를 넣는다 | 두 응답이 안 섞임 | 로그인/로그아웃 시 캐시가 두 벌 | **채택 (②와 같이)** |
+| ④ 서버가 항상 같은 모양으로 응답하게 (북마크는 별도 API) | 근본. 응답이 인증에 안 묶임 | **백엔드 변경.** 요청 수도 늘어남 | 보류 |
+
+②와 ③을 같이 넣었습니다. **둘은 서로 다른 문제를 고칩니다** — ②는 "잘못된 요청을 안 보내기", ③은 "이미 받은 두 응답을 안 섞기"예요. 하나만 하면 다른 쪽이 남습니다.
+
+```tsx
+// 상세 페이지
+const isAuthStateReady = isAuthenticated !== null;   // "모름"을 명시적으로 분리
+const requiresAuth = isAuthenticated === true;
+
+const { data, isLoading, refetch } = useQuery({
+  queryKey: ['travelDetail', placeIdNumber, requiresAuth],   // ③ 키에 추가
+  queryFn: () => fetchTravelDetailData(placeIdNumber, requiresAuth),
+  enabled: isAuthStateReady,                                 // ② 확정 전엔 안 감
+});
+```
+
+```tsx
+// 목록 페이지 — 훅에 넘기는 enabled 조건에 추가
+useTravelListByLocation(coordinates, currentPage, requiresAuth,
+  !isSearching && isAuthStateReady);
+
+useTravelListSearch(params, currentPage, requiresAuth,
+  isSearching && isAuthStateReady);
+```
+
+`isAuthStateReady`라는 **이름을 붙인 게** 실질적인 수정이었다고 생각합니다. `isAuthenticated !== null`을 그때그때 쓰면 또 빠뜨려요. "인증 상태가 확정됐는가"는 이 앱에서 반복해서 필요한 개념이었습니다.
+
+④가 근본입니다. **응답 모양이 인증 여부에 따라 달라지는 게 애초의 문제**니까요. 목록 API가 북마크 여부까지 실어 보내는 대신 북마크 ID 목록을 따로 주면, 목록은 인증과 무관해지고 캐시가 한 벌로 끝납니다. 백엔드를 건드려야 해서 미뤘고, 지금도 안 했습니다.
+
+---
+
+## 4. 지금 다시 보면 — 고친 코드의 문제 넷
+
+이 글을 쓰면서 당시 커밋을 다시 읽었는데, **고친 쪽에도 문제가 있었습니다.**
+
+### ① 원인 진단과 처방이 어긋나 있다
+
+커밋 메시지에 원인을 이렇게 적어놨습니다.
+
+> **React Query 캐시 키 불일치**: 동일한 데이터를 `requiresAuth` 값에 따라 다른 캐시로 저장
+
+그런데 처방은 **상세 페이지 키에 `requiresAuth`를 추가**하는 것이었어요. 즉 **캐시를 더 나눴습니다.** 원인이라고 적은 것과 반대 방향이에요.
+
+실제로는 처방이 맞고 진단이 틀렸습니다. `requiresAuth`에 따라 **응답 내용이 실제로 다르니까** 캐시가 나뉘는 게 정상입니다. 진짜 원인은 키가 갈린 게 아니라 **상세 페이지 키에는 안 갈려 있던 것**과 **확정 전에 요청이 나간 것**이었어요.
+
+증상을 고치고 나서 원인을 적으면 이렇게 됩니다. **고쳐졌다는 사실이 진단을 검증해주지 않아요.**
+
+### ② `staleTime: 0`으로 캐시를 사실상 껐다
+
+```ts
+export const useTravelListByLocation = (...) => {
+  return useQuery({
+    queryKey: ['travelList', params, page, requiresAuth],
+    queryFn: () => fetchTravelListByLocation(params, page, requiresAuth),
+    enabled,
+    // 인증 상태 변경 시 데이터 신선도 유지
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+  });
+};
+```
+
+`staleTime: 0`은 **받자마자 오래된 데이터로 취급**하라는 뜻입니다. 마운트할 때마다 다시 받아요.
+
+이 프로젝트 회고에서 **"여행지를 탐색하다 상세로 들어갔다 돌아올 때 목록을 다시 안 불러오게 캐시를 공유한다"** 고 적어놨는데, 이 한 줄이 그걸 취소합니다. 돌아올 때마다 다시 받아요.
+
+그리고 이건 **필요 없는 수정**이었습니다. 키에 `requiresAuth`가 들어간 순간, 인증 상태가 바뀌면 **키가 달라지므로 React Query가 알아서 새로 가져옵니다.** 신선도를 위해 `staleTime`을 건드릴 이유가 없었어요.
+
+주석에 적힌 "인증 상태 변경 시 데이터 신선도 유지"는 **키가 하는 일을 `staleTime`으로 한 번 더 한 것**입니다. 증상이 안 사라져서 겁이 나 이것저것 덧댄 흔적이에요.
+
+### ③ 키가 바뀌면 자동 재조회된다는 걸 모르고 수동 재조회를 덧댔다
+
+```tsx
+useEffect(() => {
+  if (isAuthStateReady) {
+    // 약간의 지연을 두어 인증 상태가 완전히 안정화된 후 데이터 조회
+    const timer = setTimeout(() => {
+      if (isSearching) refetchSearch();
+      else refetchLocation();
+    }, 100);
+    return () => clearTimeout(timer);
+  }
+}, [isAuthenticated, isSearching, refetchLocation, refetchSearch, isAuthStateReady]);
+```
+
+`isAuthenticated`가 바뀌면 → `requiresAuth`가 바뀌고 → **`queryKey`가 바뀌므로 React Query가 이미 새로 가져옵니다.** 그 위에 `refetch()`를 또 부르니 **같은 데이터를 두 번 받아요.**
+
+`setTimeout(..., 100)`도 근거가 없습니다. "완전히 안정화"라는 게 무엇인지 코드로 정의된 적이 없고, 100ms는 아무것도 보장하지 않아요. `enabled`가 이미 그 역할을 합니다.
+
+**이 `useEffect`는 통째로 지워도 되는 코드**입니다. 남겨둔 이유는 "지웠다가 다시 재현되면 어쩌나" 였고, 그건 원인을 확신하지 못했다는 뜻이에요.
+
+> 재현이 어려운 버그를 고칠 때 **안전장치를 여러 겹 덧대면, 어느 것이 실제로 효과가 있었는지 영영 모르게 됩니다.** 하나씩 넣고 확인했어야 했어요.
+
+### ④ 북마크 토글에 낙관적 업데이트를 안 썼다
+
+```tsx
+await BookMarkApi({ placeId });
+// 북마크 상태 변경 성공 시 즉시 데이터 재조회
+if (isSearching) await refetchSearch();
+else await refetchLocation();
+```
+
+별 하나 눌렀는데 **목록 한 페이지를 통째로 다시 받습니다.** 별이 채워지기까지 왕복 두 번(토글 + 재조회)을 기다려야 해요.
+
+React Query에는 이 용도의 `setQueryData`가 있습니다.
+
+```ts
+queryClient.setQueryData(['travelList', params, page, requiresAuth], (old) => ({
+  ...old,
+  content: old.content.map((p) =>
+    p.placeId === placeId ? { ...p, bookmarkStatus: !p.bookmarkStatus } : p
+  ),
+}));
+```
+
+**바뀐 건 항목 하나의 불린 값 하나**인데 목록 전체를 받는 건 과합니다. 그리고 ②의 `staleTime: 0`과 겹치면 요청이 더 늘어나요.
+
+에러 경로도 어정쩡합니다.
+
+```tsx
+} catch (err) {
+  console.error('[토글북마크] 에러 발생 ✖', err);
+  setTimeout(async () => { await refetch(); }, 100);   // await 안 걸림
+}
+```
+
+`setTimeout` 안의 `await`는 바깥으로 전파되지 않아서, **여기서 나는 에러는 아무 데도 안 잡힙니다.** 그리고 원래 코드는 `finally`에서 한 번만 부르던 걸 성공/실패 두 갈래로 나눴는데, 두 갈래가 하는 일이 같아요.
+
+---
+
+## 5. 검증
+
+당시 확인한 것:
+
+- 로그인 상태에서 목록 → 상세 → 뒤로가기를 반복해도 북마크가 유지되는 것
+- 로그아웃 후 같은 화면에서 북마크가 사라지는 것(반대 방향도 정상)
+- 첫 진입 시 인증 확정 전 요청이 안 나가는 것
+
+**숫자가 없습니다.** "가끔"이 얼마나 가끔이었는지 세지 않았고, 고친 뒤에 몇 번 시도해서 0회가 됐는지도 안 적었어요. 재현이 어려운 버그일수록 **시도 횟수와 발생 횟수를 세야** 하는데, 눈으로 몇 번 해보고 넘어갔습니다.
+
+`api.ts`에 진단용 로그를 하나 넣었는데 그대로 남아 있습니다.
+
+```ts
+} else {
+  console.warn('인증이 필요한 요청이지만 액세스 토큰이 없습니다:', endpoint);
+}
+```
+
+이건 사실 **`enabled` 가드가 제대로 걸렸는지 확인하는 용도**로는 쓸 만합니다. 이 경고가 콘솔에 뜨면 어딘가에서 아직 확정 전에 요청이 나간다는 뜻이니까요. 다만 그렇게 쓰려고 남긴 게 아니라 그냥 안 지운 것이고, 프로덕션 콘솔에도 찍힙니다.
+
+---
+
+## 6. 남은 것
+
+- **`staleTime: 0` 제거**(4절 ②). 키가 이미 인증을 구분합니다.
+- **`useEffect` 수동 재조회 제거**(4절 ③). 키 변경으로 자동 처리됩니다.
+- **낙관적 업데이트 도입**(4절 ④).
+- **에러 경로 정리** — `catch` 안의 `setTimeout`은 에러를 삼킵니다.
+- **응답 모양을 인증에서 분리**(3절 ④). 이게 근본입니다.
+- `console.warn`을 개발 환경 조건부로.
+
+---
+
+## 정리
+
+- **3상태를 2상태로 접으면 "모름"이 어느 한쪽으로 잘못 분류됩니다.** `isAuthenticated === true`는 `null`을 비로그인으로 만들었습니다.
+- **"모름"에는 이름을 붙입니다.** `isAuthStateReady` 하나로 세 화면의 조건이 통일됐어요.
+- **`queryFn`이 읽는 값은 전부 `queryKey`에 있어야 합니다.** 키에 없는 입력으로 응답이 달라지면 캐시가 조용히 틀린 답을 줍니다.
+- **키가 바뀌면 React Query가 알아서 다시 가져옵니다.** 그 위에 `refetch`를 덧대면 두 번 받습니다.
+- **재현이 어려운 버그에 안전장치를 여러 겹 덧대면, 뭐가 효과였는지 영영 모릅니다.** 하나씩 넣고 확인해야 해요.
+- 그리고 — **고쳐졌다는 사실이 진단을 검증해주지 않습니다.** 커밋 메시지의 원인 분석과 실제 처방이 반대 방향이었는데, 증상이 사라졌다는 이유로 그대로 남았습니다.
+
+관련 글: [TripTune 프로젝트 회고](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발) · [React Infinite Scroll 구현하기](/blog/react-infinite-scroll-구현하기)

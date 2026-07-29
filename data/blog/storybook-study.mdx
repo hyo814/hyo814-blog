@@ -1,768 +1,138 @@
 ---
-title: StoryBook Study!
+title: 'Storybook 스터디 — 강의 정리와 정직한 결산'
 date: '2025-01-20'
 tags: [기술노트]
 draft: false
-summary: '인프런 강의 정리 : 실무에 바로 적용하는 스토리북과 UI 테스트'
+summary: '인프런 "실무에 바로 적용하는 스토리북과 UI 테스트"를 듣고 meta/story 문법, Atomic 컴포넌트 조합, Decorator, 네 가지 UI 테스트를 정리했습니다. 강의 자료에서 발견한 구식 API와 안 도는 코드도 함께 적어 두었고, 마지막에는 이걸 다 배우고도 내 프로젝트에는 Storybook을 도입하지 않은 이유를 정리했습니다.'
 ---
 
-# 스토리북이란?
+인프런 강의 "실무에 바로 적용하는 스토리북과 UI 테스트"를 완주하고 남긴 기록입니다. 강의 진행 순서를 그대로 옮기는 대신, 나중에 다시 꺼내 볼 만한 것만 주제별로 묶었습니다.
 
-## 프론트엔드에서의 디자인 시스템
+그리고 이 글에는 정리만 있지 않습니다. 마지막 "정직한 결산" 절에서, 이걸 다 배우고도 제 프로젝트 어디에도 Storybook을 넣지 않은 이유를 씁니다. 강의 후기 글이 대개 생략하는 부분이 그 대목이라고 생각합니다.
 
-### 1. 디자인 시스템이란?
+## 스토리북이 실제로 푸는 문제
 
-디자인 시스템은 브랜드 정체성을 시각·기능 양면으로 드러내는 데 필요한 규칙, 가이드라인, 컴포넌트, 툴의 묶음입니다. 개발자와 디자이너가 함께 일하기 쉬워지고, 제품이 일관된 사용자 경험(UX)을 갖추도록 돕습니다.
+강의는 디자인 시스템 이야기로 문을 엽니다. 스타일 가이드(색·타이포·간격), UI 컴포넌트, 패턴 라이브러리, 문서, 그리고 그걸 구현한 코드베이스. 여기까지는 어느 아티클에나 있는 내용이고, 실제로 중요한 건 그다음 한 문장입니다.
 
-### 2. 디자인 시스템의 주요 구성 요소
+**디자인 시스템의 진짜 비용은 만드는 게 아니라 "코드와 문서가 어긋나지 않게 유지하는 것"입니다.**
 
-디자인 시스템은 다음과 같은 구성 요소로 이루어집니다:
+Figma에는 최신 버튼이 있고 코드에는 작년 버튼이 있는 상태, 문서에는 없는 `isLoading` prop이 코드에는 있는 상태. 이 어긋남을 막는 게 Storybook의 존재 이유입니다. Storybook은 컴포넌트를 앱 전체에서 떼어 내 독립적으로 렌더링하고, 그 렌더링 자체가 문서가 되게 만듭니다. 문서를 따로 쓰는 게 아니라 **문서가 실행되는 코드**라서, 컴포넌트가 깨지면 문서도 같이 깨집니다. 그게 핵심입니다.
 
-### 2.1 스타일 가이드 (Style Guide)
+여기서 따라오는 부수 효과가 세 가지입니다.
 
-- 색상 팔레트
-- 타이포그래피 (폰트, 크기, 간격 등)
-- 간격 및 레이아웃
+- 앱을 띄우고 로그인하고 5단계 들어가야 보이는 에러 상태를, 스토리 하나 클릭으로 봅니다.
+- 디자이너·QA가 같은 URL을 보면서 이야기합니다. "그 화면 그 상태"라는 말이 필요 없어집니다.
+- 접근성 검사, 시각적 회귀 테스트, 상호작용 테스트가 전부 이 스토리 위에 얹힙니다.
 
-### 2.2 UI 컴포넌트 (UI Components)
+설치는 `npx storybook init` 한 줄이고, 프레임워크를 감지해서 `.storybook/main.ts`와 예제 스토리까지 만들어 줍니다.
 
-- 버튼, 입력 필드, 카드와 같은 재사용 가능한 UI 요소
-- 컴포넌트의 상태 (활성화, 비활성화, 에러 등)
+## 스토리의 문법: meta 하나, story 여럿
 
-### 2.3 패턴 라이브러리 (Pattern Library)
-
-- 검색창, 네비게이션 바, 푸터 등 기능적인 패턴
-- 다양한 화면에 적용할 수 있는 템플릿
-
-### 2.4 문서화 (Documentation)
-
-- 디자인과 개발의 기준을 상세히 설명
-- 사용 방법과 예제를 포함
-
-### 2.5 코드 기반 (Codebase)
-
-- 컴포넌트가 코드로 구현된 라이브러리 (예: React, Vue, Angular)
-- 개발자들이 쉽게 통합할 수 있도록 구성
-
-### 3. 디자인 시스템의 장점
-
-### 3.1 일관된 사용자 경험 제공
-
-디자인 시스템은 제품 전반에 같은 스타일과 동작을 유지해 사용자에게 일관된 경험을 줍니다.
-
-### 3.2 개발 및 디자인 효율성 향상
-
-재사용 가능한 컴포넌트로 개발 시간과 디자인 리소스를 아낄 수 있습니다.
-
-### 3.3 협업 강화
-
-개발자와 디자이너가 공통의 언어와 기준을 공유하므로, 협업이 원활해집니다.
-
-### 3.4 확장성 및 유지보수 용이
-
-새 기능이나 페이지를 추가할 때 기존 디자인 시스템을 쓰면 확장이 쉽고 유지보수도 간단합니다.
-
-### 4. 디자인 시스템 구현 방법
-
-### 4.1 목표 설정
-
-디자인 시스템을 통해 해결하고자 하는 문제와 목표를 명확히 정의합니다.
-
-### 4.2 팀 구성
-
-디자이너, 개발자, 프로젝트 관리자 등 다양한 역할이 포함된 팀을 구성하여 협업을 시작합니다.
-
-### 4.3 주요 요소 정의
-
-기본적인 스타일 가이드와 주요 컴포넌트를 정의합니다.
-
-### 4.4 도구 선택
-
-디자인 도구(Figma, Sketch 등)와 개발 프레임워크(Storybook, React 등)를 선택합니다.
-
-### 4.5 문서화 및 공유
-
-디자인 시스템을 문서화하고 팀 전체에 공유하여 활용도를 높입니다.
-
-### 4.6 지속적인 관리 및 업데이트
-
-제품이 변화함에 따라 디자인 시스템도 정기적으로 업데이트해야 합니다.
-
-### 5. 성공적인 디자인 시스템을 위한 팁
-
-- **작게 시작:** 처음부터 모든 것을 포함하려 하지 말고, 핵심 요소부터 시작하여 점진적으로 확장합니다.
-- **피드백 수집:** 디자이너와 개발자, 사용자로부터 피드백을 받아 디자인 시스템을 개선합니다.
-- **일관성 유지:** 문서화된 가이드라인과 컴포넌트를 반드시 준수하도록 팀에 교육합니다.
-- **자동화 도구 활용:** Storybook, Style Dictionary 같은 도구를 사용해 생산성을 높입니다.
-
-- 대표적인 디자인 시스템 예시
-
-  [Material Design](https://m2.material.io/design/introduction#material-environment)
-
-  [Human Interface Guidelines | Apple Developer Documentation](https://developer.apple.com/design/human-interface-guidelines/)
-
-## 스토리북이란?
-
-[Why Storybook?](https://storybook.js.org/docs/react/get-started/why-storybook)
-
-![Screenshot 2023-11-20 at 6.26.36 PM.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/1eb37c0a-6ffd-4ad6-895c-732d3acb3944/601dc448-11a4-4d93-9b6b-4f4b31aa2e4e/Screenshot_2023-11-20_at_6.26.36_PM.png)
-
----
-
-### **1. 스토리북이란 무엇인가?**
-
-- **스토리북의 개념**
-  - UI 컴포넌트를 독립적으로 개발하고 테스트할 수 있는 오픈소스 도구.
-  - React, Vue, Angular 등 다양한 프레임워크와 호환 가능.
-- **주요 기능**
-  - 컴포넌트의 상태를 "스토리"라는 형태로 시각화.
-  - 디자인 시스템 구축 및 유지 보수에 유용.
-  - 개발 중 실시간 미리 보기 제공.
-
----
-
-### **2. 스토리북의 주요 장점**
-
-- **독립적인 컴포넌트 개발 환경**
-  - 전체 애플리케이션과 분리된 환경에서 개별 컴포넌트 작업 가능.
-- **디자인-개발 협업 강화**
-  - 디자이너, 개발자, QA가 동일한 컴포넌트를 보며 협업 가능.
-- **문서화와 테스트 통합**
-  - Storybook Docs로 자동화된 문서 생성.
-  - 다양한 애드온으로 상호작용 테스트 및 접근성 검사 가능.
-
----
-
-### **3. 스토리북 설치 및 기본 설정**
-
-- **프로젝트에 설치**
-
-  ```bash
-  npx storybook init
-
-  ```
-
-- **기본 실행**
-
-  ```bash
-  npm run storybook
-
-  ```
-
-- **구성 파일(`main.js`)과 디렉토리 구조**
-  - Storybook의 주요 설정 파일 설명.
-  - 컴포넌트를 저장할 디렉토리 추천.
-
----
-
-### **4. 스토리 작성하기**
-
-- **기본 스토리 구조**
-
-  ```jsx
-  import MyComponent from './MyComponent'
-
-  export default {
-    title: 'Components/MyComponent',
-    component: MyComponent,
-  }
-
-  const Template = (args) => <MyComponent {...args} />
-
-  export const Default = Template.bind({})
-  Default.args = {
-    property1: 'value1',
-    property2: 'value2',
-  }
-  ```
-
-- **스토리 간의 변형**
-  - 다양한 상태와 시나리오를 다룰 수 있는 방법.
-
----
-
-### **5. 애드온 활용하기**
-
-- **Docs 애드온**: 자동화된 문서 생성.
-- **Knobs**: 사용자 인터페이스에서 동적으로 속성 변경.
-- **Actions**: 이벤트 핸들러 테스트.
-- **Accessibility**: 컴포넌트의 접근성 검사.
-- 애드온 설치 및 사용 방법 설명.
-
----
-
-### **6. 실전 활용 사례**
-
-- **디자인 시스템 구축**
-  - Atomic Design 방식과 Storybook의 통합.
-- **컴포넌트 테스트**
-  - 비주얼 리그레션 테스트(VRT)와의 연계.
-- **팀 협업 사례**
-  - QA와 디자이너가 Storybook을 활용하는 방법.
-
-# 2. 컴포넌트 개발과 스토리 작성
-
-## 2.1 Label 컴포넌트와 스토리의 metadata 소개
-
-### Label 컴포넌트와 스토리의 Metadata 소개
-
-### 1. **Label 컴포넌트의 역할**
-
-- `Label` 컴포넌트는 텍스트를 표시하는 단순한 UI 요소로, 다양한 스타일과 상태를 갖습니다.
-- Storybook으로 `Label` 컴포넌트의 다양한 사용 사례를 정의하고, 팀원들과 쉽게 공유하도록 설정합니다.
-
----
-
-### 2. **Metadata 설정**
-
-스토리는 Storybook의 핵심 구조로, 컴포넌트를 렌더링하는 데 필요한 정보를 담습니다. `metadata`는 스토리의 기본 설정을 관리하며, 아래 속성을 지정합니다.
-
-### 기본 예제: Label 컴포넌트의 Metadata
+Storybook 7 이후의 CSF3 문법에서 스토리 파일은 **기본 export 하나(meta)와 이름 있는 export 여럿(story)** 으로 구성됩니다.
 
 ```tsx
+// Label.stories.tsx
 import type { Meta, StoryObj } from '@storybook/react'
 import { Label } from './Label'
 
 const meta: Meta<typeof Label> = {
-  title: 'Components/Label', // 스토리북에서 컴포넌트가 표시될 경로
-  component: Label, // 스토리에서 사용할 컴포넌트
-  parameters: {
-    // 스토리를 렌더링할 때의 환경 설정
-    layout: 'centered', // 가운데 정렬 (권장)
-  },
-  tags: ['autodocs'], // 문서화 관련 태그
+  title: 'Components/Label', // 사이드바 경로
+  component: Label,
+  parameters: { layout: 'centered' },
+  tags: ['autodocs'], // 문서 페이지 자동 생성
   argTypes: {
-    // 컴포넌트의 props 설명 및 컨트롤
-    text: {
-      control: 'text', // 사용자 입력 컨트롤 타입 (텍스트)
-      description: 'Label 컴포넌트에 표시될 텍스트',
-    },
-    color: {
-      control: 'color', // 색상 선택 컨트롤
-      description: 'Label 텍스트의 색상',
-    },
+    text: { control: 'text', description: '표시될 텍스트' },
+    color: { control: 'color', description: '텍스트 색상' },
   },
 }
-
 export default meta
 type Story = StoryObj<typeof Label>
-```
 
----
-
-### 3. **Metadata 주요 속성**
-
-- **`title`**: 컴포넌트의 경로를 정의하며, Storybook의 사이드바에 표시됩니다.
-  - 예: `"Components/Label"`은 `Components` 폴더 아래 `Label`로 표시됩니다.
-- **`component`**: 스토리에서 사용할 React 컴포넌트를 지정합니다.
-- **`parameters`**: 스토리 렌더링 방식을 설정합니다.
-  - `layout: 'centered'`: 스토리를 화면 가운데에 정렬합니다.
-  - 다른 설정: [Parameters 문서 참고](https://storybook.js.org/docs/react/writing-stories/parameters).
-- **`tags`**: 문서화 방식과 관련된 태그를 추가합니다. (`autodocs` 권장)
-- **`argTypes`**:
-  - 각 `prop`의 설정 및 설명을 정의합니다.
-  - `control`: UI에서 변경 가능한 데이터 타입 (예: `text`, `color`, `boolean` 등).
-  - `description`: prop에 대한 상세 설명을 추가하여 이해를 돕습니다.
-  - [ArgTypes 문서 참고](https://storybook.js.org/docs/api/arg-types#controltype).
-
----
-
-### 4. **Label 스토리 예제**
-
-`Label` 컴포넌트의 다양한 상태를 정의하여, 팀원들과 공유할 수 있습니다.
-
-### 기본 스토리 예제
-
-```tsx
 export const Default: Story = {
-  args: {
-    text: '기본 Label',
-    color: '#000', // 검정색 텍스트
-  },
+  args: { text: '기본 Label', color: '#000' },
 }
 
 export const Highlight: Story = {
-  args: {
-    text: '강조된 Label',
-    color: '#f00', // 빨간색 텍스트
-  },
+  args: { ...Default.args, text: '강조된 Label', color: '#f00' },
 }
 ```
 
-### 스토리 확장 및 재사용
+meta의 각 필드가 하는 일은 이렇습니다.
 
-`Default` 스토리를 확장하여 다른 상태를 정의할 수 있습니다.
+| 필드          | 역할                                                             |
+| ------------- | ---------------------------------------------------------------- |
+| `title`       | 사이드바 트리 경로. `Components/Label`이면 폴더 아래 항목으로 표시 |
+| `component`   | 대상 컴포넌트. 타입 추론과 자동 문서의 근거                        |
+| `parameters`  | 렌더링 환경 설정. `layout: 'centered'`가 가장 자주 쓰임            |
+| `tags`        | `['autodocs']`를 넣으면 Docs 페이지가 자동 생성                   |
+| `argTypes`    | prop별 컨트롤 타입과 설명. 문서의 props 표가 여기서 나옴          |
 
-```tsx
-export const Bold: Story = {
-  args: {
-    ...Default.args,
-    text: '굵게 표시된 Label',
-  },
-}
-```
+`args`를 퍼뜨려 쓰는 패턴(`...Default.args`)이 실무에서 제일 유용합니다. 기본 상태를 한 번 정의해 두고 변형만 덮어쓰면, 컴포넌트 props가 바뀌었을 때 고칠 자리가 한 군데로 모입니다.
 
-## 2.2 TextField의 atom, ErrorMessage component
+이 문법을 익히면서 관점이 하나 바뀌었는데, **컴포넌트를 "props 조합이 만들어 내는 상태의 집합"으로 보게 된다**는 점입니다. 스토리를 쓴다는 건 결국 "이 컴포넌트가 가질 수 있는 상태를 전부 나열하라"는 요구고, 나열하다 보면 설계가 이상한 컴포넌트는 나열이 안 됩니다. props가 12개인데 유효한 조합은 4개뿐인 컴포넌트를 만들었다면, 스토리를 쓰는 순간 그게 드러납니다.
 
-### TextField의 Atom: `ErrorMessage` 컴포넌트
+## Atomic하게 쌓아 올리기
 
-### 1. **TextField Atom의 역할**
+강의는 `TextField` 하나를 만드는 과정을 Atomic Design 순서로 따라갑니다. 가장 작은 조각부터 만들고, 조합해서 올라갑니다.
 
-`TextField` 컴포넌트는 입력 필드를 제공하는 기본 UI 요소로, 여러 상황에 대응하려고 작은 단위의 Atom 컴포넌트를 안에 둡니다.
+### 1단계: ErrorMessage
 
-그중 `ErrorMessage` 컴포넌트는 사용자 입력이 유효하지 않을 때 알맞은 피드백을 주는 역할을 합니다.
-
----
-
-### 2. **ErrorMessage 컴포넌트 설계**
-
-`ErrorMessage`는 기본적으로 텍스트와 스타일만 포함된 단순한 컴포넌트입니다.
-
-### 주요 Props:
-
-- **`message`**: 에러 메시지 텍스트 (필수).
-- **`color`**: 에러 메시지의 색상 (선택, 기본값: 빨간색).
-- **`fontSize`**: 메시지의 텍스트 크기 (선택, 기본값: 12px).
-
----
-
-### 3. **ErrorMessage 컴포넌트 코드 예시**
+가장 단순한 Atom입니다. 텍스트와 스타일만 있습니다.
 
 ```tsx
-// ErrorMessage.tsx
-import React from 'react'
-
 interface ErrorMessageProps {
-  message: string // 에러 메시지
-  color?: string // 텍스트 색상
-  fontSize?: string | number // 텍스트 크기
+  message: string
+  color?: string
+  fontSize?: string | number
 }
 
 export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   message,
   color = 'red',
   fontSize = 12,
-}) => {
-  return <p style={{ color, fontSize, margin: '5px 0' }}>{message}</p>
-}
+}) => <p style={{ color, fontSize, margin: '5px 0' }}>{message}</p>
 ```
 
----
+이 정도 컴포넌트에도 스토리를 쓰는 이유는 "에러 메시지가 두 줄이 되면 레이아웃이 어떻게 되는가", "긴 문장이면 잘리는가"를 앱을 띄우지 않고 확인하기 위해서입니다.
 
-### 4. **ErrorMessage 스토리 작성**
-
-`ErrorMessage` 컴포넌트의 다양한 상태를 정의하여 Storybook에서 활용합니다.
-
-### 스토리의 Metadata
+### 2단계: IconButton과 SVG 관리
 
 ```tsx
-// ErrorMessage.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { ErrorMessage } from './ErrorMessage'
-
-const meta: Meta<typeof ErrorMessage> = {
-  title: 'Components/TextField/ErrorMessage', // Storybook 경로
-  component: ErrorMessage, // 컴포넌트 등록
-  parameters: {
-    layout: 'centered', // 중앙 정렬
-  },
-  argTypes: {
-    message: {
-      control: 'text',
-      description: '표시할 에러 메시지 텍스트',
-    },
-    color: {
-      control: 'color',
-      description: '에러 메시지의 텍스트 색상',
-    },
-    fontSize: {
-      control: 'text',
-      description: '에러 메시지의 텍스트 크기 (px, em 등 지정 가능)',
-    },
-  },
-}
-
-export default meta
-type Story = StoryObj<typeof ErrorMessage>
-```
-
-### 기본 스토리
-
-```tsx
-export const Default: Story = {
-  args: {
-    message: '필드를 입력해 주세요.',
-  },
-}
-
-export const CustomColor: Story = {
-  args: {
-    message: '유효하지 않은 입력입니다.',
-    color: 'orange',
-  },
-}
-
-export const LargeFont: Story = {
-  args: {
-    message: '필수 입력 항목입니다.',
-    fontSize: '16px',
-  },
-}
-```
-
----
-
-### 5. **TextField에서 ErrorMessage 사용 예시**
-
-`ErrorMessage`는 `TextField`의 하위 컴포넌트로 활용됩니다.
-
-아래는 `TextField` 컴포넌트에 `ErrorMessage`를 포함하는 예제입니다.
-
-```tsx
-// TextField.tsx
-import React, { useState } from 'react'
-import { ErrorMessage } from './ErrorMessage'
-
-interface TextFieldProps {
-  label: string
-  errorMessage?: string // 에러 메시지
-}
-
-export const TextField: React.FC<TextFieldProps> = ({ label, errorMessage }) => {
-  const [value, setValue] = useState('')
-
-  return (
-    <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '5px' }}>{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-      />
-      {errorMessage && <ErrorMessage message={errorMessage} />}
-    </div>
-  )
-}
-```
-
----
-
-### 6. **TextField와 ErrorMessage 통합 스토리**
-
-```tsx
-// TextField.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { TextField } from './TextField'
-
-const meta: Meta<typeof TextField> = {
-  title: 'Components/TextField',
-  component: TextField,
-  parameters: {
-    layout: 'centered',
-  },
-  argTypes: {
-    label: {
-      control: 'text',
-      description: '입력 필드의 라벨 텍스트',
-    },
-    errorMessage: {
-      control: 'text',
-      description: '유효하지 않은 경우 표시할 에러 메시지',
-    },
-  },
-}
-
-export default meta
-type Story = StoryObj<typeof TextField>
-
-export const Default: Story = {
-  args: {
-    label: '이름',
-    errorMessage: '',
-  },
-}
-
-export const WithError: Story = {
-  args: {
-    label: '이메일',
-    errorMessage: '유효한 이메일을 입력해 주세요.',
-  },
-}
-```
-
-## 2.3 TextField의 IconButton 컴포넌트와 `.svg` 관리방법
-
-### TextField의 IconButton 컴포넌트와 `.svg` 관리 방법
-
-### 1. **TextField와 IconButton**
-
-`TextField`는 종종 아이콘 버튼(`IconButton`)과 함께 사용됩니다.
-
-예를 들어, 입력 필드 옆에 검색 버튼, 비밀번호 표시/숨기기 토글 버튼 등을 배치할 때 사용됩니다.
-
----
-
-### 2. **IconButton 컴포넌트 설계**
-
-`IconButton` 컴포넌트는 작은 아이콘 버튼으로, 클릭 시 특정 동작을 수행합니다.
-
-### 주요 Props:
-
-- **`icon`**: 표시할 아이콘 (`.svg` 또는 React 컴포넌트).
-- **`onClick`**: 클릭 이벤트 핸들러.
-- **`size`**: 아이콘 크기 (선택, 기본값: 24px).
-- **`color`**: 아이콘 색상 (선택, 기본값: 회색).
-
----
-
-### 3. **IconButton 컴포넌트 코드 예시**
-
-```tsx
-// IconButton.tsx
-import React from 'react'
-
 interface IconButtonProps {
-  icon: React.ReactNode // SVG 또는 React 컴포넌트 형태의 아이콘
-  onClick: () => void // 클릭 이벤트 핸들러
-  size?: number | string // 아이콘 크기
-  color?: string // 아이콘 색상
-}
-
-export const IconButton: React.FC<IconButtonProps> = ({
-  icon,
-  onClick,
-  size = 24,
-  color = '#666',
-}) => {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: '5px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <span
-        style={{
-          display: 'inline-flex',
-          width: size,
-          height: size,
-          color,
-        }}
-      >
-        {icon}
-      </span>
-    </button>
-  )
-}
-```
-
----
-
-### 4. **.svg 관리 방법**
-
-`.svg` 파일을 효율적으로 관리하고 사용하는 방법은 다음과 같습니다.
-
-### 4.1. **SVG를 React 컴포넌트로 변환**
-
-SVG 아이콘을 React 컴포넌트로 관리하면 재사용성이 높아집니다.
-
-1. **`svg` 파일 생성**: `assets/icons` 폴더에 `.svg` 파일을 저장.
-
-   ```
-   assets/icons/
-   ├── search.svg
-   ├── eye.svg
-   └── eye-off.svg
-
-   ```
-
-2. **React 컴포넌트로 변환**: `SVGR` 라이브러리를 사용.
-
-   ```bash
-   npm install @svgr/webpack
-
-   ```
-
-3. **React 컴포넌트로 사용**: `Icon` 디렉토리를 통해 가져오기.
-
-   ```tsx
-   // EyeIcon.tsx
-   import React from 'react'
-
-   export const EyeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-     <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-       <path d="M12 4.5c5 0 9 3.5 10.5 7.5-1.5 4-5.5 7.5-10.5 7.5S3 16 1.5 12C3 8 7 4.5 12 4.5Zm0 2C8.6 6.5 5.7 8.6 4.4 12c1.3 3.4 4.2 5.5 7.6 5.5 3.4 0 6.3-2.1 7.6-5.5-1.3-3.4-4.2-5.5-7.6-5.5ZM12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Zm0 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
-     </svg>
-   )
-   ```
-
-### 4.2. **Dynamic Import 사용**
-
-필요한 SVG를 동적으로 불러올 수도 있습니다.
-
-```tsx
-// DynamicIcon.tsx
-import React from 'react'
-
-interface DynamicIconProps {
-  name: string
+  icon: React.ReactNode
+  onClick: () => void
   size?: number | string
   color?: string
 }
-
-export const DynamicIcon: React.FC<DynamicIconProps> = ({ name, size = 24, color = '#000' }) => {
-  const SvgIcon = React.lazy(() => import(`../assets/icons/${name}.svg`))
-
-  return (
-    <React.Suspense fallback={<span>Loading...</span>}>
-      <SvgIcon width={size} height={size} fill={color} />
-    </React.Suspense>
-  )
-}
 ```
 
----
+`icon`을 `React.ReactNode`로 받는 설계가 포인트입니다. 아이콘 이름을 문자열로 받아 내부에서 매핑하는 방식보다, 부모가 만든 엘리먼트를 그대로 받는 쪽이 타입 안전하고 트리 셰이킹에도 유리합니다.
 
-### 5. **IconButton 스토리 작성**
+SVG는 `@svgr/webpack`으로 React 컴포넌트화해서 `assets/icons`에 두고 import하는 방식을 씁니다.
 
 ```tsx
-// IconButton.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { IconButton } from './IconButton'
-import { EyeIcon } from '../icons/EyeIcon'
-import { EyeOffIcon } from '../icons/EyeOffIcon'
-
-const meta: Meta<typeof IconButton> = {
-  title: 'Components/TextField/IconButton', // Storybook 경로
-  component: IconButton, // 컴포넌트 등록
-  parameters: {
-    layout: 'centered',
-  },
-  argTypes: {
-    icon: {
-      control: false,
-      description: '버튼에 표시할 아이콘',
-    },
-    onClick: {
-      action: 'clicked',
-      description: '버튼 클릭 시 호출되는 핸들러',
-    },
-    size: {
-      control: 'number',
-      description: '아이콘 크기 (px)',
-    },
-    color: {
-      control: 'color',
-      description: '아이콘 색상',
-    },
-  },
-}
-
-export default meta
-type Story = StoryObj<typeof IconButton>
-
-export const Default: Story = {
-  args: {
-    icon: <EyeIcon />,
-    size: 24,
-    color: '#666',
-    onClick: () => console.log('Icon clicked!'),
-  },
-}
-
-export const Toggle: Story = {
-  args: {
-    icon: <EyeOffIcon />,
-    size: 24,
-    color: '#f00',
-    onClick: () => console.log('Toggled!'),
-  },
-}
+export const EyeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M12 4.5c5 0 9 3.5 10.5 7.5-1.5 4-5.5 7.5-10.5 7.5S3 16 1.5 12C3 8 7 4.5 12 4.5Z" />
+  </svg>
+)
 ```
 
----
+`React.SVGProps<SVGSVGElement>`를 그대로 받아 펼치면 `width`, `height`, `fill`, `aria-hidden`을 호출부에서 자유롭게 넘길 수 있습니다. 아이콘 컴포넌트를 만들 때 이 타입만 기억해 두면 됩니다.
 
-### 6. **TextField와 IconButton 통합 예시**
-
-```tsx
-// TextFieldWithIcon.tsx
-import React, { useState } from 'react'
-import { IconButton } from './IconButton'
-import { EyeIcon } from '../icons/EyeIcon'
-import { EyeOffIcon } from '../icons/EyeOffIcon'
-
-export const TextFieldWithIcon: React.FC = () => {
-  const [showPassword, setShowPassword] = useState(false)
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      <input
-        type={showPassword ? 'text' : 'password'}
-        style={{ flex: 1, padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-        placeholder="Enter your password"
-      />
-      <IconButton
-        icon={showPassword ? <EyeOffIcon /> : <EyeIcon />}
-        onClick={() => setShowPassword((prev) => !prev)}
-      />
-    </div>
-  )
-}
-```
-
-## 2.4 atomic 컴포넌트들을 쌓아올린 TextField 컴포넌트
-
-### TextField 컴포넌트: Atomic 컴포넌트를 조합한 구조
-
-### 1. **TextField 컴포넌트의 역할**
-
-`TextField`는 입력 필드에 부가 기능과 상태를 더하려고 **Atomic 디자인 패턴**으로 하위 컴포넌트를 조합합니다.
-
-작은 컴포넌트(Atoms)들을 모아 복잡한 UI를 구성할 수 있습니다.
-
----
-
-### 2. **TextField를 구성하는 Atomic 컴포넌트**
-
-TextField는 다음과 같은 Atomic 컴포넌트들로 구성됩니다:
-
-1. **`Label`**: 입력 필드의 제목을 표시.
-2. **`Input`**: 실제 데이터 입력을 처리.
-3. **`ErrorMessage`**: 유효성 검사 실패 시 에러 메시지 표시.
-4. **`IconButton`**: 추가적인 액션(예: 패스워드 표시/숨기기).
-
----
-
-### 3. **Atomic 컴포넌트를 조합한 TextField**
-
-### TextField Props 설계
+### 3단계: 조합한 TextField
 
 ```tsx
 interface TextFieldProps {
-  label?: string // 필드 라벨
-  placeholder?: string // 입력 필드의 placeholder
-  value: string // 입력값 (상태 관리 필요)
-  onChange: (value: string) => void // 입력값 변경 핸들러
-  errorMessage?: string // 에러 메시지
-  type?: string // 입력 타입 (예: text, password)
-  icon?: React.ReactNode // 아이콘 버튼
-  onIconClick?: () => void // 아이콘 버튼 클릭 이벤트
+  label?: string
+  placeholder?: string
+  value: string
+  onChange: (value: string) => void
+  errorMessage?: string
+  type?: string
+  icon?: React.ReactNode
+  onIconClick?: () => void
 }
-```
-
-### TextField 컴포넌트 구현
-
-```tsx
-import React from 'react'
-import { ErrorMessage } from './ErrorMessage'
-import { IconButton } from './IconButton'
 
 export const TextField: React.FC<TextFieldProps> = ({
   label,
@@ -773,1069 +143,129 @@ export const TextField: React.FC<TextFieldProps> = ({
   type = 'text',
   icon,
   onIconClick,
-}) => {
-  return (
-    <div style={{ marginBottom: '20px' }}>
-      {label && <label style={{ display: 'block', marginBottom: '5px' }}>{label}</label>}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          padding: '8px',
-        }}
-      >
-        <input
-          type={type}
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          style={{ flex: 1, border: 'none', outline: 'none' }}
-        />
-        {icon && <IconButton icon={icon} onClick={onIconClick || (() => {})} />}
-      </div>
-      {errorMessage && <ErrorMessage message={errorMessage} />}
-    </div>
-  )
-}
-```
-
----
-
-### 4. **TextField 스토리 작성**
-
-### Metadata 설정
-
-```tsx
-// TextField.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { TextField } from './TextField'
-import { EyeIcon } from '../icons/EyeIcon'
-import { EyeOffIcon } from '../icons/EyeOffIcon'
-
-const meta: Meta<typeof TextField> = {
-  title: 'Components/TextField', // Storybook 경로
-  component: TextField,
-  parameters: {
-    layout: 'centered',
-  },
-  argTypes: {
-    label: {
-      control: 'text',
-      description: '입력 필드의 라벨',
-    },
-    placeholder: {
-      control: 'text',
-      description: '입력 필드의 placeholder 텍스트',
-    },
-    value: {
-      control: 'text',
-      description: '입력값 (상태 관리 필요)',
-    },
-    errorMessage: {
-      control: 'text',
-      description: '유효하지 않을 때 표시할 에러 메시지',
-    },
-    icon: {
-      control: false,
-      description: '아이콘 버튼 (React 컴포넌트)',
-    },
-    onIconClick: {
-      action: 'clicked',
-      description: '아이콘 버튼 클릭 이벤트',
-    },
-  },
-}
-
-export default meta
-type Story = StoryObj<typeof TextField>
-```
-
-### 기본 스토리
-
-```tsx
-export const Default: Story = {
-  args: {
-    label: '이름',
-    placeholder: '이름을 입력하세요',
-    value: '',
-    errorMessage: '',
-    onChange: (value: string) => console.log(value),
-  },
-}
-```
-
-### 에러 상태 스토리
-
-```tsx
-export const WithError: Story = {
-  args: {
-    label: '이메일',
-    placeholder: '이메일을 입력하세요',
-    value: '',
-    errorMessage: '유효한 이메일 주소를 입력하세요',
-    onChange: (value: string) => console.log(value),
-  },
-}
-```
-
-### 패스워드 필드 스토리
-
-```tsx
-import React, { useState } from 'react'
-
-export const PasswordField: Story = {
-  render: () => {
-    const [showPassword, setShowPassword] = useState(false)
-    const [value, setValue] = useState('')
-
-    return (
-      <TextField
-        label="비밀번호"
-        placeholder="비밀번호를 입력하세요"
+}) => (
+  <div style={{ marginBottom: 20 }}>
+    {label && <label style={{ display: 'block', marginBottom: 5 }}>{label}</label>}
+    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: 4, padding: 8 }}>
+      <input
+        type={type}
         value={value}
-        type={showPassword ? 'text' : 'password'}
-        icon={showPassword ? <EyeOffIcon /> : <EyeIcon />}
-        onIconClick={() => setShowPassword((prev) => !prev)}
-        onChange={setValue}
-        errorMessage={value.length < 8 ? '비밀번호는 8자 이상이어야 합니다' : ''}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ flex: 1, border: 'none', outline: 'none' }}
       />
-    )
-  },
-}
-```
-
-## 2.5 Cumulative Layout Shift(CLS)를 고려한 컴포넌트 개발
-
-- Web Vital에서 CLS는 예기치 못한 UI 변동을 뜻함
-
-  [Cumulative Layout Shift (CLS)  |  Articles  |  web.dev](https://web.dev/articles/cls?hl=ko)
-
-- Web Vital이 단순히 사용자 경험 뿐 아니라 SEO에도 중요하다는 점을 고려할 때 컴포넌트 설계 시 Web Vitals를 고려해야함
-
-  [Core Web Vitals 및 Google 검색결과 이해하기 | Google 검색 센터  |  문서  |  Google for Developers](https://developers.google.com/search/docs/appearance/core-web-vitals?hl=ko)
-
-  [How Core Web Vitals affect application SEO: Understanding Google page experience ranking and Lighthouse scores – Vercel](https://vercel.com/blog/how-core-web-vitals-affect-seo)
-
-## 2.6 NavigationBar 컴포넌트와 Story Decorator
-
-[Decorators • Storybook docs](https://storybook.js.org/docs/writing-stories/decorators/)
-
-### NavigationBar 컴포넌트와 Story Decorator
-
-### 1. **NavigationBar 컴포넌트 개요**
-
-`NavigationBar`는 애플리케이션 페이지 사이를 오가는 핵심 UI 컴포넌트입니다.
-
-주로 화면 위나 아래에 자리하며, 사용자 경험을 끌어올리려고 스타일과 아이콘을 함께 둡니다.
-
----
-
-### 2. **NavigationBar 컴포넌트 설계**
-
-### Props 설계
-
-```tsx
-interface NavigationBarProps {
-  items: { label: string; icon?: React.ReactNode; onClick: () => void }[] // 네비게이션 항목
-  activeIndex?: number // 현재 활성화된 항목
-  style?: React.CSSProperties // 추가 스타일
-}
-```
-
-### NavigationBar 컴포넌트 구현
-
-```tsx
-import React from 'react'
-
-export const NavigationBar: React.FC<NavigationBarProps> = ({ items, activeIndex = 0, style }) => {
-  return (
-    <nav style={{ display: 'flex', justifyContent: 'space-around', ...style }}>
-      {items.map((item, index) => (
-        <button
-          key={index}
-          onClick={item.onClick}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: '10px',
-            cursor: 'pointer',
-            color: index === activeIndex ? '#007bff' : '#666',
-            fontWeight: index === activeIndex ? 'bold' : 'normal',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          {item.icon && <span style={{ fontSize: '18px' }}>{item.icon}</span>}
-          {item.label}
-        </button>
-      ))}
-    </nav>
-  )
-}
-```
-
----
-
-### 3. **Storybook의 Story Decorator**
-
-Story Decorator는 특정 스토리에 컨텍스트(테마, 레이아웃 등)를 추가할 때 사용됩니다.
-
-### Decorator 예제: NavigationBar를 특정 레이아웃에 추가
-
-```tsx
-import { DecoratorFunction } from '@storybook/react'
-
-// Story Decorator 생성
-export const CenteredDecorator: DecoratorFunction = (Story) => (
-  <div style={{ padding: '20px', backgroundColor: '#f9f9f9', minHeight: '100vh' }}>
-    <Story />
+      {icon && <IconButton icon={icon} onClick={onIconClick ?? (() => {})} />}
+    </div>
+    {errorMessage && <ErrorMessage message={errorMessage} />}
   </div>
 )
 ```
 
----
+**제어 컴포넌트로 만든 것이 이 설계의 핵심**입니다. `value`와 `onChange`를 밖에서 받기 때문에 폼 라이브러리와 붙일 수 있고, 스토리에서도 원하는 상태를 그대로 주입할 수 있습니다. 내부에 `useState`를 감춰 두면 "값이 있는데 에러도 떠 있는 상태"를 스토리로 만들 수 없습니다.
 
-### 4. **NavigationBar 스토리 작성**
-
-### Metadata 설정
+상태를 가진 스토리가 필요할 때는 `render`에 **컴포넌트를 만들어서** 넣어야 합니다. 훅은 컴포넌트 안에서만 호출할 수 있기 때문입니다.
 
 ```tsx
-// NavigationBar.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { NavigationBar } from './NavigationBar'
-import { CenteredDecorator } from './decorators' // Decorator 가져오기
-import { HomeIcon, SearchIcon, ProfileIcon } from '../icons' // 예시 아이콘
-
-const meta: Meta<typeof NavigationBar> = {
-  title: 'Components/NavigationBar',
-  component: NavigationBar,
-  parameters: {
-    layout: 'centered',
-  },
-  decorators: [CenteredDecorator], // Decorator 등록
-  argTypes: {
-    items: {
-      control: false,
-      description: '네비게이션 항목 배열',
-    },
-    activeIndex: {
-      control: 'number',
-      description: '현재 활성화된 항목의 인덱스',
-    },
-    style: {
-      control: 'object',
-      description: '네비게이션 바의 추가 스타일',
-    },
-  },
-}
-
-export default meta
-type Story = StoryObj<typeof NavigationBar>
-```
-
-### 기본 스토리
-
-```tsx
-export const Default: Story = {
-  args: {
-    items: [
-      { label: 'Home', icon: <HomeIcon />, onClick: () => console.log('Home clicked') },
-      { label: 'Search', icon: <SearchIcon />, onClick: () => console.log('Search clicked') },
-      { label: 'Profile', icon: <ProfileIcon />, onClick: () => console.log('Profile clicked') },
-    ],
-    activeIndex: 0,
-  },
-}
-```
-
-### 활성화된 항목 변경
-
-```tsx
-export const ActiveProfile: Story = {
-  args: {
-    items: [
-      { label: 'Home', icon: <HomeIcon />, onClick: () => console.log('Home clicked') },
-      { label: 'Search', icon: <SearchIcon />, onClick: () => console.log('Search clicked') },
-      { label: 'Profile', icon: <ProfileIcon />, onClick: () => console.log('Profile clicked') },
-    ],
-    activeIndex: 2, // Profile 활성화
-  },
-}
-```
-
-### 스타일 커스터마이징
-
-```tsx
-export const CustomStyle: Story = {
-  args: {
-    items: [
-      { label: 'Home', icon: <HomeIcon />, onClick: () => console.log('Home clicked') },
-      { label: 'Search', icon: <SearchIcon />, onClick: () => console.log('Search clicked') },
-      { label: 'Profile', icon: <ProfileIcon />, onClick: () => console.log('Profile clicked') },
-    ],
-    activeIndex: 1, // Search 활성화
-    style: { backgroundColor: '#333', color: '#fff', padding: '10px', borderRadius: '8px' },
-  },
-}
-```
-
----
-
-### 5. **Decorator 활용 사례**
-
-- **Global Decorator**: 모든 스토리에 동일한 배경색, 폰트, 레이아웃 적용.
-- **Story-Specific Decorator**: 특정 컴포넌트(예: NavigationBar)에만 레이아웃 적용.
-
-```tsx
-// preview.ts
-import { addDecorator } from '@storybook/react'
-import { CenteredDecorator } from './decorators'
-
-addDecorator(CenteredDecorator) // 모든 스토리에 글로벌 Decorator 적용
-```
-
-## 2.7 다양한 스토리를 가진 `PrimaryButton` 컴포넌트
-
-### 다양한 스토리를 가진 PrimaryButton 컴포넌트
-
-### 1. **PrimaryButton 컴포넌트 개요**
-
-`PrimaryButton`은 애플리케이션에서 주로 쓰이는 핵심 액션 버튼입니다.
-
-사용자 상호작용에서 중요한 역할을 하며, 활성·비활성·로딩 등 여러 상태를 갖습니다.
-
----
-
-### 2. **PrimaryButton 컴포넌트 설계**
-
-### Props 설계
-
-```tsx
-interface PrimaryButtonProps {
-  label: string // 버튼 텍스트
-  onClick: () => void // 버튼 클릭 이벤트 핸들러
-  disabled?: boolean // 버튼 비활성화 상태
-  isLoading?: boolean // 로딩 상태
-  style?: React.CSSProperties // 추가 스타일
-}
-```
-
-### PrimaryButton 컴포넌트 구현
-
-```tsx
-import React from 'react'
-
-export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
-  label,
-  onClick,
-  disabled = false,
-  isLoading = false,
-  style,
-}) => {
+const PasswordFieldDemo = () => {
+  const [show, setShow] = useState(false)
+  const [value, setValue] = useState('')
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled || isLoading}
-      style={{
-        padding: '10px 20px',
-        backgroundColor: disabled || isLoading ? '#ccc' : '#007bff',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: disabled || isLoading ? 'not-allowed' : 'pointer',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        ...style,
-      }}
-    >
-      {isLoading ? 'Loading...' : label}
-    </button>
+    <TextField
+      label="비밀번호"
+      value={value}
+      onChange={setValue}
+      type={show ? 'text' : 'password'}
+      icon={show ? <EyeOffIcon /> : <EyeIcon />}
+      onIconClick={() => setShow((prev) => !prev)}
+      errorMessage={value.length < 8 ? '비밀번호는 8자 이상이어야 합니다' : ''}
+    />
   )
 }
+
+export const PasswordField: Story = { render: () => <PasswordFieldDemo /> }
 ```
 
----
+## Decorator: 스토리에 맥락을 씌우기
 
-### 3. **PrimaryButton 스토리 작성**
-
-### Metadata 설정
+컴포넌트가 테마 Provider나 라우터, 특정 배경 위에서만 제대로 보이는 경우가 있습니다. Decorator는 스토리를 감싸는 래퍼입니다.
 
 ```tsx
-// PrimaryButton.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { PrimaryButton } from './PrimaryButton'
+// .storybook/preview.tsx
+import type { Preview } from '@storybook/react'
 
-const meta: Meta<typeof PrimaryButton> = {
-  title: 'Components/PrimaryButton', // Storybook 경로
-  component: PrimaryButton,
-  parameters: {
-    layout: 'centered',
-  },
-  argTypes: {
-    label: {
-      control: 'text',
-      description: '버튼에 표시할 텍스트',
-    },
-    onClick: {
-      action: 'clicked',
-      description: '버튼 클릭 이벤트 핸들러',
-    },
-    disabled: {
-      control: 'boolean',
-      description: '버튼 비활성화 여부',
-    },
-    isLoading: {
-      control: 'boolean',
-      description: '로딩 상태 여부',
-    },
-    style: {
-      control: 'object',
-      description: '추가 스타일',
-    },
-  },
+const preview: Preview = {
+  decorators: [
+    (Story) => (
+      <div style={{ padding: 20, backgroundColor: '#f9f9f9' }}>
+        <Story />
+      </div>
+    ),
+  ],
 }
-
-export default meta
-type Story = StoryObj<typeof PrimaryButton>
+export default preview
 ```
 
----
+특정 컴포넌트에만 씌우려면 meta에 `decorators: [CenteredDecorator]`를 넣습니다. 실무에서 가장 값어치가 큰 쓰임은 장식이 아니라 **Provider 주입**입니다. ThemeProvider, i18n, React Query Client를 글로벌 Decorator로 한 번 감싸 두면 모든 스토리가 앱과 같은 컨텍스트에서 렌더링됩니다.
 
-### 4. **다양한 스토리 정의**
+## CLS를 아는 컴포넌트 설계
 
-### 기본 상태
+강의에서 짧지만 오래 남은 대목이 [Cumulative Layout Shift](https://web.dev/articles/cls?hl=ko) 이야기였습니다. 에러 메시지가 나타나면서 아래 콘텐츠를 밀어내는 것, 이미지가 로드되면서 레이아웃이 튀는 것이 전부 CLS입니다.
 
-```tsx
-export const Default: Story = {
-  args: {
-    label: 'Submit',
-    disabled: false,
-    isLoading: false,
-  },
-}
-```
+앞의 `ErrorMessage`도 정확히 이 문제를 갖고 있습니다. `errorMessage &&` 조건부 렌더링이라 메시지가 생기는 순간 아래 요소가 밀립니다. 실무라면 에러 영역의 높이를 미리 확보하고 `visibility`나 `opacity`로 전환하는 편이 낫습니다.
 
-### 비활성화 상태
+CLS가 [Core Web Vitals](https://developers.google.com/search/docs/appearance/core-web-vitals?hl=ko)를 거쳐 검색 순위에 영향을 준다는 점을 생각하면, 이건 취향 문제가 아니라 요구사항입니다. Storybook의 좋은 점은 이런 튐을 컴포넌트 단위에서 미리 볼 수 있다는 것입니다.
 
-```tsx
-export const Disabled: Story = {
-  args: {
-    label: 'Submit',
-    disabled: true,
-    isLoading: false,
-  },
-}
-```
+## UI 테스트 네 가지
 
-### 로딩 상태
+강의 후반부는 스토리 위에 얹는 테스트입니다. 네 가지가 서로 다른 것을 잡습니다.
 
-```tsx
-export const Loading: Story = {
-  args: {
-    label: 'Submit',
-    isLoading: true,
-  },
-}
-```
+| 테스트           | 잡는 것                              | 도구                          |
+| ---------------- | ------------------------------------ | ----------------------------- |
+| Visual (VRT)     | 의도치 않은 픽셀 변화                | Chromatic                     |
+| Accessibility    | 대비·레이블·역할 위반                | `@storybook/addon-a11y`       |
+| Interaction      | 클릭·입력 후의 상태 변화             | `play` 함수 + test-runner     |
+| CI 연동          | 위 전부를 PR마다 자동 실행           | GitHub Actions + test-runner  |
 
-### 스타일 커스터마이징
+**Chromatic**은 Storybook 팀이 만든 시각 회귀 서비스입니다. 강의에서 "Storybook 문서보다 Chromatic 문서를 보라"고 권하는데, 실제로 Chromatic 쪽 문서가 `devDependency`로 설치하라는 것까지 정확히 명시합니다. 별도 도메인이나 호스팅 설정 없이 HTTPS로 스토리북을 배포해 주는 것도 편합니다. PR을 만들면 변경된 스냅샷만 모아서 UI 리뷰를 걸어 줍니다.
 
-```tsx
-export const CustomStyle: Story = {
-  args: {
-    label: 'Custom Button',
-    isLoading: false,
-    style: {
-      backgroundColor: '#28a745',
-      fontSize: '18px',
-      borderRadius: '8px',
-    },
-  },
-}
-```
+**a11y 애드온**은 애드온만 켜면 각 스토리에서 위반 목록을 보여 주지만, CI에서 실패로 만들려면 `@storybook/test-runner`가 필요합니다. 애드온만 켜 놓고 CI가 잡아 줄 거라 기대하면 아무것도 안 잡힙니다.
 
-### 긴 텍스트 버튼
+**Interaction 테스트**는 스토리의 `play` 함수 안에서 사용자 동작을 재현합니다. E2E와 비슷하지만 브라우저 전체가 아니라 Storybook canvas 안에서 컴포넌트 단위로 돕니다. 그래서 빠르고, 대신 라우팅이나 API 통합처럼 앱 전체를 지나는 문제는 못 잡습니다. 앱 전체를 훑는 검증은 결국 [Playwright로 메뉴 136종을 쓸어 보는](/blog/playwright-메뉴-136종-qa-스윕) 식의 별도 레이어가 필요합니다.
 
-```tsx
-export const LongText: Story = {
-  args: {
-    label: 'This is a button with a very long text',
-    isLoading: false,
-  },
-}
-```
+## 강의 자료를 다시 읽으며 발견한 것들
 
-### 작은 버튼
+정리하면서 원래 필기를 검토했더니, 그대로 두면 안 되는 대목이 몇 개 있었습니다. 위 본문은 이미 고쳐 쓴 버전이고, 무엇을 고쳤는지 남겨 둡니다.
 
-```tsx
-export const Small: Story = {
-  args: {
-    label: 'Click Me',
-    style: {
-      padding: '5px 10px',
-      fontSize: '14px',
-    },
-  },
-}
-```
+**1. `addDecorator`는 이제 없습니다.** 옛 필기에는 `preview.ts`에서 `addDecorator(CenteredDecorator)`를 호출하는 코드가 있었는데, 이 API는 Storybook 7에서 제거됐습니다. 같은 문서가 다른 곳에서는 `Meta`/`StoryObj`라는 CSF3 문법을 쓰고 있었으니, 앞뒤가 맞지 않는 상태였습니다. 지금은 `preview.tsx`에서 `decorators` 배열을 export합니다.
 
----
+**2. Knobs 애드온도 없습니다.** 애드온 목록에 Knobs가 들어 있었는데, Knobs는 Controls로 대체되어 사라졌습니다. 본문에서 계속 쓰던 `argTypes` + `control`이 바로 그 후신입니다. 스스로 Controls를 쓰면서 Knobs를 소개하고 있었던 셈입니다.
 
-### 5. **스토리 확장 및 응용**
+**3. `Template.bind({})`는 CSF2 문법입니다.** 초반 예제만 옛 문법이고 이후 전부 CSF3였습니다. 지금은 굳이 섞을 이유가 없어 CSF3로 통일했습니다.
 
-### 글로벌 Decorator로 스타일 통일
+**4. `render`에서 훅을 부르면 안 됩니다.** `PasswordField` 스토리가 `render: () => { const [x, setX] = useState() ... }` 형태였는데, `render`는 컴포넌트가 아니라 일반 함수라 훅 규칙 위반입니다. 위에 쓴 것처럼 별도 컴포넌트로 감싸야 합니다.
 
-Storybook에서 모든 버튼 스토리에 동일한 기본 배경색을 적용하려면 Decorator를 활용합니다.
+**5. 동적 SVG import는 그대로는 안 돕니다.** 아이콘 이름을 템플릿 문자열로 만들어 `React.lazy` 안에서 `.svg`를 동적 import하는 코드가 있었는데, SVGR 설정과 번들러의 정적 분석 조건이 맞아야만 동작합니다. 아이콘 개수가 확정적인 경우엔 그냥 정적 import가 낫습니다.
 
-```tsx
-// preview.ts
-import { addDecorator } from '@storybook/react'
+**6. 스토리 `title`이 중복돼 있었습니다.** `Components/TextField`가 두 번, `Components/TagList`가 두 번 등장했습니다. Storybook은 스토리 ID를 `title` 기준으로 만들기 때문에 중복은 실제로 충돌을 냅니다.
 
-addDecorator((Story) => (
-  <div style={{ backgroundColor: '#f0f0f0', padding: '20px' }}>
-    <Story />
-  </div>
-))
-```
+**7. "Event Bubbling을 활용한 TagList"라는 제목의 코드가 사실은 버블링을 막고 있었습니다.** 태그 클릭 핸들러와 삭제 핸들러 양쪽에서 `stopPropagation()`을 부르는데, 이건 버블링을 활용하는 게 아니라 차단하는 것입니다. 삭제 아이콘 쪽에서 부모 클릭으로 전파되는 걸 막는 건 타당하지만, 최상위 클릭 핸들러에서 부르는 건 의미가 없습니다. 제목과 코드가 정반대였습니다.
 
-### 이벤트 핸들링 확인
+## 정직한 결산: 배웠지만 도입하지 않았다
 
-스토리에서 `onClick` 이벤트를 활용하여 버튼 클릭 시 동작을 확인할 수 있습니다.
+여기까지 정리해 놓고 말하기 민망하지만, **저는 이 강의를 완주한 뒤 제 어떤 프로젝트에도 Storybook을 도입하지 않았습니다.** 그러기로 결정한 이유를 적는 게 이 글에서 제일 쓸모 있는 부분이라고 생각합니다.
 
-```tsx
-export const ClickAction: Story = {
-  args: {
-    label: 'Click Me',
-    onClick: () => alert('Button clicked!'),
-  },
-}
-```
+**첫째, 2인 사이드 프로젝트에서는 카탈로그 유지 비용이 효용을 넘습니다.** [2년 묵은 사이드 프로젝트를 되살리는 작업](/blog/2년-묵은-사이드-프로젝트-되살리기)을 하면서 이 판단을 굳혔습니다. Storybook의 가치는 "같은 컴포넌트를 여러 사람이, 앱을 띄우지 않고, 각자의 맥락에서 확인해야 할 때" 나옵니다. 전달 대상이 사실상 없는 팀에서는 컴포넌트 옆에 스토리 파일을 하나 더 두는 일이 순수한 추가 부채입니다. props가 바뀔 때마다 컴포넌트와 스토리를 같이 고쳐야 하고, 안 고치면 스토리가 썩고, 썩은 스토리는 없는 것보다 나쁩니다. 실제로 유지되지 않을 카탈로그를 만드는 건 문서를 만드는 게 아니라 거짓말을 만드는 것입니다.
 
-## 2.8 TagList의 atom, `TagButton` 컴포넌트
+**둘째, 서버 렌더링 프로젝트에는 전제 자체가 맞지 않습니다.** 실무에서 다루는 SDMS는 Django + Jinja 템플릿 기반입니다. 여기서 "컴포넌트"의 단위는 JavaScript 함수가 아니라 서버에서 렌더링되는 템플릿 조각이고, 상태는 props가 아니라 뷰가 넘긴 컨텍스트에서 옵니다. Storybook은 "컴포넌트가 JS 함수이고 props로 상태를 주입할 수 있다"는 전제 위에 서 있는 도구라, 이 구조에서는 도구를 쓰려고 아키텍처를 비트는 결과가 됩니다. 도구가 좋아서 쓰는 것과, 도구를 쓰려고 문제를 개조하는 것은 다른 일입니다.
 
-### TagList의 Atom: `TagButton` 컴포넌트
+그래서 아무것도 안 남았느냐 하면, 그렇지 않습니다.
 
-### 1. **TagList와 TagButton 개요**
+**컴포넌트를 "props 조합이 만드는 상태 집합"으로 보는 관점은 Storybook 없이도 남았습니다.** 새 컴포넌트를 설계할 때 머릿속으로 스토리 목록을 먼저 세어 봅니다. 기본, 비활성, 로딩, 에러, 긴 텍스트, 빈 값. 여섯 개가 셈이 안 되면 props 설계가 잘못된 겁니다. 이 습관은 파일 하나 안 늘리고도 씁니다.
 
-- **`TagList`**: 여러 개의 태그를 관리하고 표시하는 컴포넌트로, 사용자와 상호작용할 수 있는 태그들의 컬렉션입니다.
-- **`TagButton`**: 각각의 태그를 담당하는 Atom 컴포넌트로, 선택/삭제/클릭 등의 기능을 제공합니다.
+**제어 컴포넌트로 설계하는 습관도 남았습니다.** 상태를 안에 감추면 스토리를 못 쓴다는 걸 배우고 나니, 스토리를 안 쓰더라도 상태를 밖으로 빼게 됐습니다. 테스트하기 쉬운 설계와 스토리 쓰기 쉬운 설계는 같은 것이었습니다.
 
----
+**CLS를 컴포넌트 단위에서 생각하는 것도 남았습니다.** 에러 메시지 하나 띄우면서 아래를 밀어내는지 아닌지는, Storybook이 없어도 만들면서 확인할 수 있습니다.
 
-### 2. **TagButton 컴포넌트 설계**
-
-### Props 설계
-
-```tsx
-interface TagButtonProps {
-  label: string // 태그에 표시될 텍스트
-  onClick: () => void // 태그 클릭 이벤트
-  onDelete?: () => void // 삭제 아이콘 클릭 이벤트 (선택)
-  isSelected?: boolean // 태그 선택 상태
-  style?: React.CSSProperties // 커스텀 스타일
-}
-```
-
-### TagButton 컴포넌트 구현
-
-```tsx
-import React from 'react'
-
-export const TagButton: React.FC<TagButtonProps> = ({
-  label,
-  onClick,
-  onDelete,
-  isSelected = false,
-  style,
-}) => {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        padding: '5px 10px',
-        backgroundColor: isSelected ? '#007bff' : '#f1f1f1',
-        color: isSelected ? '#fff' : '#333',
-        borderRadius: '16px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        marginRight: '8px',
-        ...style,
-      }}
-    >
-      {label}
-      {onDelete && (
-        <span
-          onClick={(e) => {
-            e.stopPropagation() // 클릭 이벤트 전파 방지
-            onDelete()
-          }}
-          style={{
-            marginLeft: '8px',
-            color: isSelected ? '#fff' : '#888',
-            cursor: 'pointer',
-          }}
-        >
-          ×
-        </span>
-      )}
-    </div>
-  )
-}
-```
-
----
-
-### 3. **TagList 컴포넌트 설계**
-
-### Props 설계
-
-```tsx
-interface TagListProps {
-  tags: { id: string; label: string }[] // 태그 배열
-  selectedTagId?: string // 선택된 태그 ID
-  onTagClick: (id: string) => void // 태그 클릭 이벤트
-  onTagDelete?: (id: string) => void // 태그 삭제 이벤트
-}
-```
-
-### TagList 컴포넌트 구현
-
-```tsx
-import React from 'react'
-import { TagButton } from './TagButton'
-
-export const TagList: React.FC<TagListProps> = ({
-  tags,
-  selectedTagId,
-  onTagClick,
-  onTagDelete,
-}) => {
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-      {tags.map((tag) => (
-        <TagButton
-          key={tag.id}
-          label={tag.label}
-          onClick={() => onTagClick(tag.id)}
-          onDelete={onTagDelete ? () => onTagDelete(tag.id) : undefined}
-          isSelected={selectedTagId === tag.id}
-        />
-      ))}
-    </div>
-  )
-}
-```
-
----
-
-### 4. **TagButton 스토리 작성**
-
-### Metadata 설정
-
-```tsx
-// TagButton.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { TagButton } from './TagButton'
-
-const meta: Meta<typeof TagButton> = {
-  title: 'Components/TagButton',
-  component: TagButton,
-  parameters: {
-    layout: 'centered',
-  },
-  argTypes: {
-    label: {
-      control: 'text',
-      description: '태그에 표시할 텍스트',
-    },
-    onClick: {
-      action: 'clicked',
-      description: '태그 클릭 이벤트 핸들러',
-    },
-    onDelete: {
-      action: 'deleted',
-      description: '삭제 버튼 클릭 이벤트 핸들러',
-    },
-    isSelected: {
-      control: 'boolean',
-      description: '태그 선택 여부',
-    },
-    style: {
-      control: 'object',
-      description: '추가 스타일',
-    },
-  },
-}
-
-export default meta
-type Story = StoryObj<typeof TagButton>
-```
-
-### 기본 스토리
-
-```tsx
-export const Default: Story = {
-  args: {
-    label: 'Tag 1',
-    isSelected: false,
-  },
-}
-```
-
-### 선택된 태그
-
-```tsx
-export const Selected: Story = {
-  args: {
-    label: 'Selected Tag',
-    isSelected: true,
-  },
-}
-```
-
-### 삭제 가능한 태그
-
-```tsx
-export const WithDelete: Story = {
-  args: {
-    label: 'Deletable Tag',
-    onDelete: () => alert('Tag deleted'),
-  },
-}
-```
-
----
-
-### 5. **TagList 스토리 작성**
-
-### Metadata 설정
-
-```tsx
-// TagList.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { TagList } from './TagList'
-
-const meta: Meta<typeof TagList> = {
-  title: 'Components/TagList',
-  component: TagList,
-  parameters: {
-    layout: 'centered',
-  },
-  argTypes: {
-    tags: {
-      control: false,
-      description: '태그 배열',
-    },
-    selectedTagId: {
-      control: 'text',
-      description: '선택된 태그의 ID',
-    },
-    onTagClick: {
-      action: 'clicked',
-      description: '태그 클릭 이벤트 핸들러',
-    },
-    onTagDelete: {
-      action: 'deleted',
-      description: '태그 삭제 이벤트 핸들러',
-    },
-  },
-}
-
-export default meta
-type Story = StoryObj<typeof TagList>
-```
-
-### 기본 스토리
-
-```tsx
-export const Default: Story = {
-  args: {
-    tags: [
-      { id: '1', label: 'Tag 1' },
-      { id: '2', label: 'Tag 2' },
-      { id: '3', label: 'Tag 3' },
-    ],
-  },
-}
-```
-
-### 선택된 태그
-
-```tsx
-export const WithSelected: Story = {
-  args: {
-    tags: [
-      { id: '1', label: 'Tag 1' },
-      { id: '2', label: 'Tag 2' },
-      { id: '3', label: 'Tag 3' },
-    ],
-    selectedTagId: '2',
-  },
-}
-```
-
-### 삭제 가능한 태그
-
-```tsx
-export const DeletableTags: Story = {
-  args: {
-    tags: [
-      { id: '1', label: 'Tag 1' },
-      { id: '2', label: 'Tag 2' },
-      { id: '3', label: 'Tag 3' },
-    ],
-    onTagDelete: (id: string) => alert(`Tag with id ${id} deleted`),
-  },
-}
-```
-
-## 2.9 Generic Type과 Event Bubbling을 활용한 TagList 컴포넌트
-
-### Generic Type과 Event Bubbling을 활용한 TagList 컴포넌트
-
-### 1. **개요**
-
-`TagList` 컴포넌트에 **Generic Type**을 적용하면 데이터 타입의 유연성을 확보할 수 있습니다.
-
-또 **Event Bubbling**으로 개별 태그의 클릭이나 삭제 이벤트를 상위 컴포넌트에서 처리하도록 설계할 수 있습니다.
-
----
-
-### 2. **Generic Type 적용**
-
-### Generic Type 설계
-
-```tsx
-interface Tag<T = unknown> {
-  id: string // 태그의 고유 ID
-  label: string // 태그 텍스트
-  data?: T // 추가 데이터 (Generic)
-}
-
-interface TagListProps<T = unknown> {
-  tags: Tag<T>[] // 태그 배열
-  selectedTagId?: string // 선택된 태그 ID
-  onTagClick?: (tag: Tag<T>) => void // 태그 클릭 이벤트 핸들러
-  onTagDelete?: (tag: Tag<T>) => void // 태그 삭제 이벤트 핸들러
-}
-```
-
-### TagList 컴포넌트 구현
-
-```tsx
-import React from 'react'
-
-export const TagList = <T,>({ tags, selectedTagId, onTagClick, onTagDelete }: TagListProps<T>) => {
-  const handleClick = (tag: Tag<T>, event: React.MouseEvent) => {
-    event.stopPropagation() // 이벤트 버블링 방지
-    if (onTagClick) onTagClick(tag)
-  }
-
-  const handleDelete = (tag: Tag<T>, event: React.MouseEvent) => {
-    event.stopPropagation() // 이벤트 버블링 방지
-    if (onTagDelete) onTagDelete(tag)
-  }
-
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-      {tags.map((tag) => (
-        <div
-          key={tag.id}
-          onClick={(e) => handleClick(tag, e)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            padding: '5px 10px',
-            backgroundColor: selectedTagId === tag.id ? '#007bff' : '#f1f1f1',
-            color: selectedTagId === tag.id ? '#fff' : '#333',
-            borderRadius: '16px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 'bold',
-          }}
-        >
-          {tag.label}
-          {onTagDelete && (
-            <span
-              onClick={(e) => handleDelete(tag, e)}
-              style={{
-                marginLeft: '8px',
-                color: selectedTagId === tag.id ? '#fff' : '#888',
-                cursor: 'pointer',
-              }}
-            >
-              ×
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-```
-
----
-
-### 3. **Event Bubbling 활용**
-
-- `onClick`과 `onDelete` 이벤트에서 **`stopPropagation()`** 호출로 상위 태그 클릭 이벤트와 삭제 이벤트를 명확히 구분.
-- 상위 컴포넌트에서 각 이벤트를 처리할 수 있도록 설계.
-
----
-
-### 4. **TagList 스토리 작성**
-
-### Metadata 설정
-
-```tsx
-// TagList.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { TagList } from './TagList'
-
-const meta: Meta<typeof TagList> = {
-  title: 'Components/TagList',
-  component: TagList,
-  parameters: {
-    layout: 'centered',
-  },
-  argTypes: {
-    tags: {
-      control: false,
-      description: '태그 배열',
-    },
-    selectedTagId: {
-      control: 'text',
-      description: '선택된 태그 ID',
-    },
-    onTagClick: {
-      action: 'clicked',
-      description: '태그 클릭 이벤트 핸들러',
-    },
-    onTagDelete: {
-      action: 'deleted',
-      description: '태그 삭제 이벤트 핸들러',
-    },
-  },
-}
-
-export default meta
-type Story = StoryObj<typeof TagList>
-```
-
-### 기본 스토리
-
-```tsx
-export const Default: Story = {
-  args: {
-    tags: [
-      { id: '1', label: 'Tag 1' },
-      { id: '2', label: 'Tag 2' },
-      { id: '3', label: 'Tag 3' },
-    ],
-  },
-}
-```
-
-### Generic 데이터 활용
-
-```tsx
-export const WithCustomData: Story = {
-  args: {
-    tags: [
-      { id: '1', label: 'Tag 1', data: { category: 'A' } },
-      { id: '2', label: 'Tag 2', data: { category: 'B' } },
-      { id: '3', label: 'Tag 3', data: { category: 'C' } },
-    ],
-    onTagClick: (tag) => console.log('Tag clicked:', tag),
-    onTagDelete: (tag) => console.log('Tag deleted:', tag),
-  },
-}
-```
-
-### 선택된 태그
-
-```tsx
-export const SelectedTag: Story = {
-  args: {
-    tags: [
-      { id: '1', label: 'Tag 1' },
-      { id: '2', label: 'Tag 2' },
-      { id: '3', label: 'Tag 3' },
-    ],
-    selectedTagId: '2',
-  },
-}
-```
-
-### 삭제 가능한 태그
-
-```tsx
-export const DeletableTags: Story = {
-  args: {
-    tags: [
-      { id: '1', label: 'Tag 1' },
-      { id: '2', label: 'Tag 2' },
-      { id: '3', label: 'Tag 3' },
-    ],
-    onTagDelete: (tag) => alert(`Tag with ID ${tag.id} deleted`),
-  },
-}
-```
-
----
-
-### 5. **Generic Type과 Event Bubbling 장점**
-
-- **Generic Type**:
-  - 태그 데이터에 맞는 타입을 정의할 수 있어 재사용성이 향상됩니다.
-  - 다양한 데이터 구조를 사용할 수 있어 확장성이 높아집니다.
-- **Event Bubbling**:
-  - 이벤트를 상위 컴포넌트에서 처리하므로 코드가 간결해집니다.
-  - `stopPropagation()`을 활용하여 이벤트 흐름을 명확히 제어할 수 있습니다.
-
-# 3. UI 테스트
-
-## 3.1chromatic을 활용한 Visual 테스트
-
-- storybook 문서보다 chromatic문서를 보는 것을 추천
-
-  [Visual testing & review for web user interfaces](https://www.chromatic.com/)
-
-  - `devDependency` 로 활용할 것을 더 정확히 명시함
-
-- 별도의 도메인을 붙이거나 툴과 연결하지 않아도 HTTPS로 스토리북을 배포할 수 있음
-
-## 3.2 GitHub Action을 활용한 CI/CD와 Visual 테스트
-
-- chromatic 공식문서에 자세히 나와있음
-- Pull Request를 생성하면 자동으로 UI Review가능
-
-  [Automate with CI • Chromatic docs](https://www.chromatic.com/docs/ci/)
-
-## 3.3 Test Runner를 활용한 Accessibility 테스트
-
-- addon을 활용해서 쉽게 연동 가능
-
-  [Accessibility Addon | Storybook: Frontend workshop for UI development](https://storybook.js.org/addons/@storybook/addon-a11y)
-
-  [Accessibility tests • Storybook docs](https://storybook.js.org/docs/writing-tests/accessibility-testing)
-
-- CI를 연동하려면 test-runner를 활용해야함
-
-  [Test runner • Storybook docs](https://storybook.js.org/docs/writing-tests/test-runner)
-
-## 3.4 사용자와 브라우저의 상호작용을 확인하는 Interaction 테스트
-
-- e2e 테스트와 유사하지만 스토리북의 canvas에서 테스트
-
-  [Interaction tests • Storybook docs](https://storybook.js.org/docs/writing-tests/interaction-testing)
-
-  - 복잡한 UI의 변동사항도 처리할 수 있다는 장점이 있음
+결국 강의값 이상은 했다고 생각합니다. 다만 그 값어치가 "Storybook을 쓰게 됐다"가 아니라 "컴포넌트를 보는 눈이 바뀌었고, 언제 이 도구가 필요한지 판단할 수 있게 됐다"에 있었을 뿐입니다. **팀이 커지고 디자이너와 QA가 같은 컴포넌트를 봐야 하는 순간이 오면, 그때는 주저 없이 깔 겁니다.** 그 판단 기준을 갖게 된 게 수료증보다 값진 결과였습니다.
 
 ![수료증](/static/images/스토리북_수료증.png)

@@ -1,0 +1,117 @@
+---
+title: react-dnd 드래그 정렬 — item.index 한 줄을 빼먹으면 순서가 튄다
+date: '2026-07-29'
+tags: [기술노트]
+draft: false
+summary: '여행 일정의 순서를 드래그로 바꾸는 기능을 react-dnd로 만들며 겪은 것들입니다. drop이 아니라 hover 시점에 정렬하는 이유, 드래그 아이템의 index를 직접 갱신하지 않으면 hover마다 이동이 재실행되어 순서가 튀는 고전 함정, 그리고 이 글을 쓰며 지금 코드에서 새로 찾은 버그 — 삭제 드롭존이 한 번 빨개지면 안 돌아오는 문제 — 까지 정리했습니다.'
+---
+
+# react-dnd 드래그 정렬 — item.index 한 줄을 빼먹으면 순서가 튄다
+
+[TripTune](/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발)의 일정 편집 화면에는 여행지 순서를 드래그로 바꾸는 목록이 있습니다(`ScheduleRoute.tsx`). 만들 때 걸린 함정 하나와, 이 글을 쓰려고 코드를 다시 읽다 찾은 버그 하나를 기록합니다.
+
+---
+
+## 1. 라이브러리 선택 — package.json에 남은 검토의 흔적
+
+| 후보 | 장점 | 걸린 것 | 판단 |
+|---|---|---|---|
+| react-beautiful-dnd | 목록 정렬에 특화, 애니메이션 기본 제공 | 유지보수 중단 공지(아카이브 예정), 목록 정렬 외 시나리오(삭제 드롭존 같은)가 경직됨 | 탈락 |
+| dnd-kit | 현대적 API, 접근성 내장 | 당시(2024) 레퍼런스가 상대적으로 적었고 학습 비용을 새로 지불해야 했음 | 탈락 |
+| **react-dnd** | 백엔드 교체 구조(HTML5/터치), 드래그 소스·드롭 타깃을 자유 조합 — "목록 정렬 + 별도 삭제 드롭존" 구성이 자연스러움 | 정렬은 직접 구현해야 함 | **채택** |
+
+정렬만 필요했으면 react-beautiful-dnd가 코드가 덜 들었을 겁니다. 결정타는 **삭제 드롭존** — 목록 밖 영역으로 끌어내 삭제하는 UX가 기획에 있었고, 이건 "정렬 라이브러리"가 아니라 "드래그 앤 드롭 라이브러리"의 일이었어요.
+
+고백하자면 이 검토의 흔적이 지금도 남아 있습니다. `react-beautiful-dnd`가 **package.json에 선언만 된 채** 한 번도 import되지 않고 있어요. 후보를 설치해 비교하고, 탈락시킨 뒤 제거를 안 한 겁니다. 의존성 정리는 결정의 일부인데 그걸 빼먹었습니다.
+
+---
+
+## 2. 정렬 시점 — drop이 아니라 hover
+
+드래그 정렬은 "언제 순서를 바꿀 것인가"부터 정해야 합니다.
+
+| 방식 | 사용자가 보는 것 | 구현 난이도 |
+|---|---|---|
+| drop 시점 정렬 | 놓기 전까지 목록이 안 움직임 — 어디 들어갈지 예측 불가 | 쉬움 (이벤트 1회) |
+| **hover 시점 정렬** | 끌고 다니는 동안 목록이 실시간으로 비켜줌 — 결과를 보면서 놓음 | 어려움 (연속 이벤트 처리) |
+
+UX는 hover 쪽이 명백히 낫습니다. 요즘 앱들이 다 이렇게 동작하고요. 문제는 hover가 **드래그 중 계속 발사되는 이벤트**라는 점이고, 여기서 함정이 나옵니다.
+
+```tsx
+// PlaceItem — 행 하나가 드래그 소스이자 드롭 타깃
+const [{ isDragging }, drag] = useDrag({
+  type: 'PLACE',
+  item: { place, index },          // 드래그 시작 시점의 index를 담음
+  collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+});
+
+const [, drop] = useDrop({
+  accept: 'PLACE',
+  hover(item: { place: Place; index?: number }) {
+    const dragIndex = item.index ?? -1;
+    const hoverIndex = index;
+    if (dragIndex !== hoverIndex && dragIndex !== -1) {
+      onMovePlace(dragIndex, hoverIndex);
+      item.index = hoverIndex;     // ← 이 한 줄이 핵심
+    }
+  },
+});
+
+drag(drop(ref));                   // 같은 ref에 소스와 타깃을 합성
+```
+
+## 3. 함정 — `item.index = hoverIndex`를 빼먹으면
+
+`item`은 드래그 시작 때 `useDrag`가 만든 객체가 **드래그가 끝날 때까지 그대로 전달**되는 것입니다. 목록 상태를 바꿔도 이 객체는 자동으로 안 바뀌어요.
+
+그래서 갱신을 빼먹으면 이렇게 됩니다. 0번 항목을 2번 위로 끌었다고 하면:
+
+1. hover 발사 → `dragIndex=0, hoverIndex=2` → 이동 실행. 실제 목록에서 항목은 이제 2번.
+2. 마우스가 1px 움직여 hover 재발사 → 그런데 `item.index`는 **여전히 0** → "0을 2로 이동"이 또 실행.
+3. hover는 계속 발사되니 같은 이동이 무한 재실행 — 목록이 **튀거나 진동**합니다.
+
+`item.index = hoverIndex`는 "방금 이동시킨 결과를 드래그 아이템에도 알려주는" 동기화입니다. 이게 있어야 다음 hover에서 `dragIndex === hoverIndex`로 걸러져 조용해져요. react-dnd 공식 정렬 예제에도 있는 줄인데, 예제를 볼 때는 왜 있는지 몰라서 빼고 쓰다가 위 증상으로 배웠습니다. **불변성이 교리인 React에서 mutation으로 동작하는 줄이라** 더 어색했는데, 이 객체는 React 상태가 아니라 dnd 모니터의 전달물이라 mutation이 맞는 방법입니다.
+
+---
+
+## 4. 삭제 드롭존 — 그리고 이 글을 쓰다 찾은 버그
+
+목록 밖 삭제 영역은 별도 `useDrop`입니다. 끌어다 놓으면 루트에서 제거하고 지도 마커도 지웁니다.
+
+```tsx
+const [, drop] = useDrop({
+  accept: 'PLACE',
+  hover: () => setIsOver(true),          // 올라오면 빨간 휴지통
+  drop: (item) => {
+    setIsOver(false);
+    removePlaceFromRoute(item.place.placeId);
+    removeMarker(item.place.latitude, item.place.longitude);
+  },
+  collect: (monitor) => ({ isOver: monitor.isOver() }),
+});
+```
+
+이 코드를 글에 옮기다가 버그를 찾았습니다. **`isOver`를 로컬 state로 만들면서 `hover`에서 `true`로 켜고, 끄는 곳은 `drop`뿐입니다.** 휴지통 위까지 끌고 갔다가 마음을 바꿔 딴 데 놓으면? `drop`이 안 불리니 **휴지통이 빨간 채로 남습니다.**
+
+더 민망한 건 답이 바로 옆에 있다는 겁니다. `collect`로 `monitor.isOver()`를 이미 수집하고 있는데, 구조 분해에서 `const [, drop]`으로 **버리고** 있어요. 모니터의 `isOver`는 이탈 시 자동으로 `false`가 되므로, 로컬 state와 `hover` 핸들러를 지우고 수집값을 쓰면 버그와 코드가 같이 사라집니다.
+
+```tsx
+const [{ isOver }, drop] = useDrop({  // 수집값을 버리지 말고 쓴다
+  accept: 'PLACE',
+  drop: (item) => { /* 삭제 처리 */ },
+  collect: (monitor) => ({ isOver: monitor.isOver() }),
+});
+```
+
+같은 파일에서 두 개 더 보였습니다.
+
+- **`PlaceItem`·`DeleteDropZone`이 부모 컴포넌트 함수 안에 정의**돼 있습니다. 렌더마다 컴포넌트 타입이 새로 만들어지니 React는 매번 언마운트→마운트를 합니다. hover 정렬은 렌더를 연발하는 기능이라 최악의 조합인데, HTML5 드래그가 브라우저 레벨에서 유지되는 덕에 "어쩌다 동작"하고 있는 상태예요. 파일 밖 분리가 맞습니다.
+- 빈 목록 안내가 `<p>` 안에 `<div>`와 `<p>`를 중첩하고 있습니다. HTML 스펙상 `p`는 블록 요소를 못 담아서 브라우저가 태그를 임의로 쪼개고, Next.js에서는 hydration 불일치 경고의 단골 원인입니다.
+
+---
+
+## 5. 돌아보면
+
+- **연속 이벤트(hover) 기반 로직은 "한 번 실행"이 아니라 "재실행돼도 무해"하게 설계해야 합니다.** `item.index` 갱신은 결국 멱등성을 만드는 장치였어요.
+- **글로 정리하는 게 코드 리뷰가 됐습니다.** 삭제 드롭존 버그는 2년 가까이 아무도(저 포함) 몰랐는데, 남에게 설명하려고 코드를 옮겨 적는 순간 보였습니다. 설명할 수 없는 코드는 아직 이해 못 한 코드라는 걸 역으로 확인한 셈입니다.
+- **한계** — HTML5Backend라 **터치 미지원**입니다. 모바일에서 이 목록은 드래그가 안 되고, TouchBackend 병용(멀티 백엔드)은 붙이지 않았습니다. 키보드로 순서를 바꿀 접근성 수단도 없습니다 — dnd-kit이었다면 기본 제공이라, 접근성 요구가 있었다면 선택이 달라졌을 항목입니다. 위에서 찾은 버그 3건은 글 시점 기준 아직 코드에 그대로 있고, 수정은 후속 과제로 남깁니다.

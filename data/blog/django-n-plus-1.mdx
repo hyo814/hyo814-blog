@@ -189,13 +189,84 @@ for dataset in datasets:
 
 ---
 
+## 실무에서 만난 세 가지 — 이 글의 조언이 안 통했던 곳
+
+위 내용은 "N+1을 없애는 법"인데, 실제로 적용해보니 **없애는 것보다 어디에 붙일지 정하는 게** 어려웠습니다.
+
+### ① `prefetch_related`가 화면을 죽인 케이스 — 관계가 없는데도 통과한다
+
+최적화라고 믿고 있던 `prefetch_related("metadata")`가 **카탈로그 다운로드 기능 네 개를 못 쓰게 만들었습니다.** `Dataset`에 `metadata`라는 관계가 아예 없었거든요.
+
+이 글은 내내 *"관계를 미리 당겨오면 쿼리가 준다"* 고만 말하는데, **인자가 실재하는 관계인지 언제 확인되는지**는 한 줄도 안 적어놨습니다. 여기가 함정이었어요.
+
+```python
+qs = Dataset.objects.prefetch_related("metadata")   # 통과. 아무 일도 안 일어난다
+list(qs)                                            # 여기서 터진다
+# AttributeError: Cannot find 'metadata' on Dataset object,
+#                 'metadata' is an invalid parameter to prefetch_related()
+```
+
+QuerySet은 지연 평가라 **선언 시점에는 검증되지 않습니다.** 그래서 `manage.py check`도, 서버 기동도, 마이그레이션도 조용했고, 오타를 낸 파일이 아니라 그 QuerySet을 순회하는 다른 파일에서 스택 트레이스가 시작됐습니다.
+
+`select_related`/`prefetch_related`의 문자열 인자는 **오타가 런타임까지 살아남는 몇 안 되는 자리**입니다. 표에 "M2M이면 prefetch"라고 적을 게 아니라, 그 인자를 무엇이 검증해 주는지를 같이 적었어야 했어요 — 답은 "아무것도, 순회 전까지는"입니다.
+
+원인 추적과 AST로 전 프로젝트 인자를 대조한 과정은 [별도 글](/blog/없는-관계를-prefetch하고-있었다)에 정리했습니다.
+
+### ② `Count`를 두 개 붙이면 숫자가 부풀어 오른다
+
+*"annotate는 N+1과 별개"* 라고 짧게 넘어갔는데, 여기에 함정이 하나 더 있습니다.
+
+```python
+# 위험: 역방향 관계 두 개를 동시에 Count
+Author.objects.annotate(
+    post_count=Count('post'),
+    comment_count=Count('comment'),   # 둘 다 틀려진다
+)
+```
+
+역방향 조인이 둘이면 **행이 곱해집니다.** 글 3개 × 댓글 4개면 조인 결과가 12행이 되고, `Count('post')`가 3이 아니라 12를 세요. `distinct=True`를 주거나 서브쿼리로 빼야 합니다.
+
+**N+1은 느려서 알아채지만 이건 빠르면서 틀립니다.** 쿼리 수만 보고 최적화를 판단하면 이 종류는 절대 안 걸려요.
+
+### ③ `to_attr`을 쓰면 접근 방법도 바뀐다
+
+위 `Prefetch` 예제에 함정이 하나 있습니다.
+
+```python
+Dataset.objects.prefetch_related(
+    Prefetch('concepts', queryset=Concept.objects.filter(public=True), to_attr='public_concepts')
+)
+```
+
+`to_attr`을 주면 결과가 **`dataset.concepts`가 아니라 `dataset.public_concepts`(리스트)** 에 담깁니다. 그대로 `dataset.concepts.all()`을 쓰면 prefetch를 무시하고 새 쿼리가 나가요.
+
+```python
+for dataset in datasets:
+    dataset.public_concepts        # ✅ 리스트, 추가 쿼리 없음
+    dataset.concepts.all()         # ❌ 다시 쿼리
+```
+
+이름을 바꾸는 옵션이 **접근 경로까지 바꾸는데**, 그걸 모르면 최적화를 넣고도 효과가 없는 상태가 됩니다.
+
+---
+
+## 실제 적용 사례
+
+이 내용을 실제 화면에 적용한 기록은 [메타클래스 리스트가 점점 느려진 이유](/blog/메타클래스-쿼리-최적화-회고)에 따로 정리했습니다. 300건에서 908쿼리가 나오던 목록을 4쿼리로 줄인 과정과, **속성 개수만 필요할 때 `prefetch_related` 대신 `annotate(Count(...))`를 고른 이유**를 다뤘어요.
+
+---
+
 ## 요약
 
 | 문제 | 해결 |
 |------|------|
 | FK/OneToOne 루프 내 접근 | `select_related` |
-| M2M / 역참조 루프 내 접근 | `prefetch_related` |
+| **목록에서** M2M / 역참조 루프 내 접근 | `prefetch_related` |
+| 전량 순회·다운로드 경로 | prefetch를 **빼고** `iterator()` 등 다른 전략 |
+| 개수만 필요 | `annotate(Count(...))` — 단, 두 개 이상이면 `distinct=True` |
 | 복합 관계 | 둘 다 조합 |
-| prefetch 후 Python 필터링 | `Prefetch(to_attr=...)` 또는 리스트 컴프리헨션 |
+| prefetch 후 Python 필터링 | `Prefetch(to_attr=...)` — 접근 경로가 바뀌는 것에 주의 |
+
+**최적화는 쿼리셋이 아니라 경로에 붙입니다.** 목록에서 옳은 것이 전량 조회에서는 반대일 수 있어요.
 
 N+1은 기능 구현 후 성능 테스트 단계에서 발견되는 경우가 많습니다. `django-debug-toolbar`를 개발 환경에 항상 켜두는 것만으로도 많은 문제를 미리 잡을 수 있습니다.
