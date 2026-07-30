@@ -2,6 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 종이와 점토. 라이트가 기본 — 채용 담당자는 낮에 서류 사이에서 이 사이트를 연다. */
+@layer base {
+  :root {
+    --c-paper: 250 248 244;
+    --c-surface: 240 237 230;
+    --c-line: 226 221 210;
+    --c-ink: 25 24 23;
+    --c-muted: 107 104 98;
+    --c-clay: 166 75 46;
+    --c-clay-field: 166 75 46;
+  }
+
+  .dark {
+    --c-paper: 20 20 19;
+    --c-surface: 31 30 29;
+    --c-line: 46 44 42;
+    --c-ink: 240 238 230;
+    --c-muted: 162 158 150;
+    --c-clay: 224 139 107;
+    --c-clay-field: 143 64 38;
+  }
+
+  html {
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background-color: rgb(var(--c-clay) / 0.22);
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-clay));
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-gowun-batang), Georgia, serif;
+  }
+
+  /* 표제 위 여백이 아래보다 넓다 */
+  .prose :where(h2):not(:first-child) {
+    margin-top: 2.5em;
+  }
+  .prose :where(h3):not(:first-child) {
+    margin-top: 2em;
+  }
+}
+
+@layer components {
+  /* 측정값 표기. 모노스페이스는 코드·데이터·측정값에만 쓴다. */
+  .measure {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* 이 사이트의 유일한 저작된 모션: 지표 밴드가 전 → 후로 정착하는 순간.
+     이미 보이는 상태에서 시작하므로 JS 없이도 내용이 사라지지 않는다. */
+  .animate-settle {
+    animation: settle 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0.5;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .task-list-item::before {
   @apply hidden;
 }
@@ -11,7 +86,7 @@
 }
 
 .footnotes {
-  @apply mt-12 border-t border-gray-200 pt-8 dark:border-gray-700;
+  @apply mt-12 border-t border-line pt-8;
 }
 
 .data-footnote-backref {
@@ -48,4 +123,32 @@ input:-webkit-autofill:focus {
 .linkicon {
   display: inline-block;
   vertical-align: middle;
+}
+
+/* 본문의 표·코드블록은 페이지가 아니라 자기 안에서 가로 스크롤한다 */
+.prose pre {
+  overflow-x: auto;
+}
+
+.prose table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .prose table {
+    display: table;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

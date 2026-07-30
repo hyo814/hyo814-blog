@@ -8,10 +8,10 @@ const siteMetadata = {
   theme: 'system', // system, dark or light
   siteUrl: 'https://hyo814-blog.vercel.app',
   siteRepo: 'https://github.com/hyo814/hyo814-blog',
-  siteLogo: '/static/images/logo.png',
-  socialBanner: '/static/images/logo.png',
+  siteLogo: '/static/favicons/favicon.svg',
+  socialBanner: '/static/images/og-banner.png',
   mastodon: '',
-  email: 'ggamjge8888@naver.com',
+  email: 'ggamjige8888@naver.com',
   github: 'https://github.com/hyo814',
   x: '',
   // twitter: 'https://twitter.com/Twitter',

@@ -28,36 +28,37 @@ function Pagination({ totalPages, currentPage }: PaginationProps) {
   const prevPage = currentPage - 1 > 0
   const nextPage = currentPage + 1 <= totalPages
   return (
-    <div className="space-y-2 pb-8 pt-6 md:space-y-5">
-      <nav className="flex justify-between">
-        {!prevPage && (
-          <button className="cursor-auto disabled:opacity-50" disabled={!prevPage}>
-            Previous
-          </button>
-        )}
-        {prevPage && (
-          <Link
-            href={currentPage - 1 === 1 ? `/${basePath}/` : `/${basePath}/page/${currentPage - 1}`}
-            rel="prev"
-          >
-            Previous
-          </Link>
-        )}
-        <span>
-          {currentPage} of {totalPages}
+    <nav className="mt-10 flex items-center justify-between border-t border-line pt-6 text-sm">
+      {prevPage ? (
+        <Link
+          href={currentPage - 1 === 1 ? `/${basePath}/` : `/${basePath}/page/${currentPage - 1}`}
+          rel="prev"
+          className="rounded border border-line px-3 py-2 font-medium text-ink transition-colors hover:bg-surface"
+        >
+          &larr; 이전
+        </Link>
+      ) : (
+        <span className="rounded border border-line px-3 py-2 text-muted opacity-50">
+          &larr; 이전
         </span>
-        {!nextPage && (
-          <button className="cursor-auto disabled:opacity-50" disabled={!nextPage}>
-            Next
-          </button>
-        )}
-        {nextPage && (
-          <Link href={`/${basePath}/page/${currentPage + 1}`} rel="next">
-            Next
-          </Link>
-        )}
-      </nav>
-    </div>
+      )}
+      <span className="measure text-muted">
+        {currentPage} / {totalPages}
+      </span>
+      {nextPage ? (
+        <Link
+          href={`/${basePath}/page/${currentPage + 1}`}
+          rel="next"
+          className="rounded border border-line px-3 py-2 font-medium text-ink transition-colors hover:bg-surface"
+        >
+          다음 &rarr;
+        </Link>
+      ) : (
+        <span className="rounded border border-line px-3 py-2 text-muted opacity-50">
+          다음 &rarr;
+        </span>
+      )}
+    </nav>
   )
 }
 
@@ -75,96 +76,85 @@ export default function ListLayoutWithTags({
   const displayPosts = initialDisplayPosts.length > 0 ? initialDisplayPosts : posts
 
   return (
-    <>
-      <div>
-        <div className="pb-6 pt-6">
-          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:hidden sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
+    <div className="pt-6">
+      <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:hidden">
+        {title}
+      </h1>
+
+      <div className="sm:flex sm:gap-x-12">
+        <aside className="hidden max-h-[calc(100vh-8rem)] min-w-[240px] max-w-[240px] shrink-0 overflow-auto border-r border-line pr-6 sm:sticky sm:top-24 sm:block">
+          {pathname.startsWith('/blog') ? (
+            <h2 className="font-display text-base font-bold text-clay">전체 글</h2>
+          ) : (
+            <Link
+              href={`/blog`}
+              className="font-display text-base font-bold text-ink transition-colors hover:text-clay"
+            >
+              전체 글
+            </Link>
+          )}
+          <ul className="mt-4 space-y-1">
+            {sortedTags.map((t) => {
+              const active = pathname.split('/tags/')[1] === slug(t)
+              return (
+                <li key={t}>
+                  <Link
+                    href={`/tags/${slug(t)}`}
+                    aria-current={active ? 'page' : undefined}
+                    className={`flex items-baseline justify-between gap-2 rounded px-2 py-1.5 text-sm transition-colors ${
+                      active
+                        ? 'bg-surface font-semibold text-clay'
+                        : 'text-muted hover:bg-surface hover:text-ink'
+                    }`}
+                  >
+                    <span className="truncate">{t}</span>
+                    <span className="measure shrink-0 text-xs text-muted">{tagCounts[t]}</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          <h1 className="hidden font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:block sm:text-4xl">
             {title}
           </h1>
-        </div>
-        <div className="flex sm:space-x-24">
-          <div className="hidden h-full max-h-screen min-w-[280px] max-w-[280px] flex-wrap overflow-auto rounded bg-gray-50 pt-5 shadow-md dark:bg-gray-900/70 dark:shadow-gray-800/40 sm:flex">
-            <div className="px-6 py-4">
-              {pathname.startsWith('/blog') ? (
-                <h3 className="font-bold uppercase text-primary-500">All Posts</h3>
-              ) : (
-                <Link
-                  href={`/blog`}
-                  className="font-bold uppercase text-gray-700 hover:text-primary-500 dark:text-gray-300 dark:hover:text-primary-500"
-                >
-                  All Posts
-                </Link>
-              )}
-              <ul>
-                {sortedTags.map((t) => {
-                  return (
-                    <li key={t} className="my-3">
-                      {pathname.split('/tags/')[1] === slug(t) ? (
-                        <h3 className="inline px-3 py-2 text-sm font-bold uppercase text-primary-500">
-                          {`${t} (${tagCounts[t]})`}
-                        </h3>
-                      ) : (
-                        <Link
-                          href={`/tags/${slug(t)}`}
-                          className="px-3 py-2 text-sm font-medium uppercase text-gray-500 hover:text-primary-500 dark:text-gray-300 dark:hover:text-primary-500"
-                          aria-label={`View posts tagged ${t}`}
-                        >
-                          {`${t} (${tagCounts[t]})`}
-                        </Link>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-            <div className="px-6 py-4">
-              <Link
-                href={`/new-post`}
-                className="block w-full rounded bg-primary-500 px-4 py-2 text-center text-white hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-700"
-              >
-                Write a New Post
-              </Link>
-            </div>
-          </div>
-          <div>
-            <ul>
-              {displayPosts.map((post) => {
-                const { path, date, title, summary, tags } = post
-                return (
-                  <li key={path} className="py-5">
-                    <article className="flex flex-col space-y-2 xl:space-y-0">
-                      <dl>
-                        <dt className="sr-only">Published on</dt>
-                        <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                          <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
-                        </dd>
-                      </dl>
-                      <div className="space-y-3">
-                        <div>
-                          <h2 className="text-2xl font-bold leading-8 tracking-tight">
-                            <Link href={`/${path}`} className="text-gray-900 dark:text-gray-100">
-                              {title}
-                            </Link>
-                          </h2>
-                          <div className="flex flex-wrap">
-                            {tags?.map((tag) => <Tag key={tag} text={tag} />)}
-                          </div>
-                        </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
-                        </div>
+          <ul className="mt-6 divide-y divide-line border-t border-line">
+            {displayPosts.map((post) => {
+              const { path, date, title, summary, tags } = post
+              return (
+                <li key={path} className="py-7">
+                  <article>
+                    <dl>
+                      <dt className="sr-only">발행일</dt>
+                      <dd className="measure text-sm text-muted">
+                        <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
+                      </dd>
+                    </dl>
+                    <h2 className="mt-2 font-display text-xl font-bold leading-snug tracking-tight">
+                      <Link href={`/${path}`} className="text-ink hover:text-clay">
+                        {title}
+                      </Link>
+                    </h2>
+                    {tags?.length > 0 && (
+                      <div className="mt-2.5 flex flex-wrap gap-x-1.5 gap-y-1">
+                        {tags.map((tag) => (
+                          <Tag key={tag} text={tag} />
+                        ))}
                       </div>
-                    </article>
-                  </li>
-                )
-              })}
-            </ul>
-            {pagination && pagination.totalPages > 1 && (
-              <Pagination currentPage={pagination.currentPage} totalPages={pagination.totalPages} />
-            )}
-          </div>
+                    )}
+                    <p className="mt-3 text-[15px] leading-7 text-muted">{summary}</p>
+                  </article>
+                </li>
+              )
+            })}
+          </ul>
+          {pagination && pagination.totalPages > 1 && (
+            <Pagination currentPage={pagination.currentPage} totalPages={pagination.totalPages} />
+          )}
         </div>
       </div>
-    </>
+    </div>
   )
 }

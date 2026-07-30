@@ -1,14 +1,19 @@
 {
-  "name": "hyo814`s blog",
-  "short_name": "hyo814`s blog",
+  "name": "Hyo814",
+  "short_name": "Hyo814",
   "icons": [
     {
-      "src": "/android-chrome-96x96.png",
+      "src": "/static/favicons/android-chrome-96x96.png",
       "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/favicons/apple-touch-icon.png",
+      "sizes": "180x180",
       "type": "image/png"
     }
   ],
-  "theme_color": "#000000",
-  "background_color": "#000000",
+  "theme_color": "#C15F3C",
+  "background_color": "#FAF8F4",
   "display": "standalone"
 }

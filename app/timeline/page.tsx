@@ -3,20 +3,18 @@ import TimeLineComponent from '@/components/TimeLineComponent'
 
 const TimelinePage = () => {
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        <div className="space-y-2 pb-8 pt-6 md:space-y-5">
-          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
-            Fullstack Timeline
-          </h1>
-        </div>
-      </div>
-      <br />
-      <h1 className="mb-6 text-center text-3xl font-bold">비전공자에서 전공자로, 나의 성장 기록</h1>
-      <br />
-      <p className="mb-12 text-center text-lg text-gray-600">
-        비개발 경험부터 사이드 프로젝트, 그리고 개발자로서의 다양한 이력까지,
-        <br /> 저의 성장 과정을 시간 순으로 정리했습니다.
+    <div className="pt-6">
+      <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl">
+        Timeline
+      </h1>
+      <p className="mt-4 max-w-2xl text-base leading-7 text-muted">
+        2019년 컴퓨터정보공학부 편입으로 방향을 틀었고,{' '}
+        <strong className="font-medium text-ink">2021년 4월부터 개발자로 일하고 있습니다.</strong>{' '}
+        지금이 세 번째 회사입니다.
+      </p>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+        2024년 3월 ~ 2025년 4월은 이직 준비 기간으로, 2인 팀 사이드 프로젝트 TripTune의 MVP를 만들어
+        출시했습니다. 그 앞의 항목들은 편입 이전의 이력과 학부 시절 활동입니다.
       </p>
       <TimeLineComponent />
     </div>

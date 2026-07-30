@@ -6,81 +6,143 @@ import NewsletterForm from 'pliny/ui/NewsletterForm'
 
 const MAX_DISPLAY = 5
 
+/**
+ * 홈의 지표 밴드. 세 수치 모두 단독 작업이고, 각각 측정 과정을 적은 글로 이어진다.
+ * 근거 글이 없는 수치는 이 밴드에 올리지 않는다.
+ */
+const measurements = [
+  {
+    label: '메타클래스 목록 쿼리',
+    before: '908쿼리 · 1.6s',
+    after: '4쿼리 · 180ms',
+    href: '/blog/메타클래스-쿼리-최적화-회고',
+  },
+  {
+    label: '목업 시드 데이터',
+    before: '수작업 49개',
+    after: '자동 478개',
+    href: '/blog/목업-데이터-엑셀-시드-49에서-478개-자동화',
+  },
+  {
+    label: '트리 공통 로직',
+    before: '모듈 3개 중복',
+    after: '공통 1개',
+    href: '/blog/분류체계-메타클래스-트리-공통-로직-헬퍼-추출-회고',
+  },
+]
+
 export default function Home({ posts }) {
   return (
     <>
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        <div className="space-y-2 pb-8 pt-6 md:space-y-5">
-          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
-            Latest
-          </h1>
-          <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            {siteMetadata.description}
-          </p>
+      <section className="pb-10 pt-8 sm:pt-12">
+        <h1 className="max-w-3xl font-display text-[2.1rem] font-bold leading-tight tracking-tight text-ink sm:text-5xl sm:leading-[1.15]">
+          측정하고, 고치고,
+          <br />
+          틀렸으면 그렇게 적습니다
+        </h1>
+        <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
+          2021년부터 웹을 만들어 온 풀스택 개발자 임효진입니다. 프런트엔드 주력으로 시작해 지금은
+          Django 모델 설계와 쿼리 최적화까지 맡고 있습니다.
+        </p>
+        <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Link
+            href="/tags/경력기술서"
+            className="rounded bg-clayfield px-4 py-2.5 text-sm font-medium text-[#F7F3EC] shadow-raise transition-opacity hover:opacity-90"
+          >
+            경력기술서 3편 읽기
+          </Link>
+          <Link
+            href="/projects"
+            className="rounded border border-line px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-surface"
+          >
+            프로젝트
+          </Link>
+          <Link
+            href="/timeline"
+            className="px-2 py-2.5 text-sm font-medium text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
+          >
+            타임라인
+          </Link>
         </div>
-        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-          {!posts.length && 'No posts found.'}
+      </section>
+
+      {/* 점토색이 면을 소유한다. 수치는 전부 근거 글로 가는 문이다. */}
+      <section aria-labelledby="measured-heading" className="-mx-4 bg-clayfield px-4 py-8 sm:px-8">
+        <h2 id="measured-heading" className="font-sans text-xs font-semibold text-[#F7F3EC]/90">
+          측정 기록
+        </h2>
+        <dl className="mt-5 grid gap-x-8 gap-y-6 sm:grid-cols-3">
+          {measurements.map((m, i) => (
+            <div
+              key={m.label}
+              className="animate-settle border-t border-[#F7F3EC]/35 pt-4"
+              style={{ animationDelay: `${i * 90}ms` }}
+            >
+              <dt className="text-sm text-[#F7F3EC]/95">{m.label}</dt>
+              <dd className="measure mt-2 flex flex-wrap items-baseline gap-x-2 font-display">
+                <span className="text-base text-[#F7F3EC]/90 line-through decoration-[#F7F3EC]/60">
+                  {m.before}
+                </span>
+                <span aria-hidden="true" className="text-sm text-[#F7F3EC]/90">
+                  →
+                </span>
+                <span className="text-lg font-bold text-[#F7F3EC] sm:text-xl">{m.after}</span>
+              </dd>
+              <Link
+                href={m.href}
+                className="mt-2.5 inline-block text-sm text-[#F7F3EC] underline decoration-[#F7F3EC]/60 underline-offset-4 transition-colors hover:text-[#F7F3EC] hover:decoration-[#F7F3EC]"
+              >
+                측정 과정 보기
+              </Link>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section className="pt-12">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-2xl font-bold tracking-tight text-ink">최근 글</h2>
+          <Link
+            href="/blog"
+            className="text-sm font-medium text-clay underline-offset-4 hover:underline"
+          >
+            전체 {posts.length}편
+          </Link>
+        </div>
+
+        <ul className="mt-2 divide-y divide-line">
+          {!posts.length && <li className="py-8 text-muted">아직 글이 없습니다.</li>}
           {posts.slice(0, MAX_DISPLAY).map((post) => {
             const { slug, date, title, summary, tags } = post
             return (
-              <li key={slug} className="py-12">
+              <li key={slug} className="py-8">
                 <article>
-                  <div className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
-                    <dl>
-                      <dt className="sr-only">Published on</dt>
-                      <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                        <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
-                      </dd>
-                    </dl>
-                    <div className="space-y-5 xl:col-span-3">
-                      <div className="space-y-6">
-                        <div>
-                          <h2 className="text-2xl font-bold leading-8 tracking-tight">
-                            <Link
-                              href={`/blog/${slug}`}
-                              className="text-gray-900 dark:text-gray-100"
-                            >
-                              {title}
-                            </Link>
-                          </h2>
-                          <div className="flex flex-wrap">
-                            {tags.map((tag) => (
-                              <Tag key={tag} text={tag} />
-                            ))}
-                          </div>
-                        </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
-                        </div>
-                      </div>
-                      <div className="text-base font-medium leading-6">
-                        <Link
-                          href={`/blog/${slug}`}
-                          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                          aria-label={`Read more: "${title}"`}
-                        >
-                          Read more &rarr;
-                        </Link>
-                      </div>
+                  <dl>
+                    <dt className="sr-only">발행일</dt>
+                    <dd className="measure text-sm text-muted">
+                      <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
+                    </dd>
+                  </dl>
+                  <h3 className="mt-2 font-display text-xl font-bold leading-snug tracking-tight sm:text-2xl">
+                    <Link href={`/blog/${slug}`} className="text-ink hover:text-clay">
+                      {title}
+                    </Link>
+                  </h3>
+                  {tags?.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-x-1.5 gap-y-1">
+                      {tags.map((tag) => (
+                        <Tag key={tag} text={tag} />
+                      ))}
                     </div>
-                  </div>
+                  )}
+                  <p className="mt-3 max-w-2xl text-[15px] leading-7 text-muted">{summary}</p>
                 </article>
               </li>
             )
           })}
         </ul>
-      </div>
-      {posts.length > MAX_DISPLAY && (
-        <div className="flex justify-end text-base font-medium leading-6">
-          <Link
-            href="/blog"
-            className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-            aria-label="All posts"
-          >
-            All Posts &rarr;
-          </Link>
-        </div>
-      )}
+      </section>
+
       {siteMetadata.newsletter?.provider && (
         <div className="flex items-center justify-center pt-4">
           <NewsletterForm />
