@@ -1,6 +1,9 @@
 interface Project {
   title: string
   description: string
+  kind: '실무' | '사이드 프로젝트' | '학부·교육'
+  period: string
+  stack?: string
   href?: string
   imgSrc?: string
   githubHref?: string
@@ -8,38 +11,86 @@ interface Project {
 
 const projectsData: Project[] = [
   {
-    title: '직장인 건강 플랫폼, 직짱건강',
-    description: `책상에 앉아 일을 많이 하는 당신! 현재 건강 상태가 어떤지 체크해볼까요?`,
-    imgSrc: '/static/images/zigzzang/image1.png',
-    href: 'https://hyo814-blog.vercel.app/blog/%EC%A7%81%EC%A7%B1-%EA%B1%B4%EA%B0%95-%EC%A7%81%EC%9E%A5%EC%9D%B8%EC%9D%84-%EC%9C%84%ED%95%9C-%EC%98%AC%EC%9D%B8%EC%9B%90-%ED%97%AC%EC%8A%A4%EC%BC%80%EC%96%B4-%EC%84%9C%EB%B9%84%EC%8A%A4-%EA%B0%9C%EB%B0%9C',
-    githubHref: 'https://github.com/SWYP-3rd-period-1-team/JopJjangHealth-frontend',
+    title: 'ITS 표준데이터 관리 시스템(SDMS)',
+    kind: '실무',
+    period: '2025.04 — 현재',
+    stack: 'Django · PostgreSQL · D3.js · jsTree · Playwright',
+    description: `ISO 14817-2 기반 표준데이터 모델링부터 분류체계·메타클래스 트리, D3 시각화, Open API 포털, Playwright QA 자동화까지. 프런트엔드 주력으로 합류해 Django 모델·마이그레이션·쿼리로 범위를 넓히는 중입니다.`,
+    href: '/blog/2025년도~현재의-sdms',
+  },
+  {
+    title: '숙박 큐레이션 플랫폼 프런트엔드',
+    kind: '실무',
+    period: '2022.08 — 2024.03',
+    stack: 'TypeScript · Next.js · SWR · Styled-Components',
+    description: `일본어 다국어 지원, 무한 스크롤 성능 개선, 웹→앱 전환 UX 개편과 이벤트 태깅을 맡았습니다.`,
+    href: '/blog/2022년도~2024년도의-숙박-큐레이션-플랫폼',
+  },
+  {
+    title: '산업 AI 판독 시스템 프런트엔드',
+    kind: '실무',
+    period: '2021.04 — 2022.08',
+    stack: 'JavaScript · React · Redux · WebSocket',
+    description: `관세청 불법 복제품 판독 시스템과 공항 보안 검색 판독 시스템의 화면을 맡아, 바닐라 JS 기반 화면을 React SPA로 전환하고 웹소켓 실시간 판독 화면을 구현했습니다.`,
+    href: '/blog/2021년도~2022년도의-산업-ai-솔루션',
   },
   {
     title: '여행을 함께, TripTune',
-    description: `함께 여행계획을 작성하는 웹프로젝트`,
+    kind: '사이드 프로젝트',
+    period: '2024.05 — 현재',
+    stack: 'Next.js · TypeScript · React Query · STOMP',
+    description: `2인 팀으로 함께 여행 계획을 세우는 웹 서비스로, 프런트엔드 전체를 맡아 MVP를 6개월 만에 출시했고 지금도 운영 중입니다.`,
     imgSrc: '/static/images/triptune/image12.png',
-    href: 'https://hyo814-blog.vercel.app/blog/%EC%9B%B9%20%EA%B8%B0%EC%88%A0%EB%A1%9C%20%EB%A7%8C%EB%93%9C%EB%8A%94%20%ED%98%91%EC%97%85%ED%98%95%20%EC%97%AC%ED%96%89%20%EA%B3%84%ED%9A%8D%20%ED%94%8C%EB%9E%AB%ED%8F%BC%20TripTune%20%EA%B0%9C%EB%B0%9C',
+    href: '/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발',
     githubHref: 'https://github.com/TripTune-Project/TripTune-Frontend',
   },
   {
-    title: '히투지투 프로젝트',
-    description: `2022 캡스톤 운동 헬스케어 프로그램 — 프런트엔드 구현 담당`,
+    title: 'PyNews — Django 뉴스레터 서비스',
+    kind: '사이드 프로젝트',
+    period: '2026',
+    stack: 'Django · feedparser · BeautifulSoup4 · Render',
+    description: `RSS 9개 소스에서 백엔드 관련 글을 수집·정제·태깅하는 파이프라인과, UUID 토큰 기반 구독/해지 뉴스레터를 Django로 만들었습니다.`,
+    href: '/blog/feedparser-bs4로-rss-파이프라인-만들기',
+    githubHref: 'https://github.com/hyo814/python-news',
+  },
+  {
+    title: '직장인 건강 플랫폼, 직짱건강',
+    kind: '사이드 프로젝트',
+    period: '2024.01 — 2024.03',
+    stack: 'React · TypeScript',
+    description: `스위그 협업 프로젝트 3기. 백엔드를 기다리지 않고 설문 인터페이스를 먼저 완성하는 방식으로 진행했습니다.`,
+    imgSrc: '/static/images/zigzzang/image1.png',
+    href: '/blog/직짱-건강-직장인을-위한-올인원-헬스케어-서비스-개발',
+    githubHref: 'https://github.com/SWYP-3rd-period-1-team/JopJjangHealth-frontend',
+  },
+  {
+    title: '큐피트 (H2J2) — 홈트레이닝 웹',
+    kind: '학부·교육',
+    period: '2020',
+    stack: 'React · Redux · Flask · TensorFlow.js',
+    description: `대학 종합설계(졸업작품). 프런트엔드를 맡았고, 자세 교정 영상 처리를 서버에서 브라우저(TensorFlow.js·ml5)로 옮긴 첫 성능 개선 경험이 남은 프로젝트입니다.`,
     imgSrc: '/static/images/히투지투/image01.png',
-    href: 'https://hyo814-blog.vercel.app/blog/%EB%8B%B9%EC%8B%A0%EC%9D%98-%EC%9A%B4%EB%8F%99-%ED%8C%8C%ED%8A%B8%EB%84%88-%ED%81%90%ED%94%BC%ED%8A%B8',
+    href: '/blog/당신의-운동-파트너-큐피트',
     githubHref: 'https://github.com/schoolproject2020/H2J2-frontend',
   },
   {
     title: '동아리 사이트 프로젝트',
-    description: `학내 동아리 홍보·관리용 웹사이트 — 프런트엔드 구현 담당`,
+    kind: '학부·교육',
+    period: '2021',
+    stack: 'JavaScript · HTML/CSS',
+    description: `학내 동아리 홍보·관리용 웹사이트. 배경지식 없이 시작해 범위를 줄여 완주한 기록입니다.`,
     imgSrc: '/static/images/fancuk/image.png',
-    href: 'https://hyo814-blog.vercel.app/blog/%EB%8F%99%EC%95%84%EB%A6%AC-%EC%82%AC%EC%9D%B4%ED%8A%B8-%EB%A7%8C%EB%93%A4%EA%B8%B0-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8',
+    href: '/blog/동아리-사이트-만들기-프로젝트',
     githubHref: 'https://github.com/fancuk',
   },
   {
-    title: '코멘토 프로그램 — escape-plus 리팩터',
-    description: `현업 웹 개발자 멘토링으로 제작한 SW 포트폴리오 프로젝트를 2026년 escape-plus로 리팩터한 기록.`,
+    title: '코멘토 직무부트캠프 — escape-plus 리팩터',
+    kind: '학부·교육',
+    period: '2020 제작 · 2026 리팩터',
+    stack: 'JavaScript · Vite',
+    description: `현업 웹 개발자 멘토링으로 만든 방탈출 포트폴리오를 6년 뒤 escape-plus로 다시 손본 기록입니다.`,
     imgSrc: '/static/images/escape/image2.png',
-    href: 'https://hyo814-blog.vercel.app/blog/%EC%8B%A4%EC%A0%9C-%ED%98%84%EC%97%85-web-%EA%B0%9C%EB%B0%9C%EC%9E%90%EC%99%80-%ED%95%A8%EA%BB%98-sw-%ED%8F%AC%ED%8A%B8%ED%8F%B4%EB%A6%AC%EC%98%A4-%EC%A0%9C%EC%9E%91%EA%B9%8C%EC%A7%80',
+    href: '/blog/실제-현업-web-개발자와-함께-sw-포트폴리오-제작까지',
     githubHref: 'https://github.com/hyo814/escape-plus',
   },
 ]
