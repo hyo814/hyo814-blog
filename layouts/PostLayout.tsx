@@ -3,19 +3,13 @@ import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog, Authors } from 'contentlayer/generated'
 import Comments from '@/components/Comments'
 import Link from '@/components/Link'
-import PageTitle from '@/components/PageTitle'
+import Monogram from '@/components/Monogram'
 import SectionContainer from '@/components/SectionContainer'
-import Image from '@/components/Image'
 import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 
-const editUrl = (path) => `${siteMetadata.siteRepo}/blob/main/data/${path}`
-const discussUrl = (path) =>
-  `https://mobile.twitter.com/search?q=${encodeURIComponent(`${siteMetadata.siteUrl}/${path}`)}`
-
 const postDateTemplate: Intl.DateTimeFormatOptions = {
-  weekday: 'long',
   year: 'numeric',
   month: 'long',
   day: 'numeric',
@@ -30,130 +24,107 @@ interface LayoutProps {
 }
 
 export default function PostLayout({ content, authorDetails, next, prev, children }: LayoutProps) {
-  const { filePath, path, slug, date, title, tags } = content
+  const { path, slug, date, title, tags } = content
   const basePath = path.split('/')[0]
 
   return (
     <SectionContainer>
       <ScrollTopAndComment />
-      <article>
-        <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
-          <header className="pt-6 xl:pb-6">
-            <div className="space-y-1 text-center">
-              <dl className="space-y-10">
-                <div>
-                  <dt className="sr-only">Published on</dt>
-                  <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                    <time dateTime={date}>
-                      {new Date(date).toLocaleDateString(siteMetadata.locale, postDateTemplate)}
-                    </time>
-                  </dd>
-                </div>
-              </dl>
-              <div>
-                <PageTitle>{title}</PageTitle>
-              </div>
+      <article className="pt-6">
+        <header className="border-b border-line pb-8">
+          <dl>
+            <dt className="sr-only">발행일</dt>
+            <dd className="measure text-sm text-muted">
+              <time dateTime={date}>
+                {new Date(date).toLocaleDateString(siteMetadata.locale, postDateTemplate)}
+              </time>
+            </dd>
+          </dl>
+          <h1 className="mt-3 font-display text-[1.75rem] font-bold leading-tight tracking-tight text-ink sm:text-4xl sm:leading-[1.2]">
+            {title}
+          </h1>
+          {tags?.length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-x-1.5 gap-y-1">
+              {tags.map((tag) => (
+                <Tag key={tag} text={tag} />
+              ))}
             </div>
-          </header>
-          <div className="grid-rows-[auto_1fr] divide-y divide-gray-200 pb-8 dark:divide-gray-700 xl:grid xl:grid-cols-4 xl:gap-x-6 xl:divide-y-0">
-            <dl className="pb-10 pt-6 xl:border-b xl:border-gray-200 xl:pt-11 xl:dark:border-gray-700">
-              <dt className="sr-only">Authors</dt>
-              <dd>
-                <ul className="flex flex-wrap justify-center gap-4 sm:space-x-12 xl:block xl:space-x-0 xl:space-y-8">
-                  {authorDetails.map((author) => (
-                    <li className="flex items-center space-x-2" key={author.name}>
-                      {author.avatar && (
-                        <Image
-                          src={author.avatar}
-                          width={38}
-                          height={38}
-                          alt="avatar"
-                          className="h-10 w-10 rounded-full"
-                        />
-                      )}
-                      <dl className="whitespace-nowrap text-sm font-medium leading-5">
-                        <dt className="sr-only">Name</dt>
-                        <dd className="text-gray-900 dark:text-gray-100">{author.name}</dd>
-                        <dt className="sr-only">Twitter</dt>
-                        <dd>
-                          {author.twitter && (
-                            <Link
-                              href={author.twitter}
-                              className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                            >
-                              {author.twitter
-                                .replace('https://twitter.com/', '@')
-                                .replace('https://x.com/', '@')}
-                            </Link>
-                          )}
-                        </dd>
-                      </dl>
-                    </li>
-                  ))}
-                </ul>
-              </dd>
-            </dl>
-            <div className="divide-y divide-gray-200 dark:divide-gray-700 xl:col-span-3 xl:row-span-2 xl:pb-0">
-              <div className="prose max-w-none pb-8 pt-10 dark:prose-invert">{children}</div>
-              {siteMetadata.comments && (
-                <div
-                  className="pb-6 pt-6 text-center text-gray-700 dark:text-gray-300"
-                  id="comment"
-                >
-                  <Comments slug={slug} />
-                </div>
-              )}
-            </div>
-            <footer>
-              <div className="divide-gray-200 text-sm font-medium leading-5 dark:divide-gray-700 xl:col-start-1 xl:row-start-2 xl:divide-y">
-                {tags && (
-                  <div className="py-4 xl:py-8">
-                    <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Tags
-                    </h2>
-                    <div className="flex flex-wrap">
-                      {tags.map((tag) => (
-                        <Tag key={tag} text={tag} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(next || prev) && (
-                  <div className="flex justify-between py-4 xl:block xl:space-y-8 xl:py-8">
-                    {prev && prev.path && (
-                      <div>
-                        <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Previous Article
-                        </h2>
-                        <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/${prev.path}`}>{prev.title}</Link>
-                        </div>
-                      </div>
-                    )}
-                    {next && next.path && (
-                      <div>
-                        <h2 className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Next Article
-                        </h2>
-                        <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/${next.path}`}>{next.title}</Link>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="pt-4 xl:pt-8">
-                <Link
-                  href={`/${basePath}`}
-                  className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                  aria-label="Back to the blog"
-                >
-                  &larr; Back to the blog
-                </Link>
-              </div>
-            </footer>
+          )}
+        </header>
+
+        <div className="prose max-w-none py-10 dark:prose-invert">{children}</div>
+
+        {/* 검색으로 이 글에 바로 들어온 독자를 위한 안내. 헤더를 거치지 않아도 완결된다. */}
+        <aside className="flex flex-col gap-4 border-t border-line py-8 sm:flex-row sm:items-center">
+          <Monogram size={48} compact className="shrink-0 rounded" />
+          <div>
+            <p className="text-sm text-ink">
+              <span className="font-semibold">{authorDetails[0]?.name ?? siteMetadata.author}</span>
+              {' · '}
+              <span className="text-muted">2021년부터 웹을 만들어 온 풀스택 개발자</span>
+            </p>
+            <p className="mt-1.5 text-sm text-muted">
+              <Link href="/about" className="text-clay underline-offset-4 hover:underline">
+                소개
+              </Link>
+              {' · '}
+              <Link
+                href="/tags/경력기술서"
+                className="text-clay underline-offset-4 hover:underline"
+              >
+                경력기술서
+              </Link>
+              {' · '}
+              <Link href="/projects" className="text-clay underline-offset-4 hover:underline">
+                프로젝트
+              </Link>
+            </p>
           </div>
+        </aside>
+
+        {(next || prev) && (
+          <nav className="grid gap-4 border-t border-line py-8 sm:grid-cols-2">
+            {prev?.path ? (
+              <Link
+                href={`/${prev.path}`}
+                className="rounded border border-line p-4 transition-colors hover:bg-surface"
+              >
+                <span className="text-xs text-muted">이전 글</span>
+                <span className="mt-1 block font-display font-bold leading-snug text-ink">
+                  {prev.title}
+                </span>
+              </Link>
+            ) : (
+              <span />
+            )}
+            {next?.path && (
+              <Link
+                href={`/${next.path}`}
+                className="rounded border border-line p-4 transition-colors hover:bg-surface sm:text-right"
+              >
+                <span className="text-xs text-muted">다음 글</span>
+                <span className="mt-1 block font-display font-bold leading-snug text-ink">
+                  {next.title}
+                </span>
+              </Link>
+            )}
+          </nav>
+        )}
+
+        {siteMetadata.comments && (
+          <div className="border-t border-line pt-8" id="comment">
+            <Comments slug={slug} />
+          </div>
+        )}
+
+        <div className="border-t border-line py-8">
+          <Link
+            href={`/${basePath}`}
+            className="text-sm font-medium text-clay underline-offset-4 hover:underline"
+            aria-label="글 목록으로"
+          >
+            &larr; 글 목록으로
+          </Link>
         </div>
       </article>
     </SectionContainer>

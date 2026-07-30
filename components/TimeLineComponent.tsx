@@ -2,15 +2,18 @@ import React from 'react'
 
 const TimeLineComponent = () => {
   const tagColors = {
-    계약직: 'bg-red-100 text-red-800',
-    편입: 'bg-yellow-100 text-yellow-800',
-    사이드프로젝트: 'bg-purple-100 text-purple-800',
-    동아리: 'bg-pink-100 text-pink-800',
-    협업: 'bg-teal-100 text-teal-800',
-    스터디: 'bg-orange-100 text-orange-800',
-    공모전: 'bg-emerald-100 text-emerald-800',
-    박람회: 'bg-rose-100 text-rose-800',
-    커피챗: 'bg-orange-100 text-orange-800',
+    회사: 'bg-clayfield text-[#F7F3EC]',
+    '개발 전 이력': 'bg-surface text-muted',
+    편입: 'bg-primary-100 text-primary-800',
+    교육: 'bg-primary-50 text-primary-700',
+    사이드프로젝트: 'bg-primary-100 text-primary-800',
+    동아리: 'bg-surface text-ink',
+    협업: 'bg-surface text-ink',
+    스터디: 'bg-surface text-ink',
+    공모전: 'bg-primary-50 text-primary-700',
+    박람회: 'bg-surface text-muted',
+    강연: 'bg-surface text-muted',
+    커피챗: 'bg-surface text-muted',
   }
 
   const experienceData = [
@@ -18,15 +21,16 @@ const TimeLineComponent = () => {
       company: '맥딜리버리 콜센터',
       startDate: '2016-01-01',
       endDate: '2016-07-31',
-      description: '전화주문 접수 및 입력원으로 일하며 다양한 고객 문의를 처리.',
-      tags: ['계약직'],
+      description: '전화주문 접수 및 입력원으로 일하며 다양한 고객 문의를 처리. (개발자 전향 이전)',
+      tags: ['개발 전 이력'],
     },
     {
       company: '공간정보기술',
       startDate: '2018-09-01',
       endDate: '2018-12-31',
-      description: '데이터 입력원으로 근무하며, 여러 데이터를 관리하고 입력.',
-      tags: ['계약직'],
+      description:
+        '데이터 입력원으로 근무. 이 일을 계기로 개발자 전향을 결심하고 편입을 준비했습니다.',
+      tags: ['개발 전 이력'],
     },
     {
       company: '컴퓨터정보공학부',
@@ -40,14 +44,14 @@ const TimeLineComponent = () => {
       startDate: '2020-04-01',
       endDate: '2020-12-31',
       description: '프론트엔드 스터디 참여 및 실습 경험.',
-      tags: ['스터디'],
+      tags: ['교육', '스터디'],
     },
     {
       company: '코멘토 > 실제 현업 WEB 개발자와 함께 SW 포트폴리오 제작까지!',
       startDate: '2020-06-10',
       endDate: '2020-07-08',
-      description: '실제 현업 WEB 개발자와 함께 SW 포트폴리오 제작까지! : 방탈출 제작',
-      tags: ['사이드프로젝트'],
+      description: '현업 개발자 멘토링 직무부트캠프 : 방탈출 서비스 제작.',
+      tags: ['교육', '사이드프로젝트'],
     },
     {
       company: '극도로 한정된 세계 프로젝트',
@@ -88,35 +92,37 @@ const TimeLineComponent = () => {
       company: '코멘토 > SQL 입문 부터 활용까지 데이터 분석 보고서 작성과 대시보드 개발',
       startDate: '2021-02-21',
       endDate: '2021-03-21',
-      description: '데이터 개발 직무 부트 캠프',
-      tags: ['사이드프로젝트'],
+      description: '데이터 개발 직무 부트캠프 수료.',
+      tags: ['교육'],
     },
     {
       company: '딥노이드 : 프론트엔드 개발',
       startDate: '2021-04-12',
       endDate: '2022-08-05',
-      description: '의료와 산업 AI 솔루션을 개발 및 제공하는 인공지능 전문 기업.',
+      description:
+        '의료·산업 AI 솔루션 기업. 관세청 불법 복제품 판독 시스템과 공항 보안 검색 판독 시스템의 프런트엔드를 담당했습니다.',
       tags: ['회사'],
     },
     {
       company: '빅데이터 분석 첫걸음 시작하기',
       startDate: '2021-11-10',
       endDate: '2021-12-15',
-      description: '국비지원 : 빅데이터 분석 첫걸음 시작하기',
-      tags: ['사이드프로젝트'],
+      description: '국비지원 교육 : 빅데이터 분석 첫걸음 시작하기 (재직 중 수강)',
+      tags: ['교육'],
     },
     {
       company: 'python & django로 시작하는 웹 프로그래밍',
       startDate: '2021-11-10',
       endDate: '2022-01-05',
-      description: '국비지원 : python & django로 시작하는 웹 프로그래밍',
-      tags: ['회사'],
+      description: '국비지원 교육 : python & django로 시작하는 웹 프로그래밍 (재직 중 수강)',
+      tags: ['교육'],
     },
     {
       company: '스테이폴리오 : 프론트엔드 개발',
       startDate: '2022-08-08',
       endDate: '2024-03-01',
-      description: '특별한 숙박 공간을 큐레이션하여 고객들에게 독창적인 경험을 제공하는 플랫폼.',
+      description:
+        '숙박 큐레이션 플랫폼. 프런트엔드로 다국어(일본어) 지원, 무한 스크롤 성능 개선, 웹→앱 전환 UX 개편을 담당했습니다.',
       tags: ['회사'],
     },
     {
@@ -130,7 +136,8 @@ const TimeLineComponent = () => {
       company: 'TripTune',
       startDate: '2024-05-01',
       endDate: '2025-02-28',
-      description: '협업형 여행 일정 플랫폼 구축 프로젝트.',
+      description:
+        '협업형 여행 계획 플랫폼. 2인 팀에서 프런트엔드 전체를 맡아 MVP를 출시했고, 현재도 운영 중입니다.',
       tags: ['사이드프로젝트', '협업'],
     },
     {
@@ -165,41 +172,58 @@ const TimeLineComponent = () => {
       company: '지슨(GitSN) : 웹 개발',
       startDate: '2025-04-07',
       endDate: '진행 중',
-      description: '보안 기술 기업에서 풀스택 웹 개발 업무 수행 — 프런트엔드·백엔드 전반 담당.',
+      description:
+        'ITS 표준데이터 관리 시스템(SDMS) 개발. 프런트엔드 주력으로 합류해 Django 모델·마이그레이션·쿼리까지 범위를 넓히는 중입니다.',
       tags: ['회사'],
     },
   ]
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="border-l-4 border-blue-600 pl-8">
-        {[...experienceData].reverse().map((experience, index) => (
-          <div key={index} className="mb-8 flex items-start">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600">
-              <span className="text-xl font-bold text-white">{experienceData.length - index}</span>
-            </div>
-            <div className="ml-6 w-full rounded-lg bg-gray-50 p-6 shadow-md transition-all hover:shadow-lg">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-2xl font-semibold text-blue-600">{experience.company}</span>
-                <span className="text-sm text-gray-500">
-                  {experience.startDate} - {experience.endDate}
-                </span>
-              </div>
-              <p className="text-gray-700">{experience.description}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {experience.tags.map((tag, tagIndex) => (
-                  <span
-                    key={tagIndex}
-                    className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${tagColors[tag] || 'bg-gray-100 text-gray-800'}`}
+    <div className="mt-10">
+      <ol className="relative border-l border-line">
+        {[...experienceData]
+          .sort((a, b) => b.startDate.localeCompare(a.startDate))
+          .map((experience, index) => {
+            const isJob = experience.tags.includes('회사')
+            return (
+              <li key={index} className="relative mb-9 pl-7 sm:pl-9">
+                <span
+                  className={`absolute -left-[5px] top-2 h-2.5 w-2.5 rounded-full ring-4 ring-paper ${
+                    isJob ? 'bg-clay' : 'bg-line'
+                  }`}
+                  aria-hidden="true"
+                />
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h3
+                    className={`font-display tracking-tight ${
+                      isJob ? 'text-xl font-bold text-ink' : 'text-lg font-bold text-ink/85'
+                    }`}
                   >
-                    {tag}
+                    {experience.company}
+                  </h3>
+                  <span className="measure shrink-0 text-sm text-muted">
+                    {experience.startDate} — {experience.endDate}
                   </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+                </div>
+                <p className="mt-2 max-w-2xl text-[15px] leading-7 text-muted">
+                  {experience.description}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {experience.tags.map((tag, tagIndex) => (
+                    <span
+                      key={tagIndex}
+                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        tagColors[tag] || 'bg-surface text-muted'
+                      }`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </li>
+            )
+          })}
+      </ol>
     </div>
   )
 }
