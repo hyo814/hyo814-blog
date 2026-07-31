@@ -15,7 +15,7 @@ const projectsData: Project[] = [
     kind: '실무',
     period: '2025.04 — 현재',
     stack: 'Django · PostgreSQL · D3.js · jsTree · Playwright',
-    description: `ISO 14817-2 기반 표준데이터 모델링부터 분류체계·메타클래스 트리, D3 시각화, Open API 포털, Playwright QA 자동화까지. 프런트엔드 주력으로 합류해 Django 모델·마이그레이션·쿼리로 범위를 넓히는 중입니다.`,
+    description: `ISO 14817-2 기반 표준데이터 모델링부터 분류체계·메타클래스 트리, D3 시각화, Open API 포털, Playwright QA 자동화까지. 프런트엔드 주력으로 합류해, 목업 데이터로 화면을 먼저 검증하고 Django API·쿼리까지 범위를 넓히는 중입니다.`,
     href: '/blog/2025년도~현재의-sdms',
   },
   {

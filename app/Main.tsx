@@ -12,10 +12,10 @@ const MAX_DISPLAY = 5
  */
 const measurements = [
   {
-    label: '엑셀 적재 로더 통합',
-    before: '로더 3종 · 1,476줄',
-    after: '1종 · 95줄',
-    href: '/blog/엑셀-2단-병합-헤더-워크북-리더와-4패스-로더',
+    label: '목업 시드 자동화',
+    before: '수작업 49건',
+    after: '엑셀 기반 478건',
+    href: '/blog/목업-데이터-엑셀-시드-49에서-478개-자동화',
   },
   {
     label: '메뉴 QA 스윕 자동화',
@@ -42,7 +42,7 @@ export default function Home({ posts }) {
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
           2021년부터 웹을 만들어 온 풀스택 개발자 임효진입니다. 프런트엔드 주력으로 시작해 지금은
-          Django 모델 설계와 쿼리 최적화까지 맡고 있습니다.
+          필요한 데이터를 목업으로 먼저 세워 화면을 검증하고, Django API와 쿼리까지 이어 붙입니다.
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2">
           <Link
