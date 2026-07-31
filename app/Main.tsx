@@ -18,16 +18,16 @@ const measurements = [
     href: '/blog/목업-데이터-엑셀-시드-49에서-478개-자동화',
   },
   {
-    label: '메타클래스 목록 쿼리',
-    before: '908쿼리 · 1.6s',
-    after: '4쿼리 · 180ms',
-    href: '/blog/메타클래스-쿼리-최적화-회고',
-  },
-  {
     label: '메뉴 QA 스윕 자동화',
     before: '손으로 136종 확인',
     after: '1커맨드 · 문서오류 15건 적발',
     href: '/blog/playwright-메뉴-136종-qa-스윕',
+  },
+  {
+    label: '묵은 사이드 프로젝트 정리',
+    before: '2년 방치 · 경보 누적',
+    after: '하루 · 15,733줄 삭제',
+    href: '/blog/2년-묵은-사이드-프로젝트-되살리기',
   },
 ]
 
