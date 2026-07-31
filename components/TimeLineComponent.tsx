@@ -173,7 +173,7 @@ const TimeLineComponent = () => {
       startDate: '2025-04-07',
       endDate: '진행 중',
       description:
-        'ITS 표준데이터 관리 시스템(SDMS) 개발. 프런트엔드 주력으로 합류해 Django 모델·마이그레이션·쿼리까지 범위를 넓히는 중입니다.',
+        'ITS 표준데이터 관리 시스템(SDMS) 개발. 프런트엔드 주력으로 합류해, 필요한 데이터를 목업으로 먼저 세워 화면을 검증하고 Django API·쿼리까지 범위를 넓히는 중입니다.',
       tags: ['회사'],
     },
   ]
