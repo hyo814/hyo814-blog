@@ -12,22 +12,22 @@ const MAX_DISPLAY = 5
  */
 const measurements = [
   {
-    label: '메타클래스 목록 쿼리',
-    before: '908쿼리 · 1.6s',
-    after: '4쿼리 · 180ms',
-    href: '/blog/메타클래스-쿼리-최적화-회고',
+    label: '엑셀 적재 로더 통합',
+    before: '로더 3종 · 1,476줄',
+    after: '1종 · 95줄',
+    href: '/blog/엑셀-2단-병합-헤더-워크북-리더와-4패스-로더',
   },
   {
-    label: '목업 시드 데이터',
-    before: '수작업 49개',
-    after: '자동 478개',
-    href: '/blog/목업-데이터-엑셀-시드-49에서-478개-자동화',
+    label: '메뉴 QA 스윕 자동화',
+    before: '손으로 136종 확인',
+    after: '1커맨드 · 문서오류 15건 적발',
+    href: '/blog/playwright-메뉴-136종-qa-스윕',
   },
   {
-    label: '트리 공통 로직',
-    before: '모듈 3개 중복',
-    after: '공통 1개',
-    href: '/blog/분류체계-메타클래스-트리-공통-로직-헬퍼-추출-회고',
+    label: '묵은 사이드 프로젝트 정리',
+    before: '2년 방치 · 경보 누적',
+    after: '하루 · 15,733줄 삭제',
+    href: '/blog/2년-묵은-사이드-프로젝트-되살리기',
   },
 ]
 
@@ -36,9 +36,9 @@ export default function Home({ posts }) {
     <>
       <section className="pb-10 pt-8 sm:pt-12">
         <h1 className="max-w-3xl font-display text-[2.1rem] font-bold leading-tight tracking-tight text-ink sm:text-5xl sm:leading-[1.15]">
-          측정하고, 고치고,
+          먼저 움직여서
           <br />
-          틀렸으면 그렇게 적습니다
+          결과로 말합니다
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
           2021년부터 웹을 만들어 온 풀스택 개발자 임효진입니다. 프런트엔드 주력으로 시작해 지금은
