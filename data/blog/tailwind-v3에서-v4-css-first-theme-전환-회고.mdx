@@ -8,6 +8,18 @@ summary: 'tailwind.config.js 기반 v3에서 CSS 안에서 @theme로 토큰을 �
 
 # Tailwind v3에서 v4 CSS-first `@theme`로 전환하면서 깨지고 다시 메운 기록
 
+> 🔄 **2026-09-02 정정 — 이 글의 시점과 경로는 실제 이력과 다릅니다.**
+>
+> 이 글을 다시 확인하다가 저장소 이력과 맞춰 봤는데, 세 가지가 어긋납니다.
+>
+> - **전환 시점.** `tailwind.config.js`는 2024-11-11에 만들어져 **2026-08-21까지 그대로 있었습니다.** 패키지 버전을 바꾼 커밋도 그 하나뿐이고(`v3.4.16 → v4.3.3`), 이 글이 쓰인 2026-05 시점에는 v3였습니다.
+> - **`config bridge` 2단계 전략.** 2절의 `@config "../tailwind.config.js"`로 엔진만 먼저 올리는 단계는 **실제로 없었습니다.** `@config` 문자열은 8월의 그 전환 커밋에만 등장하고, 같은 커밋이 `tailwind.config.js`를 지웁니다. 한 번에 옮겼습니다.
+> - **인용한 커밋.** 4.3절의 `fix(dualMultiSelect): 깨진 tailwind 클래스 정리 및 sdms 브랜드 톤 정렬`은 저장소에 없습니다. 이름이 가장 가까운 커밋은 2026-06-12의 `dualMultiSelect 정비: Shift 범위 선택 추가·돋보기 토글 공유화·초기 펼침 옵션화`로, 내용이 다릅니다.
+>
+> 공교롭게도 7절 ②에서 "`@config`를 언제 걷어냈는지 확인이 없다"를 스스로 부채로 적어 뒀는데, **그 단계 자체가 없었습니다.** 확인이 없다고 적을 게 아니라 확인을 했어야 했습니다.
+>
+> 아래 본문은 지우지 않고 그대로 둡니다. 틀린 기록을 지우면 정정이 아니라 은폐가 되고, 이 글이 v4의 실제 함정(`space-y-*` 선택자, `@apply`와 plugin 클래스, form 배경색 회귀)을 다룬 부분은 여전히 읽을 값이 있습니다. 실제로 무슨 일이 있었는지는 [Tailwind v3에서 v4로 170개 파일을 옮겼다](/blog/tailwind-v3에서-v4로-170개-파일을-옮겼다)에 다시 적었습니다.
+
 Tailwind v4가 안정화되면서 v3에서 v4로 넘어갔습니다. v4의 가장 큰 변화는 **JS 기반 `tailwind.config.js`가 사실상 사라지고, CSS 안의 `@theme` 블록으로 토큰을 정의**한다는 점입니다. 큰 변화인 만큼 회귀가 따라왔고, 그걸 어떻게 메웠는지 기록합니다.
 
 ---
@@ -29,7 +41,7 @@ v4는 마이그레이션을 위해 *config bridge*를 지원합니다. 기존 `t
 
 ```css
 /* app.css */
-@import "tailwindcss";
+@import 'tailwindcss';
 @config "../tailwind.config.js";
 ```
 
@@ -48,32 +60,32 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50: "#eef2ff",
-          500: "#2a4dd0",
-          900: "#0d1a4d",
+          50: '#eef2ff',
+          500: '#2a4dd0',
+          900: '#0d1a4d',
         },
       },
       fontFamily: {
-        sans: ["Pretendard", "system-ui", "sans-serif"],
+        sans: ['Pretendard', 'system-ui', 'sans-serif'],
       },
       spacing: {
-        '18': '4.5rem',
+        18: '4.5rem',
       },
     },
   },
-};
+}
 ```
 
 ```css
 /* 변경 후 app.css (v4) */
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-brand-50: #eef2ff;
   --color-brand-500: #2a4dd0;
   --color-brand-900: #0d1a4d;
 
-  --font-sans: "Pretendard", system-ui, sans-serif;
+  --font-sans: 'Pretendard', system-ui, sans-serif;
 
   --spacing-18: 4.5rem;
 }
@@ -148,13 +160,13 @@ v4는 form 요소의 기본 배경을 더 엄격하게 다룹니다. v3에서는
 
 ## 6. 검증
 
-| 항목 | 결과 |
-|---|---|
-| 빌드 | v4 엔진으로 전환, 풀빌드 시간 절반 이하 |
-| 1단계(config bridge) | 시각 회귀 거의 없음 |
-| 2단계(`@theme`) | `theme.extend` 토큰 전량 CSS variable로 이관 |
-| 회귀 점검 | 디자인 정교한 10개 페이지 캡쳐 비교, 침묵 깨짐 2~3건 발견 |
-| 개별 패치 | `space-y`/`divide` 마크업, `@apply`→`@utility`, `dualMultiSelect` 클래스, form 배경색 |
+| 항목                 | 결과                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| 빌드                 | v4 엔진으로 전환, 풀빌드 시간 절반 이하                                               |
+| 1단계(config bridge) | 시각 회귀 거의 없음                                                                   |
+| 2단계(`@theme`)      | `theme.extend` 토큰 전량 CSS variable로 이관                                          |
+| 회귀 점검            | 디자인 정교한 10개 페이지 캡쳐 비교, 침묵 깨짐 2~3건 발견                             |
+| 개별 패치            | `space-y`/`divide` 마크업, `@apply`→`@utility`, `dualMultiSelect` 클래스, form 배경색 |
 
 ---
 
@@ -166,11 +178,15 @@ v4는 form 요소의 기본 배경을 더 엄격하게 다룹니다. v3에서는
 
 ```css
 @layer base {
-  input, textarea, select { background-color: white; }
+  input,
+  textarea,
+  select {
+    background-color: white;
+  }
 }
 ```
 
-1절에서 v4로 옮긴 이유 중 하나로 *"토큰이 CSS variable이라 런타임 테마 전환이 자연스러워진다"* 를 들었습니다. 그런데 **여기서 흰색을 리터럴로 못 박았어요.** 다크 테마를 붙이는 날 이 세 줄이 제일 먼저 걸립니다.
+1절에서 v4로 옮긴 이유 중 하나로 _"토큰이 CSS variable이라 런타임 테마 전환이 자연스러워진다"_ 를 들었습니다. 그런데 **여기서 흰색을 리터럴로 못 박았어요.** 다크 테마를 붙이는 날 이 세 줄이 제일 먼저 걸립니다.
 
 `var(--color-surface)` 같은 토큰을 하나 정의하고 그걸 참조했어야 했습니다. 급하게 회귀를 메우는 중이라 리터럴이 빨랐는데, **회귀를 메우면서 새 부채를 만든** 셈이에요. 지금 남은 것 중 제일 먼저 고칠 항목입니다.
 
