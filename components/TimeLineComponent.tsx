@@ -5,6 +5,7 @@ const TimeLineComponent = () => {
     회사: 'bg-clayfield text-[#F7F3EC]',
     '개발 전 이력': 'bg-surface text-muted',
     편입: 'bg-primary-100 text-primary-800',
+    학부: 'bg-primary-50 text-primary-700',
     교육: 'bg-primary-50 text-primary-700',
     사이드프로젝트: 'bg-primary-100 text-primary-800',
     동아리: 'bg-surface text-ink',
@@ -82,11 +83,12 @@ const TimeLineComponent = () => {
       tags: ['강연'],
     },
     {
-      company: '운동 사이트 큐피트',
-      startDate: '2020-09-01',
-      endDate: '2020-11-30',
-      description: '가이드 없이 시작해본 운동 관련 프로젝트.',
-      tags: ['사이드프로젝트', '협업'],
+      company: '큐피트 (H2J2) — 4학년 종합설계 졸업작품',
+      startDate: '2020-09-11',
+      endDate: '2020-11-23',
+      description:
+        '홈트레이닝 웹. 팀 프로젝트에서 프런트엔드(React)를 맡았고, 백엔드는 Flask였습니다.',
+      tags: ['학부', '협업'],
     },
     {
       company: '코멘토 > SQL 입문 부터 활용까지 데이터 분석 보고서 작성과 대시보드 개발',
@@ -135,17 +137,32 @@ const TimeLineComponent = () => {
     {
       company: 'TripTune',
       startDate: '2024-05-01',
-      endDate: '2025-02-28',
+      endDate: '진행 중',
       description:
         '협업형 여행 계획 플랫폼. 2인 팀에서 프런트엔드 전체를 맡아 MVP를 출시했고, 현재도 운영 중입니다.',
       tags: ['사이드프로젝트', '협업'],
     },
     {
-      company: '제로베이스 PRO 5기',
-      startDate: '2024-05-01',
-      endDate: '2024-08-14',
-      description: '프론트엔드 스터디 및 다양한 인터페이스 학습.',
+      company: '동아리 사이트 프로젝트',
+      startDate: '2021-04-01',
+      endDate: '2021-12-31',
+      description:
+        '배경지식 없이 시작해 게시판을 포기하고 사용자 인증 하나로 범위를 줄여 완주한 사이드 프로젝트.',
+      tags: ['사이드프로젝트'],
+    },
+    {
+      company: '제로베이스 프론트엔드 Pro 5기',
+      startDate: '2024-05-07',
+      endDate: '2024-08-07',
+      description: '프론트엔드 스터디 및 다양한 인터페이스 학습. 90일 과정 수료.',
       tags: ['스터디', '커피챗'],
+    },
+    {
+      company: '제로베이스 개발자 면접 합격반',
+      startDate: '2024-10-01',
+      endDate: '2024-10-31',
+      description: '개발자 면접 준비 과정 수료. 11월 프런트엔드 모의면접까지 이어졌습니다.',
+      tags: ['교육'],
     },
     {
       company: '취준 컴퍼니 22기',
@@ -167,6 +184,20 @@ const TimeLineComponent = () => {
       endDate: '진행 중',
       description: 'IT 업계 여성 개발자 커뮤니티 활동 및 교류.',
       tags: ['스터디', '커피챗'],
+    },
+    {
+      company: 'PyNews — Django 뉴스레터 사이드 프로젝트',
+      startDate: '2026-03-21',
+      endDate: '2026-05-14',
+      description: '백엔드(Python·Django)를 익히려고 만든 뉴스레터 서비스. Render에 배포.',
+      tags: ['사이드프로젝트'],
+    },
+    {
+      company: 'escape-plus 리팩터',
+      startDate: '2026-04-05',
+      endDate: '2026-04-05',
+      description: '2020년 코멘토 부트캠프 방탈출 포트폴리오를 6년 뒤 Vite로 다시 손본 기록.',
+      tags: ['사이드프로젝트'],
     },
     {
       company: '지슨(GitSN) : 웹 개발',
