@@ -1,0 +1,129 @@
+---
+title: Google Optimize가 사라진 뒤 미들웨어로 A/B를 돌렸다 — 쿠키 하나와 종료일
+date: '2023-10-27'
+tags: [기술노트, 인프라]
+draft: false
+summary: 'Google Optimize가 2023년 9월에 서비스를 끝냈습니다. 그 뒤로 숙소 상세의 결제 혜택 표시를 A/B로 비교하려면 실험 분기를 직접 들고 있어야 했어요. Next.js 미들웨어가 쿠키로 사용자를 반씩 가르고 실험군만 다른 경로로 rewrite했고, 종료일을 코드에 박아 그 날이 지나면 쿠키를 지우게 했습니다.'
+---
+
+# Google Optimize가 사라진 뒤 미들웨어로 A/B를 돌렸다
+
+> 이 글은 2026년 9월에 당시 코드를 다시 보며 정리한 것입니다. 저장소는 퇴사 전에 스냅샷으로 보관한 것이라 커밋 이력이 없고, 경력기술서와 당시 쓴 이력서에 적은 담당 범위와 코드를 대조해 썼습니다. 날짜는 코드에 남은 시기 단서 기준입니다.
+
+Google Optimize는 2023년 9월 30일에 서비스를 종료했습니다. 그 전까지 A/B 실험은 Optimize에서 만들고, 웹은 실험이 켜졌는지만 확인하는 구조였어요. 실험 헬퍼 파일의 주석이 그 흐름을 적어 두고 있습니다.
+
+```ts
+/**
+ * Returns the experiment to use, the overall flow is:
+ * - You created an experiment in Google Optimize
+ * - Then created the pages that will match that experiment,
+ * - Start experimenting and then make decisions without having changed the original pages
+ */
+```
+
+이 주석은 Next.js 저장소의 Optimize 예제에서 가져온 것으로 보입니다. Optimize가 사라지자 "실험을 Optimize에서 만든다"는 첫 줄이 빠졌고, 나머지는 웹이 직접 해야 했습니다. 프런트 팀이 넷이던 곳이라 이 실험 코드를 제가 직접 짰는지는 이력이 없어 확인할 수 없습니다. 다만 2023년 12월 이력서에 담당 역할이 "가격, 홍보에 관련된 프런트엔드 개발"로 적혀 있고 경력기술서 5절에도 "배포 테스트 페이지로 간단한 A/B를 돌렸다"는 한 줄이 있어, 홍보 담당의 범위로 보고 씁니다.
+
+## 미들웨어가 쿠키로 반을 가른다
+
+분기는 `middleware.ts` 하나에 있습니다. 숙소 상세 경로에만 걸려요.
+
+```ts
+export const config = {
+  matcher: ["/findstay/(.*)"],
+};
+```
+
+요청이 오면 쿠키를 봅니다. 쿠키가 없거나 다른 실험의 것이면 새로 정합니다.
+
+```ts
+  if (!cookie || needNewExperimentID) {
+    let n = Math.random() * 100;
+    const variant = experiment.variants.find((v) => {
+      if (v.weight >= n) return true;
+      n -= v.weight;
+    });
+
+    cookie = `${experiment.id}.${variant.id}`;
+  }
+```
+
+실험 정의는 JSON 파일에 있고 변형은 `original`과 `experiment` 둘, 가중치 50 대 50입니다. 쿠키 값은 `실험id.변형id` 한 문자열이에요. 실험 id를 쿠키에 같이 넣은 이유는 실험이 바뀌었을 때 이전 실험의 배정을 그대로 쓰지 않게 하려는 겁니다. `needNewExperimentID`가 그 판정이고요.
+
+실험군이면 경로를 바꿔 rewrite합니다.
+
+```ts
+  redirectHandler({
+    url,
+    isExperimentUser: variantId === "1", // `0`: 원본 페이지 / `1`: 실험 페이지
+    additionalCondition:
+      isKoPage &&
+      !isExperimentTerminated &&
+      experimentOnlyInDetailPage(url.pathname),
+    originalPath: "/findstay",
+    experimentPath: "/findstay/experiment",
+  });
+```
+
+주소창은 그대로고 서버가 다른 페이지를 그려 줍니다. 조건이 셋 붙어요. 한국어 페이지만, 실험이 안 끝났을 때만, 상세 페이지 자체(`/findstay/[identifier]`)만. 상세 밑의 `/room`이나 `/gallery`는 빼려고 경로 조각 수가 3인지 셉니다. 함수 이름이 `redirectHandler`인데 하는 일은 rewrite예요. 이름은 그대로 남아 있습니다.
+
+## 종료일을 코드에 박았다
+
+```ts
+  const isExperimentTerminated = getTerminateOrNot({
+    terminateDate: "2023-10-27", // ex) 2023-09-27 이면 26일에서 27일로 넘어가는 자정에 종료
+  });
+```
+
+종료일이 지나면 두 가지가 바뀝니다. rewrite 조건이 꺼지고, 응답에 쿠키를 과거 만료일로 다시 심어 지웁니다.
+
+```ts
+  if (isExperimentTerminated) {
+    const cookieOptions = {
+      expires: new Date(Date.now() - ONE_YEAR),
+    };
+    res.cookies.set(EXPERIMENT_COOKIE_NAME, cookie, cookieOptions);
+  }
+```
+
+Optimize가 있을 때는 대시보드에서 실험을 끄면 됐습니다. 그게 없어지니 "언제 끝나나"를 코드가 알아야 했고, 배포 없이 끄는 수단이 없어서 날짜를 상수로 넣은 것으로 읽힙니다. 실험이 끝나면 쿠키도 치워야 다음 실험 배정이 깨끗해지니까 삭제까지 미들웨어가 합니다.
+
+이 글의 날짜가 그 종료일입니다. 실험 자체가 언제 시작됐는지는 남아 있지 않아요.
+
+## 실험군 표시가 GA4로 간다
+
+배정만 하고 측정을 안 하면 실험이 아닙니다. `_app.tsx`에서 페이지가 바뀔 때마다 쿠키를 읽어 GA4 사용자 속성으로 보냅니다.
+
+```ts
+export const measureExperimentId = () => {
+  const value = Cookies.get(EXPERIMENT_COOKIE_NAME);
+  if (!value) return;
+
+  setUserProperty("experiment_id", value);
+};
+```
+
+사용자 속성 `experiment_id`에 `실험id.변형id`가 실리니까 GA4에서 실험군·대조군을 나눠 볼 수 있습니다. Optimize가 하던 "결과 리포트"는 없어졌고, GA4 탐색 리포트에서 이 속성으로 직접 갈라 봐야 했어요.
+
+실험 대상은 결제 화면의 혜택 안내였습니다. 무이자 할부 안내 컴포넌트가 결제 수단 선택 화면에 있고, 클릭하면 `measureClickInstallment` 이벤트가 나갑니다. 실험군 페이지 자체(`pages/findstay/experiment/*`)는 스냅샷에 없습니다. 종료 뒤 페이지를 지우고 미들웨어와 상수만 남긴 것으로 읽히는데, 그렇게 정리했다는 기록은 없어요.
+
+## 검증
+
+- 날짜 근거: `middleware.ts`의 `terminateDate: "2023-10-27"`. Optimize 종료(2023-09-30)는 공개된 사실이고, 상수 파일의 `PREVIOUS_EXPERIMENT_ID`가 세 번째 실험을 가리키는 것으로 보아 이 실험이 최소 네 번째입니다.
+- 매처·배정·rewrite·쿠키 삭제는 `middleware.ts` 전문에서, 실험 정의는 `components/experiment/lib/optimize-experiments.json`에서 확인했습니다(변형 둘, 50/50).
+- `measureExperimentId`가 `_app.tsx`에서 불리는 것을 grep으로 확인했습니다.
+- 문서 두 개와 대조한 결과입니다.
+
+| 항목 | 경력기술서(2024-03) | 이력서(2023-12) |
+|---|---|---|
+| A/B 실험 | §5 "배포 테스트 페이지로 간단한 A/B" — 일치하나 코드는 그보다 큼(미들웨어·쿠키·GA4 속성·종료 처리) | "홍보에 관련된 프런트엔드 개발" — 범위 안, 실험 자체는 언급 없음 |
+| 직접 작성 여부 | 확인 불가 | 확인 불가 — 프런트 4명 |
+
+## 남은 것 · 한계
+
+- **직접 짰는지 모릅니다.** 이 글에서 제일 큰 한계예요. 이력서의 "홍보 담당"과 경력기술서의 한 줄로 담당 범위를 잡았고, 그 안에서 코드가 무엇을 하는지만 적었습니다.
+- **종료를 배포로만 할 수 있습니다.** 날짜 상수를 고치려면 배포해야 하고, 실험을 일찍 끝내고 싶어도 마찬가지입니다. Optimize가 주던 "대시보드에서 끄기"를 되살리지 않았어요.
+- **실험이 하나만 돌 수 있습니다.** `getCurrentExperiment`가 이름 문자열 하나로 실험을 고릅니다. 두 실험을 동시에 돌리려면 구조를 바꿔야 합니다.
+- **rewrite된 페이지가 스냅샷에 없어서** 실험군이 실제로 무엇을 다르게 봤는지 코드로 확인할 수 없습니다.
+- 3년 뒤 SDMS에서 [7단계를 박아둔 템플릿이 5단계 환경에서 거짓말을 했다](/blog/7단계를-박아둔-템플릿이-5단계-환경에서-거짓말을-했다)를 겪으면서 "코드에 박은 상수가 환경을 속인다"를 다시 만났습니다. 여기서는 종료일이 그 상수였습니다.
+
+관련 글: [숙박 큐레이션 플랫폼 프런트엔드 2022–2024](/blog/2022년도~2024년도의-숙박-큐레이션-플랫폼) · [7단계를 박아둔 템플릿이 5단계 환경에서 거짓말을 했다](/blog/7단계를-박아둔-템플릿이-5단계-환경에서-거짓말을-했다) · [루트 레이아웃에 'use client'가 붙어 있었다](/blog/루트-레이아웃에-use-client가-붙어-있었다) · [GA4 이벤트를 웹·Android·iOS 세 갈래로 보냈다](/blog/ga4-이벤트를-웹-android-ios-세-갈래로-보냈다) · [프로모션마다 지원 언어를 두고, 안 되는 언어면 뒤로 보냈다](/blog/프로모션마다-지원-언어를-두고-안-되는-언어면-뒤로-보냈다)

@@ -1,0 +1,116 @@
+---
+title: 프로모션마다 지원 언어를 두고, 안 되는 언어면 뒤로 보냈다 — 404 대신 모달과 back
+date: '2023-02-24'
+tags: [기술노트, React]
+draft: false
+summary: '프로모션은 한국어에만 있는 것도, 세 언어에 다 있는 것도 있었습니다. 프로모션마다 지원 언어 목록을 두고, 지금 언어가 그 안에 없으면 404나 빈 화면이 아니라 "이 언어는 지원하지 않는다"는 모달을 띄우고 닫으면 뒤로 보냈어요. 그 판단과, 같은 화면의 딜 목록이 SWR 무한 스크롤을 어떻게 이어받았는지를 코드로 다시 읽었습니다.'
+---
+
+# 프로모션마다 지원 언어를 두고, 안 되는 언어면 뒤로 보냈다
+
+> 이 글은 2026년 9월에 당시 코드를 다시 보며 정리한 것입니다. 저장소는 퇴사 전에 스냅샷으로 보관한 것이라 커밋 이력이 없고, 경력기술서와 당시 쓴 이력서에 적은 담당 범위와 코드를 대조해 썼습니다. 날짜는 코드에 남은 시기 단서 기준입니다.
+
+프로모션은 당시 이력서에 적은 제 담당 역할 "가격·홍보 관련 프런트엔드 개발"의 홍보 쪽이고, 일본어는 [경력기술서](/blog/2022년도~2024년도의-숙박-큐레이션-플랫폼)에 제 담당으로 적혀 있습니다. 이 화면은 그 둘이 겹치는 자리예요.
+
+프로모션 페이지는 언어별로 사정이 달랐습니다. 국내 카드사 제휴처럼 한국어로만 뜻이 있는 것, 해외 사용자를 겨냥해 세 언어로 다 만든 것. 그런데 주소는 언어를 안 가려요. 영어 화면을 보던 사람이 한국어 전용 프로모션 링크를 열면 무엇을 보여 줄지 정해야 했습니다.
+
+## 서버가 준 것: 지원 언어 목록
+
+Rails 마이그레이션에 그 시작이 남아 있습니다.
+
+```ruby
+class AddLocalesToPromotion < ActiveRecord::Migration[6.1]
+  def up
+    add_column :promotions, :locales, :string
+    execute "UPDATE promotions SET locales =
+      case
+      when is_en = 1 then 'ko,en'
+      else 'ko'
+      end
+    "
+  end
+```
+
+그 전에는 `is_en`이라는 불리언 하나였어요. 영어를 지원하느냐 아니냐. 일본어가 들어오면서 불리언으로는 안 되니 `locales`라는 콤마 문자열이 됐고, 기존 값은 그 불리언에서 옮겨 채웠습니다. 같은 날 프로모션 테이블에 `title_ja`·`contents_ja` 같은 일본어 컬럼 열 개가 붙었고요. 이 마이그레이션은 서버 쪽 작업이라 제 손인지는 알 수 없습니다. 프런트가 그 값을 어떻게 썼는지가 제 범위예요.
+
+## 화면이 한 것: 검사하고, 모달, 그리고 back
+
+```tsx
+  const { locale } = useRouter();
+  const [isSupportLocale, setIsSupportLocale] = useState<boolean>(
+    checkSupportLocale()
+  );
+
+  useEffect(() => {
+    setIsSupportLocale(checkSupportLocale());
+  }, [locale]);
+
+  function checkSupportLocale() {
+    return promotionData?.locales?.includes(locale);
+  }
+```
+
+`"ko,en"` 문자열에 현재 언어가 들어 있는지 `includes`로 봅니다. 콤마를 쪼개지 않고 문자열 포함으로 검사해요. 언어 코드가 두 글자라 겹칠 일이 없어서 통했고, 그 점을 믿고 쓴 건지 그냥 짧아서 쓴 건지는 남아 있지 않습니다.
+
+지원하지 않으면 `BlockEnAlert`가 뜹니다.
+
+```tsx
+  const onClose = () => {
+    document.body.classList.remove("scroll_lock");
+    closeAlertHandler();
+    router.back();
+  };
+```
+
+닫으면 `router.back()`. 컴포넌트 이름은 영어 시절에 지어진 `BlockEnAlert`인데 문구는 `t("localeNotSupport")`로 세 언어를 다 냅니다. 한국어는 "한국어가 지원되지 않는 페이지 입니다", 영어는 "This menu does not support English", 일본어는 "日本語に対応していないページです"였어요.
+
+선택지는 이 정도였다고 봅니다.
+
+| 방법 | 포기하는 것 |
+|---|---|
+| 404 | 페이지는 있는데 없다고 말하게 됨. 링크를 받은 사람은 링크가 깨진 줄 앎 |
+| 한국어로 강제 표시 | 영어 화면 한가운데 한국어 페이지가 뜸 |
+| 모달 + back | 사용자가 어디로 갈지는 못 정해 줌. 온 길로 돌려보낼 뿐 |
+
+셋째를 골랐습니다. "이 언어로는 없다"는 사실을 그 언어로 말하고, 온 길로 돌려보내는 것. 이벤트 페이지(`pages/events/[identifier].tsx`)도 같은 컴포넌트와 같은 검사를 씁니다. 다만 거기는 필드 이름이 `locale`(단수)이라 서버 응답 모양이 둘로 갈려 있었어요.
+
+## 딜 목록이 이어받은 무한 스크롤
+
+같은 프로모션 화면 아래에는 딜 목록이 있습니다. [경력기술서](/blog/2022년도~2024년도의-숙박-큐레이션-플랫폼) §2에서 "프리오더·프로모션 페이지로 확장 가능한지도 확인했다"고 적은 그 자리예요.
+
+```tsx
+  const { data, setSize, isLoading, isValidating, error } = useSWRInfinite(
+    infiniteKeyGenerator(dealApiUrl, query.per, query.locale),
+    fetcherWithError,
+    {
+      errorRetryCount: 0,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateFirstPage: false,
+      dedupingInterval: 0,
+      fallbackData: [],
+    }
+  );
+```
+
+`useSWRInfinite`에 언어를 쿼리로 실어 페이지 키를 만들고, `useSWRInfiniteScroll` 훅이 `IntersectionObserver`로 `setSize`를 올립니다. 확장은 됐어요. 그런데 옵션을 보면 `revalidateOnFocus: false`, `revalidateOnReconnect: false`입니다. 경력기술서 §2는 SWR을 고른 이유로 "캐시 무효화·포커스 리페칭이 기본값"이라고 적었는데, 프로모션 딜 목록에서는 **그 기본값을 전부 껐습니다.** 딜은 자주 바뀌지 않으니 끄는 게 맞았을 수 있지만, 그러면 고른 이유였던 것이 여기서는 이유가 아니에요.
+
+딜 카드에는 `getDdayCount(deal.start_at)`로 D-day를 붙이고, 혜택 문구는 `deal.translation[router.locale].benefit`을 줄바꿈으로 쪼개 목록으로 그립니다. 번역 객체를 언어 키로 직접 뽑는 방식이라 서버가 그 언어를 안 주면 `undefined`가 되고, 그래서 위의 지원 언어 검사가 앞에 서 있어야 했습니다.
+
+## 검증
+
+- `pages/promotions/[code].tsx`·`pages/events/[identifier].tsx`·`components/layout/block-en-alert.tsx`·`components/promotion/promotion-deal.tsx`·`common/hooks/useSWRInfiniteScroll.ts`를 스냅샷에서 읽었습니다. 세 언어 문구는 리소스 파일에서 확인했습니다.
+- 날짜 근거: Rails `db/migrate/20230224060958_add_locales_to_promotion`과 같은 날 `add_japanese_fields_to_promotion`.
+- 당시 이력서(2023-12) 대조: 담당 역할 "가격·홍보"와 일치. 프런트 4명 팀이라 이 파일의 모든 줄이 제 것이라고는 말할 수 없습니다.
+- 경력기술서 대조: §2 "프로모션으로 확장" 일치, §2 "포커스 리페칭이 기본값이라 채택"은 이 화면 옵션과 불일치, §5 "프로모션과 프리오더의 데이터 구조 통합"은 이 스냅샷에서 확인하지 못했습니다.
+- 그때 어느 언어·어느 프로모션으로 모달을 확인했는지는 기록이 없습니다.
+
+## 남은 것 · 한계
+
+- **`includes`는 문자열 검사입니다.** 언어 코드가 두 글자라 통했지, 콤마로 쪼개 비교한 게 아니에요. 언어가 늘어 코드가 겹치면 잘못 통과합니다.
+- **이벤트는 `locale`, 프로모션은 `locales`.** 같은 검사가 두 필드 이름을 봅니다. 서버 응답을 프런트가 맞춘 결과인데 왜 안 통일했는지는 남아 있지 않습니다.
+- **`router.back()`은 온 길이 없으면 아무 데도 안 갑니다.** 링크를 직접 열어 들어온 사람은 모달을 닫아도 그 자리예요. 이 경우를 처리한 코드는 없습니다.
+- **이벤트 페이지는 훅보다 앞에 `return null`이 있습니다.** 데이터가 없으면 훅을 안 부르고 나가는 구조라 React 훅 규칙에 어긋나요. 그때 문제가 됐는지는 기록이 없고, 이 스냅샷에 그렇게 남아 있다는 것만 적어 둡니다.
+- 1년 반 뒤 TripTune에서 [무한 스크롤을 다시 고를 때](/blog/무한-스크롤-비교)는 이 화면의 "기본값을 껐다"는 사실을 떠올리지 못했습니다. 고른 이유와 실제 설정이 어긋난 것을 이 글을 쓰며 처음 봤어요.
+
+관련 글: [숙박 큐레이션 플랫폼 프런트엔드 2022–2024](/blog/2022년도~2024년도의-숙박-큐레이션-플랫폼) · [무한 스크롤 비교](/blog/무한-스크롤-비교) · [React Infinite Scroll 구현하기](/blog/react-infinite-scroll-구현하기) · [일본어는 도메인, 영어는 경로](/blog/일본어는-도메인-영어는-경로) · [Google Optimize가 사라진 뒤 미들웨어로 A/B를 돌렸다](/blog/google-optimize가-사라진-뒤-미들웨어로-ab를-돌렸다)
