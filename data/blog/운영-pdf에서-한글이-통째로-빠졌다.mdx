@@ -1,0 +1,148 @@
+---
+title: 운영 PDF에서 한글이 통째로 빠졌다 — 맥에서는 멀쩡했던 이유와 글꼴을 문서에 심은 일
+date: '2026-09-04'
+tags: [기술노트, Django]
+draft: false
+summary: '등록 신청 작성 예시 PDF를 만들어 올렸더니 운영에서 한글이 한 글자도 안 찍혔습니다. 템플릿이 지정한 글꼴이 윈도우와 맥 것이라 우분투에는 아무것도 안 걸렸고, 맥에서는 시스템 글꼴이 잡혀 정상으로 보였어요. 서버 글꼴에 기대지 않고 저장소의 Pretendard를 @font-face로 문서에 심었고, 운영 설정에서 글꼴 파일을 찾는지 테스트로 잠갔습니다. 2월부터 있던 설문 PDF 두 종도 같은 길을 지나게 됐습니다.'
+---
+
+# 운영 PDF에서 한글이 통째로 빠졌다
+
+9월 4일 낮에 등록 신청서 작성 예시 PDF를 만들었습니다(`6a3844f5`). 표준데이터 신청서와 OID 신청서를 실제로 끝까지 채워 제출하면서 단계마다 화면을 찍고, 그 캡처를 WeasyPrint로 PDF에 실은 거예요. "이 칸에 이런 값을 적는다"를 글이 아니라 화면으로 보여 주자는 물건입니다. 표준데이터 11장, OID 10장.
+
+로컬에서 열어 보고 올렸습니다. 그리고 운영에서 연 PDF에는 **한글이 한 글자도 없었습니다.** 영문과 숫자, 표의 선, 캡처 이미지는 다 있는데 한글 자리만 비어 있었어요.
+
+## 맥에서는 왜 멀쩡했나
+
+템플릿의 글꼴 지정이 이랬습니다.
+
+```css
+font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+```
+
+맑은 고딕은 윈도우 글꼴이고 Apple SD Gothic Neo는 맥 글꼴입니다. 운영은 우분투예요. 둘 다 없습니다. 그러면 `sans-serif`로 떨어지는데, 우분투 서버에 한글 글리프를 가진 sans-serif가 깔려 있지 않았어요. 글꼴이 없는 글자는 그 자리가 비어서 나갑니다.
+
+맥에서는 두 번째 글꼴이 잡혀서 정상으로 보였습니다. **개발 환경이 문제를 가려 준 겁니다.** 글꼴 지정이 틀린 게 아니라, 서버에 있는 글꼴에 기대는 구조 자체가 환경마다 다른 결과를 내는 거였어요.
+
+| 방법 | 장점 | 문제 | 판단 |
+|---|---|---|---|
+| ① 운영 서버에 한글 글꼴 설치 | 코드 무변경 | 서버를 새로 세울 때마다 같은 일을 해야 하고, 그걸 잊으면 같은 사고. 코드가 그 사실을 모름 | 기각 |
+| ② 저장소의 글꼴 파일을 `@font-face`로 문서에 심음 | 어느 서버에서 렌더해도 같은 결과. 글꼴이 코드와 함께 배포됨 | 글꼴 파일 경로를 운영 설정에서 찾아야 함 | **채택** |
+| ③ PDF를 브라우저 인쇄로 대체 | 서버 글꼴 문제 자체가 없음 | 버튼 하나로 내려받는 PDF가 아니게 됨. 설문 PDF 2종도 같이 바꿔야 함 | 기각 |
+
+Pretendard woff가 이미 저장소에 있었습니다. 화면에서 쓰던 글꼴이에요. 그걸 그대로 씁니다.
+
+## render_pdf() 하나로 모았다
+
+WeasyPrint 호출이 세 곳에 있었습니다. 작성 예시 PDF, 설문 상세 PDF, 설문 목록 PDF. 각자 `HTML(string=...).write_pdf()`를 부르고 있었어요. 이걸 함수 하나로 모았습니다(`977bbf1f`).
+
+```python
+"""WeasyPrint PDF 렌더 — 한글 글꼴을 문서에 심어서 낸다.
+
+운영(Ubuntu)에는 한글 글꼴이 깔려 있지 않아 `'Malgun Gothic', sans-serif` 같은
+글꼴 지정이 어디에도 걸리지 않는다. 그 결과 한글만 통째로 빠진 PDF가 나갔다
+(맥에서는 Apple SD Gothic Neo 가 잡혀 멀쩡해 보였다).
+그래서 서버 글꼴에 기대지 않고 저장소에 든 Pretendard 를 @font-face 로 직접 먹인다.
+"""
+
+# 템플릿의 font-family 는 'Pretendard' 로 시작해야 이 얼굴이 잡힌다
+_FACES = (("400", "Pretendard-Regular"), ("700", "Pretendard-Bold"))
+
+
+def _font_css():
+    rules = []
+    for weight, name in _FACES:
+        path = find_static_file(f"fonts/woff/{name}.woff")
+        if not path:
+            logger.warning("PDF 한글 글꼴 없음: %s (collectstatic 확인)", name)
+            continue
+        rules.append(
+            "@font-face {"
+            "font-family: 'Pretendard';"
+            f"src: url('file://{path}');"
+            f"font-weight: {weight};"
+            "font-style: normal;"
+            "}"
+        )
+    return "".join(rules)
+
+
+def render_pdf(html_string):
+    font_config = FontConfiguration()
+    stylesheets = []
+    css = _font_css()
+    if css:
+        stylesheets.append(CSS(string=css, font_config=font_config))
+    return HTML(string=html_string).write_pdf(
+        stylesheets=stylesheets, font_config=font_config
+    )
+```
+
+글꼴을 못 찾으면 경고 로그만 남기고 렌더는 계속합니다. 글꼴 하나 때문에 PDF 다운로드 자체가 500으로 죽는 건 더 나쁜 결과라서요. 대신 로그에 `collectstatic 확인`이라고 적어 뒀습니다. 다음에 같은 증상이 나면 거기부터 보라고.
+
+템플릿 네 곳의 `font-family`는 맨 앞에 `'Pretendard'`를 넣었습니다. `@font-face`로 심은 이름이 첫 번째여야 잡히니까요. 뒤의 맑은 고딕과 Apple SD Gothic Neo는 그대로 뒀습니다. 지워도 되는데, 글꼴 파일이 없는 최악의 경우에 그래도 뭔가 잡히라고요.
+
+## 글꼴 파일을 운영 설정에서 찾는가
+
+②의 문제가 여기입니다. `find_static_file()`은 Django의 `finders`를 먼저 봅니다. 그런데 finders는 `STATICFILES_DIRS`와 앱 static만 뒤져요. **운영은 `STATICFILES_DIRS`가 비어 있고 `collectstatic` 결과인 `STATIC_ROOT`만 있습니다.** finders만 믿으면 운영에서 또 못 찾아요. 같은 날 낮에 작성 예시 캡처를 실을 때 이미 한 번 걸린 문제였습니다.
+
+```python
+def find_static_file(relative):
+    path = finders.find(relative)
+    if path:
+        return path
+    root = getattr(settings, "STATIC_ROOT", None)
+    if root:
+        candidate = os.path.join(root, relative)
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+```
+
+그리고 이걸 테스트로 잠갔습니다. 운영 형태를 흉내 내서요.
+
+```python
+def test_korean_font_files_found(self):
+    # 운영(Ubuntu)엔 한글 글꼴이 없다 — @font-face 가 비면 한글만 통째로 빠진 PDF 가 나간다.
+    # 운영처럼 STATICFILES_DIRS 가 비어도 STATIC_ROOT 에서 찾아야 한다.
+    with override_settings(
+        STATICFILES_DIRS=[], STATIC_ROOT=settings.BASE_DIR / "static"
+    ):
+        css = _font_css()
+    self.assertEqual(css.count("@font-face"), len(_FACES), css)
+    for path in re.findall(r"url\('file://([^']+)'\)", css):
+        self.assertTrue(Path(path).is_file(), path)
+```
+
+`@font-face` 규칙이 얼굴 수만큼 나오는지, 거기 적힌 경로가 실제 파일인지. 이 테스트는 맥에서도 돕니다. 맥에서 통과하는 것이 운영에서 통과하는 것과 같은 조건이 되게 만든 거예요. 개발 환경이 문제를 가려 준 게 사고의 원인이었으니, 테스트가 그 가림막을 걷어야 합니다.
+
+## 캡처는 WeasyPrint에 URL로 못 준다
+
+작성 예시 PDF 쪽 이야기를 조금 더 하면, 캡처 이미지를 `/static/...` URL로 넣을 수 없었습니다. WeasyPrint가 그 URL을 받으려면 서버가 자기 자신을 다시 불러야 하는데, 프록시와 인증이 낀 배포 환경에서 그게 흔들려요. 파일을 직접 읽어 data URI로 심었습니다.
+
+```python
+# WeasyPrint 는 /static/ URL 을 스스로 못 받는다(서버가 자기 자신을 다시 불러야 한다) —
+# 파일을 직접 읽어 data URI 로 심는 편이 배포 환경(프록시·인증)에 안 흔들린다.
+```
+
+캡처가 없으면 그림만 건너뛰고 글은 남깁니다. 캡처가 낡거나 빠져도 PDF 자체는 죽지 않게. 다만 그림 없는 PDF는 조용히 나가면 아무도 모르니 경고 로그를 남겨요. 그리고 캡처 이름이 스펙의 `out()`, 뷰의 `SAMPLE_CAPTURES`, 템플릿의 `images.get()` 세 곳에서 같아야 하는데, 이 계약을 `SamplePdfTests`가 잠급니다. 한 곳에서 이름을 바꾸면 테스트가 깨져요.
+
+글꼴을 고친 뒤 캡처도 다시 찍었습니다(`db70cb25`). 오후에 신청서 확인 화면이 구획마다 표 하나로 바뀌어 표준데이터 5장이 밀려 있었고, OID 트리 구성도 바뀌어 3장이 달랐어요. 21장을 전부 다시 찍었는데 **나머지 13장은 바이트까지 동일했습니다.** 재촬영이 결정적이라는 걸 확인한 셈이에요. 같은 스펙으로 찍으면 같은 그림이 나옵니다.
+
+## 검증
+
+- 두 PDF가 `200`, `application/pdf`로 오고 한글이 찍히는 것. 고치기 전 운영에서는 한글 자리가 빈칸이었습니다.
+- PDF 안의 이미지 XObject 수가 10개·11개로 캡처 수와 같고, 실린 바이트가 디스크의 PNG와 일치하는 것.
+- `test_korean_font_files_found` — `STATICFILES_DIRS=[]`로 운영 형태를 흉내 내도 글꼴 파일 두 개를 찾는 것.
+- `SamplePdfTests` — 캡처 파일이 전부 있는지, 운영 형태에서도 찾는지, 세 곳의 이름 계약이 맞는지.
+- 설문 상세·목록 PDF 두 종도 `render_pdf()`를 지나는지 코드로 확인. 운영에서 열어 보진 않았습니다.
+
+## 남은 것 · 한계
+
+- **설문 PDF 두 종은 2월부터 같은 글꼴 지정으로 있었습니다.** 템플릿이 처음 들어온 게 2026년 2월 9일인데, 운영에서 그 PDF를 누가 열어 봤는지, 한글이 빠진 채 나간 적이 있는지는 모릅니다. 확인할 로그가 없어요. 이번에 고쳐진 건 맞지만 "언제부터 깨져 있었나"는 답하지 못합니다.
+- **글꼴을 못 찾으면 경고만 남기고 한글 없는 PDF가 나갑니다.** 500보다 낫다고 판단했는데, 사용자 입장에서는 빈 PDF를 받고 로그는 못 봅니다. 다운로드 응답에 뭔가 표시할 방법을 안 찾았습니다.
+- **글꼴 파일이 `collectstatic`에 실리는지는 배포 절차에 달려 있습니다.** 테스트는 `BASE_DIR/static`을 `STATIC_ROOT`로 흉내 낼 뿐, 실제 운영의 `STATIC_ROOT`에 woff가 들어갔는지는 배포 때 봐야 해요.
+- Pretendard Regular와 Bold 두 얼굴만 심었습니다. 템플릿에 다른 굵기가 들어가면 가까운 얼굴로 대체되고, 그건 화면과 미묘하게 다를 수 있어요.
+- 캡처 21장은 스펙이 실제 신청을 만들어 제출까지 가므로 찍고 나면 dev DB에 신청과 OID가 남습니다. 지우는 절차는 스펙 머리말에 적어 뒀지만 자동이 아닙니다.
+
+관련 글: [Django로 설문조사 시스템 처음부터 만들기](/blog/django로-설문조사-시스템-처음부터-만들기) · [디자인 회귀를 잡으려고 페이지 자동 캡쳐 스크립트를 만들었다](/blog/페이지-자동-캡쳐-스크립트-만들기) · [신청서 단계 구획이 로딩 중에 전부 보였다](/blog/신청서-단계-구획이-로딩-중에-전부-보였다) · [OID 트리를 낮에 고정하고 밤에 되돌렸다](/blog/oid-트리를-낮에-고정하고-밤에-되돌렸다)

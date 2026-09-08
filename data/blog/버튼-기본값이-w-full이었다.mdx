@@ -1,0 +1,90 @@
+---
+title: 버튼 기본값이 w-full이었다 — 되돌리는 코드 61곳이 기본값을 고를 근거였다
+date: '2026-09-03'
+tags: [기술노트, CSS]
+draft: false
+summary: '이 프로젝트의 모든 button은 base 레이어에서 w-full을 물려받고 있었습니다. 그래서 버튼을 놓는 자리마다 w-auto로 되돌리고 있었고, 그게 61곳이었어요. 기본값을 글자 폭으로 뒤집고 되돌리기를 전부 지웠습니다. 예외가 규칙보다 많으면 규칙이 틀린 겁니다.'
+---
+
+# 버튼 기본값이 w-full이었다
+
+저장 버튼 하나를 카드 안에 놓으면 카드 폭을 통째로 먹었습니다. 표 셀에 넣으면 셀을 다 채우고, 제목 옆에 붙이면 다음 줄로 떨어져 한 줄을 차지했어요. 2024년 12월에 들어온 규칙이 원인이었습니다.
+
+```css
+  /* button */
+  button {
+    @apply flex h-[2.5rem] w-full items-center justify-center rounded-lg border border-sub4 font-bold text-sub4;
+```
+
+`@layer base`가 문서의 **모든** `<button>`에 `w-full`을 줍니다. 로그인 화면의 제출 버튼처럼 폼 폭을 꽉 채워야 하는 자리에서 시작된 규칙인데, 그 뒤로 만든 화면은 대부분 그런 자리가 아니었어요.
+
+## 예외를 세어 봤다
+
+8월에 이 규칙을 문서에 적을 때는 "기본이 전체 폭이니 작은 버튼은 `w-auto`로 되돌려라"였습니다. 그 되돌리기가 얼마나 있는지 세어 봤어요.
+
+```html
+<button type="button" class="primary w-auto! px-4" onclick="toggleAllAccordions(true)">
+<button type="button" class="w-auto! px-4" onclick="toggleAllAccordions(false)">
+```
+
+`w-auto`나 `!w-auto`로 base를 되돌리는 자리가 **61곳**이었습니다. 반대로 `w-full`이 실제로 필요한 자리는 로그인·회원가입·비밀번호 찾기의 제출 버튼 **5곳**이었어요.
+
+| 기본값 | 되돌려야 하는 곳 |
+|---|---|
+| `w-full` (그때까지) | 61곳이 `w-auto` |
+| `w-auto` (바꾼 뒤) | 5곳이 `w-full` |
+
+이 표가 결정이었습니다. 규칙과 예외의 수가 뒤집혀 있으면 규칙이 틀린 거예요. 61곳에서 되돌리는 코드는 "이 버튼은 작게"라는 의도가 아니라 **base가 틀렸다는 증거가 61번 반복된 것**이었습니다.
+
+## base를 뒤집고 되돌리기를 지웠다
+
+```css
+   button {
+-    @apply flex h-[2.5rem] w-full items-center justify-center rounded-lg border border-sub4 font-bold text-sub4;
++    @apply flex h-[2.5rem] w-auto items-center justify-center whitespace-nowrap rounded-lg border border-sub4 px-4 font-bold text-sub4;
++
++    /* 버튼이 flex 라 셀의 text-center 가 안 먹는다 — w-full 을 걷어낸 뒤로 표 안 버튼이 왼쪽에 붙었다 */
++    td > & {
++      @apply mx-auto;
++    }
+```
+
+`w-auto`만 바꾸면 끝이 아니었습니다. 폭이 글자 폭이 되니까 좌우 여백이 없으면 글자가 테두리에 붙어서 `px-4`를 같이 줬고, 좁은 자리에서 라벨이 두 줄로 꺾이지 않게 `whitespace-nowrap`을 넣었어요.
+
+그리고 표 안의 버튼이 왼쪽으로 붙었습니다. 버튼이 `flex`라 셀의 `text-center`가 안 통하는데, `w-full`일 때는 폭이 셀과 같아서 그 문제가 안 보였던 거예요. `td > button`에 `mx-auto`를 줬습니다. **기본값을 바꾸면 그 기본값이 가리고 있던 다른 결함이 드러납니다.**
+
+그다음에 61곳의 `w-auto`·`!w-auto`를 지웠습니다. 되돌리기가 사라지니 `class="h-auto w-auto border-none bg-transparent"` 같은 긴 되돌림 사슬도 짧아졌어요.
+
+## 고정 폭 41곳과 아이콘 버튼 22곳
+
+되돌리기만 있던 게 아니었습니다. `w-full`을 피하는 다른 방법으로 **고정 폭**을 준 자리가 있었어요.
+
+```html
+-          <button type="submit" class="primary w-[8rem]">{{ _("의견 제출하기") }}</button>
++          <button type="submit" class="primary min-w-[6rem]">{{ _("의견 제출하기") }}</button>
+```
+
+`w-[8rem]`, `w-[11rem]`, `w-[12.5rem]`. 폭을 직접 박은 41곳이었는데, 라벨이 두 글자인 버튼에 `w-[8rem]`이 걸려 있으면 글자보다 여백이 넓은 버튼이 됩니다. 전부 `min-w-[6rem]`으로 바꿨어요. 짧은 라벨은 아래 폭을 지키고, 긴 라벨은 글자만큼 늘어납니다.
+
+아이콘 버튼은 반대 문제가 있었습니다.
+
+```html
++              <button name="closePopupBtn" class="px-0 w-8 h-8 bg-[url('/static/img/icn_close_black_32px.svg')]"></button>
+```
+
+base에 넣은 `px-4`가 정사각 아이콘 버튼의 폭을 다 먹어서 배경 이미지가 사라졌어요. `bg-contain`은 padding box 기준이라 좌우 패딩 2rem이 들어가면 2rem짜리 버튼에는 그릴 자리가 없습니다. 22곳에 `px-0`을 줬습니다. **새 기본값이 만든 새 예외**인데, 22곳은 61곳보다 적고 이유가 한 줄로 설명되니 이쪽이 낫다고 봤어요.
+
+## 검증
+
+- 커밋 diff에서 `w-auto`가 든 삭제 줄을 다시 셌습니다. 64줄이 잡히는데 문서와 주석 줄이 섞여 있어, 커밋에 적은 61곳과 정확히 같은 수로 맞추지는 못했어요. 자릿수는 맞습니다.
+- 58개 파일, 삽입 146줄에 삭제 139줄. 전수 정리인데 순증이 7줄뿐인 건 되돌리기를 지운 만큼 `px-0`·`min-w`가 들어갔기 때문입니다.
+- `w-full`이 새로 들어간 버튼 5개는 로그인·관리자 로그인·심의위원회 로그인·회원가입·비밀번호 찾기 제출입니다. 전부 폼 폭을 채워야 하는 자리예요.
+
+## 남은 것 · 한계
+
+- **`min-w-[6rem]` 하나로 41곳을 통일한 건 편의입니다.** 원래 `w-[8rem]`과 `w-[12.5rem]`은 화면마다 다른 의도였을 텐데, 그 의도를 확인하지 않고 같은 하한으로 눌렀어요. 짝을 이루는 버튼 둘의 폭이 라벨 길이에 따라 달라지는 자리가 생겼을 수 있습니다.
+- **`whitespace-nowrap`은 긴 라벨을 잘라내지 않고 넘칩니다.** 좁은 칸에 긴 라벨이 들어가면 두 줄로 꺾이는 대신 칸 밖으로 나가요. 그런 자리를 이번에 찾지 않았습니다.
+- **아이콘 버튼 22곳은 `px-0`을 손으로 붙인 것이라 다음 아이콘 버튼도 같은 걸 잊으면 배경이 사라집니다.** 문서에 ⚠️로 적어 뒀지만 코드가 막지는 않아요. `w-8`류에 자동으로 `px-0`을 주는 선택자를 안 만들었습니다.
+- 클릭 요소를 `<span>`으로 만들어 버튼 규칙을 피한 자리(데이터 맵 breadcrumb)는 이번에도 그대로입니다. 키보드 포커스를 잃는 자리인데, 기본값이 바뀌어 `<button>`으로 바꿔도 될 조건이 됐는데 안 바꿨어요.
+
+관련 글: [Tailwind v3에서 v4로 170개 파일을 옮겼다](/blog/tailwind-v3에서-v4로-170개-파일을-옮겼다) · [팔레트에 없는 색은 조용히 안 칠해진다](/blog/팔레트에-없는-색은-조용히-안-칠해진다) · [TV에 연결하니 테두리가 안 보였다](/blog/tv에-연결하니-테두리가-안-보였다)
