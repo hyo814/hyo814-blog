@@ -1,0 +1,119 @@
+---
+title: 리액트 쿼리 적용이라고 다섯 번 적었는데 찜 화면은 끝내 Recoil과 useEffect였다 — 한 달 뒤 내가 쓴 회고와 어긋나는 코드
+date: '2024-03-17'
+tags: [기술노트, React]
+draft: false
+summary: '사흘 동안 "리액트 쿼리 적용"이라는 제목으로 커밋 다섯 개를 올렸습니다. 마이페이지·설문·비밀번호는 useMutation으로 갔는데, 정작 서버 목록을 보여 주는 찜 화면은 끝까지 Recoil 아톰 다섯 개와 useEffect였어요. 한 달 뒤 쓴 회고에는 "서버 상태는 TanStack, 클라이언트 상태는 Recoil"이라고 적었는데, 코드는 그렇지 않았습니다.'
+---
+
+# 리액트 쿼리 적용이라고 다섯 번 적었는데 찜 화면은 끝내 Recoil과 useEffect였다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+직짱건강은 스위그 3기에서 만든 건강 설문·병원 추천 서비스입니다. 프런트 둘 중 제가 온보딩·회원·마이페이지·설문·찜 화면을 맡았고, 팀원이 지도·검색·캘린더를 맡았어요. 2024년 3월 15일부터 17일 새벽까지 제 커밋 제목은 전부 이렇게 시작합니다.
+
+```
+af6610a 03-15 17:45  리액트 쿼리 적용 (1차)
+b4ab9e6 03-15 23:44  리액트 쿼리 적용 (2차) : 프로필 사진 부분 까지 추가 적용
+22a2d65 03-16 00:16  리액트 쿼리 적용 (3차) : 기본 작동 확인 <accessToken ~ error>
+5d321d3 03-16 19:15  리액트 쿼리 작동 : 찜화면 제외 QA 1차 테스트
+5c914f8 03-17 02:13  리액트 쿼리 작동 : alert 처리 일부 변경
+```
+
+넷째 커밋 제목에 이미 답이 있습니다. **"찜화면 제외."** 그리고 다섯째 커밋에서도 찜 화면은 제외된 채로 끝났어요.
+
+## 무엇이 리액트 쿼리로 갔나
+
+1차 커밋(`af6610a`, 30개 파일 +327/−330)이 `src/hooks/react-query/` 폴더에 훅을 만들었습니다. 17일 새벽 기준으로 제 훅 다섯 파일에 든 호출을 세면 이렇습니다.
+
+| 훅 | `useMutation` | `useQuery` |
+|---|---|---|
+| `useAuth.ts` (로그인·로그아웃·가입·이메일 인증) | 5 | 0 |
+| `useChangePassword.ts` | 2 | 0 |
+| `useProfileImage.ts` | 2 | 0 |
+| `useFind.ts` (아이디·비밀번호 찾기) | 2 | 0 |
+| `useSurvey.ts` | 1 | 1 |
+| `useLikeHospitalInfo.ts` (찜) | **0** | **0** |
+
+쓰기 요청은 전부 `useMutation`으로 갔습니다. 서버에서 목록을 읽어 와 화면에 그리는 건 찜 화면 하나였는데, 그 하나가 `useQuery`를 안 씁니다. 같은 폴더 이름이 `react-query`인데 그 안에 리액트 쿼리를 안 쓰는 훅이 하나 들어 있는 거예요.
+
+## 찜 화면의 실제 모양
+
+17일 새벽 `useLikeHospitalInfo.ts`는 이렇게 시작합니다.
+
+```ts
+const useHospitalInfo = () => {
+    const [hospitalFirstData, setHospitalFirstData] = useRecoilState<HospitalBookmark[]>(hospitalFirstDataState);
+    const [hospitalInfo, setHospitalInfo] = useRecoilState<HospitalDetail[]>(hospitalInfoState);
+    const [isLoading, setIsLoading] = useRecoilState<boolean>(isLoadingState);
+    const [isHospitalDetailsLoaded, setIsHospitalDetailsLoaded] = useRecoilState<boolean>(isHospitalDetailsLoadedState);
+    const [isHospitalInfoLoaded, setIsHospitalInfoLoaded] = useRecoilState<boolean>(isHospitalInfoLoadedState);
+
+    useEffect(() => {
+        const initializeHospitalInfo = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetchHospitalInfo();
+```
+
+Recoil 아톰 다섯 개. 서버에서 온 북마크 목록(`hospitalFirstData`), 그걸 Google Places로 채운 상세(`hospitalInfo`), 그리고 로딩 플래그 셋. 서버 응답을 `useEffect` 안에서 직접 `fetch`해서 아톰에 넣습니다. 리액트 쿼리가 대신 해 주는 일을 손으로 다 하고 있는 모양이에요.
+
+시도는 있었습니다. 3월 13일 커밋(`0e89494`)에 `fakeuseLikeHospitalInfo.ts`라는 파일이 있어요.
+
+```ts
+    // @ts-ignore
+    const { data:response, isLoading, isError, error } = useQuery(['hospitalInfo'], fetchHospitalInfo);
+```
+
+`@ts-ignore`가 붙은 이유는 지금 보면 분명합니다. `useQuery(키배열, 함수)` 꼴은 v4 문법이고, 이 프로젝트의 `@tanstack/react-query`는 5.24였어요. v5는 객체 하나만 받습니다. 타입이 막으니 무시하고 넘어간 건데, 그때 그걸 알았는지는 커밋에 없습니다. 파일 이름에 `fake`를 붙인 채 이틀 있다가 1차 커밋에서 지웠고, 찜 페이지는 처음부터 `fake` 아닌 쪽을 import하고 있었습니다.
+
+## 왜 찜만 못 갔나
+
+커밋에 이유는 없습니다. 코드로 읽히는 건 하나예요. 찜 목록은 서버 응답 한 번으로 끝나지 않습니다. 서버가 주는 건 `googleMapId`와 찜한 날짜뿐이고, 병원 이름·주소·거리는 브라우저에서 Google Places `getDetails`를 병원 수만큼 불러 콜백으로 받아야 해요. 그 콜백들을 `Promise.allSettled`로 모아 두 번째 아톰에 넣는 구조라, "서버 요청 하나 = 쿼리 하나"로 떨어지지 않았습니다. 마이페이지의 `useMutation`처럼 함수 하나를 넘기면 끝나는 자리가 아니었어요.
+
+같은 목록을 팀원 화면은 리액트 쿼리로 읽고 있었습니다. `hooks/react-query/index.ts`의 `useQuery_BookmarkList`는 팀원이 3월 7일에 만든 훅이고, 검색 목록과 지도 상세가 찜 여부를 표시할 때 씁니다. 같은 `/bookmark` 응답이 **팀원 화면에서는 리액트 쿼리 캐시에, 제 찜 화면에서는 Recoil 아톰에** 따로 있었던 셈이에요.
+
+## 같은 커밋에서 한 다른 일
+
+17일 새벽 커밋은 `alert()`를 MUI `Snackbar`로 바꾸는 일도 같이 했습니다. `src` 안의 `alert(` 호출이 48곳에서 37곳으로 줄었어요. 찜·비밀번호 변경·프로필·설문 목록 네 화면입니다. 비밀번호 변경 화면에는 이런 코드가 들어갔습니다.
+
+```tsx
+                    setOpenSnackbar(false);
+                    setTimeout(() => {
+                        setSnackbarMessage(response.message);
+                        setSnackbarSeverity('error');
+                        setOpenSnackbar(true);
+                    }, 100);
+```
+
+닫고 100ms 뒤에 다시 여는 코드예요. 같은 메시지가 연달아 오면 스낵바가 안 다시 뜨는 걸 이렇게 우회했습니다. 왜 100인지는 커밋에 없습니다.
+
+## 한 달 뒤 회고와 어긋난다
+
+3월 31일에 쓴 [직짱건강 회고](/blog/직짱-건강-직장인을-위한-올인원-헬스케어-서비스-개발) 2절은 "병원 북마크 — 클라이언트 상태와 서버 상태를 나눠 관리"입니다. 표까지 그려서 Recoil은 클라이언트 상태, TanStack Query는 "북마크 목록 조회·동기화, 캐싱"이라고 적었어요. 그리고 이렇게 썼습니다.
+
+> 서버에서 온 데이터를 전역 스토어에 복사해두면 두 벌이 되고 그 순간부터 동기화 문제가 시작됩니다.
+
+찜 화면이 정확히 그 모양이었습니다. 서버 응답을 Recoil 아톰에 복사해 두고, 팀원 화면의 리액트 쿼리 캐시와 두 벌로 갖고 있었어요. 회고는 원칙을 썼고, 코드는 그 원칙의 반대편에 있었습니다. 그 글은 그대로 두고, 이 글이 그 자리를 정정합니다.
+
+## 검증
+
+그날 확인한 것:
+
+- 커밋 제목대로 "찜화면 제외 QA". 마이페이지·설문·비밀번호 흐름을 손으로 돌렸습니다. 기록은 제목 한 줄뿐이에요.
+
+이 글을 쓰며 확인한 것:
+
+- 제 훅 다섯 파일의 `useMutation`·`useQuery` 호출 수는 17일 새벽 커밋(`5c914f8`)에서 `grep -c`로 셌습니다. 찜 훅은 둘 다 0입니다.
+- `fakeuseLikeHospitalInfo.ts`는 `0e89494`에서 생겨 `af6610a`에서 지워졌고, 찜 페이지의 import는 그 사이에도 `fake` 아닌 파일이었습니다.
+- `useQuery_BookmarkList`를 쓰는 곳은 팀원의 `Search/Child/SearchList.tsx`와 `Map/[id]/Child/InfoTitleView.tsx` 두 파일이고, 두 줄 다 `git blame`이 팀원 3월 7일 커밋을 가리킵니다.
+- `alert(` 48→37은 `git grep`으로 셌습니다. 2026년 9월 HEAD에서는 43입니다. 뒤에 다시 늘었어요.
+
+## 남은 것 · 한계
+
+- **찜 화면은 끝내 리액트 쿼리로 못 갔습니다.** 3월 21일 커밋(`474fd62`)은 찜 훅에 "처음 진입하면 `localStorage`에 표시를 남기고 한 번 `router.reload()`"하는 코드를 넣었고, 그 코드가 지금 HEAD에도 있습니다. 첫 렌더에서 목록이 안 그려지는 문제를 새로고침으로 덮은 건데, 왜 안 그려졌는지는 커밋에 없습니다.
+- **같은 데이터가 두 벌인 것을 그때는 몰랐습니다.** 팀원이 리액트 쿼리로 같은 목록을 읽고 있다는 걸 이 글을 쓰며 `grep`으로 알았어요. 그때 알았다면 찜 화면도 `useQuery_BookmarkList`를 쓰고 Places 상세만 따로 붙였을 텐데, 그 선택지를 본 기록이 없습니다.
+- **회고와 코드의 어긋남을 한 달 동안 몰랐습니다.** 회고를 쓸 때 코드를 다시 열어 보지 않은 거예요. 이후 TripTune에서는 반대 방향으로 갔습니다. 서버 상태 라이브러리를 화면별로 걷어내는 쪽으로요. 그 경위는 [일정 관리와 데이터 동기화 문제 해결하기](/blog/일정-관리와-데이터-동기화-문제-해결하기)에 있고, 그 글도 나중에 뒤집혔습니다.
+- `swr`이 `package.json`에 설치돼 있고 import는 0건입니다. 리액트 쿼리와 같이 깔아 두고 하나만 쓴 채 끝났어요.
+
+관련 글: [직짱건강 — 백엔드를 기다리지 않고 설문 인터페이스를 먼저 완성한 방법](/blog/직짱-건강-직장인을-위한-올인원-헬스케어-서비스-개발) · [무한 스크롤에서는 왜 이슈가 생긴 걸까 — 상태의 주인이 둘일 때](/blog/무한-스크롤에서는-왜-이슈가-생긴-걸까) · [일정에 담은 장소를 컴포넌트 state에서 스토어로 옮겼다](/blog/일정에-담은-장소를-컴포넌트-state에서-스토어로-옮겼다) · [일정 관리와 데이터 동기화 문제 해결하기](/blog/일정-관리와-데이터-동기화-문제-해결하기)

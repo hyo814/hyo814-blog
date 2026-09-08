@@ -1,0 +1,110 @@
+---
+title: data.data가 data.data.data가 됐다 — 응답 껍데기를 벗기는 자리를 36분 만에 옮겼다
+date: '2024-03-14'
+tags: [기술노트, 네트워크]
+draft: false
+summary: '마이페이지 회원 정보가 화면에 안 찍혀서 새벽에 커밋 둘을 올렸습니다. 첫 커밋은 API 함수가 벗기던 껍데기를 화면 쪽으로 넘겨 data.data.data를 읽게 했고, 36분 뒤 두 번째 커밋이 그걸 되돌리고 팀원이 만들어 둔 타입 붙은 훅으로 갈아탔어요. 나흘 뒤에는 상태 코드마다 써 두던 에러 문구를 지우고 서버가 주는 message 하나로 통일했습니다.'
+---
+
+# data.data가 data.data.data가 됐다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+직짱건강 백엔드의 응답은 한 겹 껍데기를 두르고 옵니다. 회원 정보를 부르면 몸통이 `response.data.data`에 있어요. axios가 `data`를 한 번 감싸고, 서버가 `data`로 한 번 더 감싼 모양입니다.
+
+2024년 3월 14일 새벽, 마이페이지에 회원 정보가 안 찍혔습니다. 커밋 제목은 "[fix] userInfo data issue"와 "[fix] userInfo data issue 2". 둘 사이가 36분이에요.
+
+## 첫 커밋 — 껍데기를 화면 쪽으로 넘겼다
+
+0시 36분 `6a3ea4a`. API 함수가 벗기던 한 겹을 안 벗기기로 했습니다.
+
+```ts
+ export const fetchUserInfo = async () => {
+-        const response = await axiosInstance.get(fetchUserInfoUrl);
+-        return {success: true, data: response.data.data};
++        const response = await axiosInstance.get('/api/members/my-page');
++        return {success: true, data: response.data};
+```
+
+그러면 화면이 한 겹 더 벗겨야 합니다. 마이페이지와 프로필 수정 화면의 `data.data` 일곱 곳이 `data.data.data`가 됐어요.
+
+```ts
+-            setUserInfo(data.data);
++            setUserInfo(data.data.data);
+```
+
+같은 커밋에서 `queryKey`를 `['userInfo']`에서 `['user_info']`로 바꿨고, URL 상수 `fetchUserInfoUrl` 대신 문자열을 직접 박았습니다. 왜 이렇게 했는지는 커밋에 없습니다. 지금 diff를 읽으면 "어디서 값이 사라지는지 모르겠으니 껍데기를 전부 화면까지 끌고 와서 보자"는 움직임으로 보이는데, 그건 제 추정이에요.
+
+## 두 번째 커밋 — 되돌리고 훅으로
+
+1시 12분 `6f751b6`. API 함수는 원래대로 `response.data.data`와 `fetchUserInfoUrl`로 돌아갑니다. 대신 화면이 `useQuery`를 직접 부르던 걸 걷어내고, `hooks/react-query`에 있던 `useQuery_UserInfo`를 씁니다.
+
+```ts
+-    const {data, isLoading, error} = useQuery({
+-        queryKey: ['user_info'],
+-        queryFn: fetchUserInfo,
+-    });
++    const {data: userData, isLoading} = useQuery_UserInfo();
+
+     useEffect(() => {
+-        if (data) {
+-            setUserInfo(data.data.data);
++        if (userData) {
++            setUserInfo(userData?.data);
+```
+
+이 훅은 팀원이 3월 7일에 댓글 화면용으로 만들어 둔 것이었습니다(`85fa047`). 응답 모양이 타입으로 붙어 있어요.
+
+```ts
+export const useQuery_UserInfo: () => UseQueryResult<{
+    success: boolean;
+    data: {
+        email: string;
+        memberId: number;
+        nickname: string;
+        profileImage: string;
+        userId: string;
+    };
+```
+
+첫 커밋이 껍데기를 화면으로 넘긴 거라면, 두 번째는 껍데기를 벗기는 자리를 API 함수 한 곳에 두고 그 결과 모양을 타입으로 고정한 겁니다. 36분 사이에 "어디서 벗길 것인가"의 답이 바뀌었어요. 같은 응답을 읽는 화면이 둘(마이페이지·프로필 수정)이었으니 한 곳에서 벗기는 쪽이 맞습니다. 그날은 그 이유를 적지 않았습니다.
+
+## 나흘 뒤 — 에러 문구를 서버에 맡겼다
+
+3월 18일 새벽 `6ae8916` "api 형식 통일". 찜 API 두 함수가 상태 코드마다 문구를 갖고 있었습니다.
+
+```ts
+-            let message = "찜한 병원 정보를 가져오는 중 에러가 발생했습니다.";
+-            switch (error.response.status) {
+-                case 400:
+-                    message = "잘못된 요청입니다.";
+-                    break;
+-                case 401:
+-                    message = "인증에 실패했습니다.";
+-                    break;
+-                case 404:
+-                    message = "찾을 수 없는 정보입니다.";
+-                    break;
+-            }
+-            alert(message);
++            alert(errData.message || '찜한 병원 정보를 가져오는 중 에러가 발생했습니다. 다시 시도 해주세요.');
+```
+
+삭제 쪽은 400·401·403·404 넷이었어요. 전부 지우고 서버가 주는 `errData.message`를 먼저 쓰고, 없을 때만 기본 문구를 씁니다. 마이페이지 API 함수들도 같은 모양으로 줄였고, `errCode`를 읽던 곳은 `errorCode`로 바꿨습니다. 서버 응답의 키 이름이 그쪽이었던 거예요.
+
+프런트가 상태 코드를 보고 문구를 고르면 서버가 새 코드를 돌려줄 때마다 프런트를 고쳐야 합니다. 문구는 서버가 정하고 프런트는 보여 주기만 하기로 한 건데, 백엔드와 말로 정했는지는 커밋에 남아 있지 않고, 코드만 그렇게 바뀌어 있습니다.
+
+## 검증
+
+- 그날 확인한 것: 마이페이지에 닉네임·이메일이 찍히는 것. 브라우저에서 눈으로 봤고 기록은 없습니다.
+- 이 글을 쓰며 확인한 것: `git show 6a3ea4a`의 `data.data`→`data.data.data` 일곱 곳과 `queryKey` 변경, `git show 6f751b6`에서 `fetchUserInfo`가 `response.data.data`로 돌아온 것. `git log -S'useQuery_UserInfo'`로 훅의 첫 등장이 3월 7일 팀원 커밋인 것.
+- `6ae8916`에서 지워진 `switch` 두 개의 상태 코드 목록은 diff에서 그대로 옮겼습니다.
+- 서버 응답이 실제로 어떤 모양이었는지는 프런트 저장소만으로는 알 수 없고, 훅의 타입 선언을 그 대신 인용했습니다.
+
+## 남은 것 · 한계
+
+- **`user_info`로 바꾼 `queryKey`가 그대로 남았습니다.** 두 번째 커밋이 훅으로 갈아타면서 키는 훅 안의 것을 쓰게 됐는데, 첫 커밋이 왜 키 이름을 바꿨는지는 끝내 모릅니다.
+- **껍데기를 벗기는 자리를 한 곳으로 모은 건 마이페이지뿐입니다.** 찜·설문 API는 여전히 함수마다 `response.data`와 `response.data.data`가 섞여 있었어요.
+- 백엔드 한 명과 응답 모양·에러 문구를 코드로 맞춰 가던 방식은 여섯 달 뒤 TripTune에서 [검색은 GET, 목록은 POST](/blog/검색은-get-목록은-post-하루에-세-번-바꾼-메서드)로 반복됩니다. 그때도 계약을 문서가 아니라 커밋으로 맞췄습니다.
+
+관련 글: [직짱건강 — 백엔드를 기다리지 않고 설문 인터페이스를 먼저 완성한 방법](/blog/직짱-건강-직장인을-위한-올인원-헬스케어-서비스-개발) · [검색은 GET, 목록은 POST](/blog/검색은-get-목록은-post-하루에-세-번-바꾼-메서드)

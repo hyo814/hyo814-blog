@@ -1,0 +1,80 @@
+---
+title: Google Places 응답의 lat이 함수인지 숫자인지 몰랐다 — 둘 다 대비한 분기와 거리 NaN
+date: '2024-03-19'
+tags: [기술노트, JavaScript]
+draft: false
+summary: '찜한 병원까지의 거리가 NaN으로 나오는 경우가 있었습니다. Places 응답의 location.lat을 typeof로 검사해 함수면 호출하고 숫자면 그대로 쓰는 분기를 넣고, LatLng 객체로 다시 감싸 거리를 계산하게 바꿨어요. 문서를 지금 읽어 보면 location은 늘 LatLng 객체라 lat은 늘 함수인데, 그날은 둘 다 대비했습니다. 실제로 어느 쪽이 왔는지는 기록에 없습니다.'
+---
+
+# Google Places 응답의 lat이 함수인지 숫자인지 몰랐다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+찜 화면은 병원마다 Google Places `getDetails`를 불러 위치를 받고, 사용자의 현재 위치와의 거리를 `computeDistanceBetween`으로 계산해 "2.31 km 떨어져 있습니다"라고 보여 줍니다. 3월 19일 저녁 커밋(`0345ed7`) 제목은 "지도 : catch"이고, 바뀐 건 파일 하나 27줄입니다.
+
+## 바꾼 것
+
+```ts
+                                    let hospitalLat = result.geometry.location.lat;
+                                    let hospitalLng = result.geometry.location.lng;
+                                    if (typeof hospitalLat === 'function') {
+                                        hospitalLat = hospitalLat();
+                                    }
+                                    if (typeof hospitalLng === 'function') {
+                                        hospitalLng = hospitalLng();
+                                    }
+                                    const hospitalLocation = new google.maps.LatLng(hospitalLat, hospitalLng);
+                                    const distanceMeters = google.maps.geometry.spherical.computeDistanceBetween(
+                                        userLocation,
+                                        hospitalLocation
+                                    );
+```
+
+그 전까지는 `result.geometry.location`을 그대로 `computeDistanceBetween`에 넘겼습니다. 바꾼 뒤에는 `lat`·`lng`를 꺼내서, 함수면 호출하고 아니면 그대로 두고, 그 값으로 `LatLng` 객체를 새로 만들어 넘깁니다. 같은 커밋에서 거리가 `NaN`이면 `reject`하던 것을 `resolve(null)`로 바꿔 그 병원만 목록에서 빠지게 했어요.
+
+세 시간 뒤 커밋(`75d71cd`)이 한 줄을 더 얹었습니다.
+
+```ts
+const hospitalLocation = new google.maps.LatLng(Number(hospitalLat), Number(hospitalLng)); // Convert to Number if not already
+```
+
+`Number()`로 한 번 더 감쌌습니다. 함수 호출 결과가 숫자가 아닐 수도 있다고 본 거예요.
+
+## 그때 무엇을 봤나
+
+커밋에는 "catch" 한 단어뿐입니다. 코드로 읽히는 건 `computeDistanceBetween`이 `NaN`을 돌려준 경우가 있었다는 것, 그리고 그 원인을 `location.lat`이 함수인지 숫자인지에서 찾으려 했다는 것입니다. 왜 그렇게 봤는지는 남아 있지 않아요.
+
+같은 저장소의 지도 화면(팀원 담당)은 처음부터 `location?.lat()`처럼 메서드로 부르고 있었습니다. 제 코드는 `location` 객체를 통째로 넘기고 있었고요. 둘 다 동작하는 방식이라 어느 쪽이 틀렸다고 할 수는 없습니다.
+
+## 문서는 뭐라고 하나
+
+이 글을 쓰면서 처음 문서를 찾아 읽었습니다. Places 레퍼런스에서 `PlaceGeometry.location`의 타입은 `LatLng optional`이고, 설명은 "The Place's position."입니다. `LatLng` 클래스의 `lat()`은 "Returns the latitude in degrees."예요. 그러니까 문서대로면 `location.lat`은 **항상 함수**입니다. 숫자인 경우는 없어요.
+
+숫자 꼴이 있긴 합니다. `LatLngLiteral`, 즉 `{ lat: number, lng: number }` 객체예요. 문서는 이렇게 적습니다.
+
+> Object literals are accepted in place of LatLng objects, as a convenience, in many places. These are converted to LatLng objects when the Maps API encounters them.
+
+리터럴은 **API에 넘길 때** 허용되는 편의 표기이지, API가 **돌려주는** 응답이 리터럴인 건 아닙니다. `getDetails` 응답의 `location`이 리터럴로 오는 경우는 문서에 없습니다.
+
+그러면 `typeof === 'function'` 분기는 늘 참이고, 숫자 쪽 분기는 한 번도 안 탔을 가능성이 큽니다. 그날 `NaN`이 나온 원인이 이 분기로 잡혔는지, 아니면 같은 커밋에서 `reject`를 `resolve(null)`로 바꿔 화면이 안 터지게 된 것을 "잡혔다"고 본 건지, 지금은 가를 수 없습니다.
+
+## 검증
+
+그날 확인한 것:
+
+- 거리가 `NaN`인 병원이 목록에서 사라지고 나머지는 `km`로 표시되는 것. 기록은 커밋 제목뿐입니다.
+
+이 글을 쓰며 확인한 것:
+
+- 커밋 시각 20:31과 23:35, 변경 줄 수 27/24는 `git show --stat`으로 확인했습니다.
+- 팀원 지도 화면의 `.lat()` 호출은 `git grep`으로 찾았습니다. `Map/index.tsx`·`Search/index.tsx` 6곳입니다.
+- 문서 인용은 2026년 9월의 Google Maps JavaScript API 레퍼런스(Places Service, Coordinates)에서 그대로 옮겼습니다. 2024년 3월 문서가 같았는지는 확인하지 않았습니다.
+
+## 남은 것 · 한계
+
+- **NaN의 원인을 모릅니다.** 응답 자체가 `location` 없이 온 경우는 바깥 `if`에서 걸러지고 있었으니, 남는 후보는 `userLocation` 쪽(geolocation 실패나 지연)인데 그쪽은 이 커밋이 손대지 않았습니다.
+- **문서를 그때 안 읽었습니다.** `typeof` 분기는 문서 한 줄이면 필요 없었던 코드예요. 지금 HEAD에도 그대로 있습니다.
+- **`Number()` 한 겹은 근거가 없습니다.** `lat()`의 반환은 문서상 숫자이고, 숫자에 `Number()`를 씌운 건 확신이 없어서 덧댄 것으로 읽힙니다.
+- 이틀 뒤 커밋(`474fd62`)은 이 훅에 첫 진입 시 한 번 `router.reload()`하는 코드를 넣었습니다. 목록이 첫 렌더에서 안 그려지는 문제를 새로고침으로 덮은 건데, 이 글의 분기와 같은 종류예요. 원인 대신 증상을 막았고, 둘 다 지금 HEAD에 있습니다.
+
+관련 글: [직짱건강 — 백엔드를 기다리지 않고 설문 인터페이스를 먼저 완성한 방법](/blog/직짱-건강-직장인을-위한-올인원-헬스케어-서비스-개발) · [axios를 걷어냈다가 이틀 만에 되돌렸다가 다시 걷어냈다](/blog/axios를-걷어냈다가-이틀-만에-되돌렸다가-다시-걷어냈다)

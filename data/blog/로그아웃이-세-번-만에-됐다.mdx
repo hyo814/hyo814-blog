@@ -1,0 +1,125 @@
+---
+title: 로그아웃이 세 번 만에 됐다 — 지운 뒤에 보내던 토큰, 암호문을 그대로 보내던 헤더
+date: '2024-03-14'
+tags: [기술노트, 네트워크]
+draft: false
+summary: '직짱건강의 로그아웃은 2월 말에 처음 짰고 3월 14일 새벽에야 "고치기 성공"이라는 커밋이 올라갔습니다. 그 사이 토큰은 localStorage에서 암호화된 쿠키로 옮겨 갔고, 저는 쿠키를 지운 다음에 로그아웃 요청을 보내고 있었어요. 마지막 커밋은 복호화·Bearer 접두어·절대 URL 셋을 한꺼번에 바꿔서, 그중 무엇이 고친 건지는 지금도 모릅니다.'
+---
+
+# 로그아웃이 세 번 만에 됐다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+2024년 2월, 스위그 3기에서 직짱건강이라는 건강 설문 서비스를 만들고 있었습니다. 프런트는 둘이었고 저는 온보딩·로그인·마이페이지·설문·찜을 맡았어요. React는 3년째 쓰고 있었지만 로그인부터 로그아웃까지 인증 흐름을 처음부터 끝까지 혼자 맡은 건 이때가 처음이었습니다.
+
+로그아웃 버튼은 2월 28일에 붙였고, "로그아웃 고치기 성공"이라는 커밋은 3월 14일 새벽 2시 51분입니다. 보름 동안 세 판을 짰어요.
+
+## 첫 판 — localStorage에서 꺼내 Bearer로
+
+2월 28일 `91147d3`. 마이페이지의 로그아웃 모달에 `console.log('Performing logout...')`만 있던 자리를 실제 함수로 바꿨습니다.
+
+```ts
+const refreshToken = localStorage.getItem('refreshToken');
+// HTTP 요청 헤더에 'Authorization' 대신 'RefreshToken' 사용 (서버 구현에 따라 다를 수 있음)
+await axios.post('/api/members/logout', {}, {
+    headers: {
+        'Authorization': `Bearer ${refreshToken}`
+    }
+});
+localStorage.removeItem('accessToken');
+localStorage.removeItem('refreshToken');
+```
+
+주석은 `RefreshToken` 헤더를 쓰라고 적어 놓고 코드는 `Authorization`으로 보냅니다. 서버가 어느 헤더를 읽는지 확인하기 전에 쓴 코드라는 게 주석에 그대로 남아 있어요. 이때 토큰은 `localStorage`에 있었습니다.
+
+## 토큰이 쿠키로 옮겨 갔다
+
+이틀 뒤 3월 1일, 팀원이 `cf6b6a1` "axios 토큰 및 리프래쉬 설정"으로 인증 기반을 통째로 바꿨습니다. 토큰은 `zzgg_at`·`zzgg_rt`라는 쿠키에 7일짜리로 들어가고, 넣을 때 `crypto-js`로 AES 암호화를 합니다. 요청마다 쿠키를 읽어 `Authorization`에 얹는 인터셉터도 이 커밋이에요.
+
+```ts
+const SECERET_KEY = 'temp';
+
+const setEncryptedCookie = (name: string, value: string, days: number) => {
+    const encryptedValue = encryptData(value); // 데이터를 암호화
+    document.cookie = `${name}=${encryptedValue}${expires}; path=/`;
+};
+```
+
+키가 `'temp'`로 코드에 박혀 있어서 번들을 열면 누구나 풀 수 있습니다. 그러니 보안이라기보다 쿠키 값을 눈으로 못 읽게 하는 정도예요. 다만 이건 지금 보니 그렇다는 것이고, 그때 저는 이 훅을 그냥 가져다 썼습니다.
+
+## 둘째 판 — 지운 다음에 보냈다
+
+3월 4일 `b5acb95`, 마이페이지를 새로 짜면서 로그아웃도 이 기반 위로 옮겼습니다.
+
+```ts
+const onLogout = async () => {
+    localStorage.clear();
+    logoutDeleteToken();
+    // todo : 토큰이 안보내지고 있는거 같다.
+    await logout();
+};
+```
+
+`logoutDeleteToken()`이 쿠키 두 개를 지우고, 그다음에 `logout()`을 부릅니다. 그런데 `logout()`은 인터셉터가 붙은 `axiosInstance.patch('/api/members/logout')`이고, 인터셉터는 요청 직전에 쿠키에서 액세스 토큰을 읽어 헤더에 넣어요. 지운 뒤에 읽으니 넣을 게 없습니다. "토큰이 안보내지고 있는거 같다"는 todo는 정확한 관찰이었는데, 순서가 원인이라는 데까지는 그때 못 갔어요. 이 인과는 이 글을 쓰면서 인터셉터 코드를 읽고 맞춘 겁니다.
+
+`localStorage.clear()`도 남아 있습니다. 토큰이 이미 쿠키로 간 뒤라 지울 게 없는데, 첫 판의 잔재가 그대로 따라왔어요.
+
+## 셋째 판 — 순서를 뒤집고, 응답으로 판정하고
+
+3월 12일 `9f4a409`(PR #89). 커밋 제목이 "쿠키 초기화로 로그아웃이 아닌 실제 로그아웃 진행 하도록"입니다. 순서를 뒤집었어요.
+
+```ts
+const refreshToken = getTokenValue('zzgg_rt');
+const onLogout = async () => {
+    if (refreshToken) {
+        const response = await logout(refreshToken);
+        if (response?.data?.blacklist?.length !== 0) {
+            logoutDeleteToken();
+            await router.push('/Home');
+        } else {
+            alert(response?.data?.message);
+        }
+    }
+};
+```
+
+먼저 서버에 보내고, 응답의 `blacklist` 길이로 성공을 판정한 뒤에 쿠키를 지웁니다. 헤더 이름은 `RefreshToken`, 값은 `Bearer` 뒤에 리프레시 토큰을 붙인 형태로, 2월 주석이 말하던 그 헤더 이름을 이제야 씁니다. 인터셉터에도 로그아웃 주소일 때만 리프레시 토큰을 `Authorization`에 넣는 분기를 넣었어요.
+
+그런데 이 커밋에도 함정이 하나 있었습니다. `getTokenValue`는 `js-cookie`의 `Cookies.get`이라 **쿠키에 든 암호문을 그대로** 돌려줍니다. 복호화 함수는 `getDecryptedCookie`였는데 다른 걸 불렀어요. 서버는 AES 암호문을 리프레시 토큰이라고 받은 셈입니다.
+
+## 고치기 성공 — 셋을 한꺼번에
+
+3월 14일 새벽 `8e84c98` "로그아웃 고치기 성공". 그 사이 `6a3ea4a`가 로그아웃 호출을 `axiosInstance`에서 인터셉터 없는 맨 `axios`로 빼 두었고, `6f751b6`이 인터셉터의 로그아웃 분기를 다시 걷어냈습니다. 마지막 커밋은 세 가지를 바꿉니다.
+
+```ts
+-const refreshToken = getTokenValue('zzgg_rt');
++const refreshToken = getDecryptedCookie('zzgg_rt');
+
+-const response = await axios.patch(logoutUrl, {}, {
++const response = await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}${logoutUrl}`, {}, {
+     headers: {
+-        'RefreshToken': `Bearer ${refreshToken}`,
++        'RefreshToken': `${refreshToken}`,
+     },
+ });
+```
+
+복호화한 값을 보내고, `Bearer ` 접두어를 떼고, 상대 경로를 절대 URL로 바꿨습니다. 그리고 됐어요. 어느 것이 고친 건지는 커밋에 없고, 셋을 한 번에 바꿔서 지금 diff를 봐도 가릴 수 없습니다. 암호문을 보내던 건 확실히 문제였을 테고, 서버가 `Bearer` 없는 값을 기대했는지는 서버 코드가 없어서 모릅니다.
+
+메서드는 3월 4일부터 줄곧 `PATCH`였습니다. 왜 `PATCH`인지 이때는 묻지 않았고, 한 달 뒤 [로그아웃은 PATCH인가 DELETE인가](/blog/로그아웃-시-patch-방식과-delete-방식의-비교)에서 그 비교를 따로 했어요.
+
+## 검증
+
+- 그날 확인한 것: 로그아웃 뒤 홈으로 이동하고 마이페이지에 다시 못 들어가는 것. 기록은 커밋 제목 "고치기 성공"뿐이고 네트워크 탭 캡처는 없습니다.
+- 이 글을 쓰며 확인한 것: `git show b5acb95`로 `logoutDeleteToken()`이 `logout()`보다 앞에 있는 것, `cf6b6a1`의 인터셉터가 요청 시점에 `getDecryptedCookie('zzgg_at')`를 읽는 것. `9f4a409:src/hooks/useToken.ts`의 `getTokenValue`가 `Cookies.get` 한 줄인 것과 `8e84c98`에서 `getDecryptedCookie`로 바뀐 것.
+- `git log -S'localStorage.clear()'`로 그 줄이 3월 4일에 들어와 3월 16일까지 남아 있던 것을 확인했습니다.
+- 서버가 어느 헤더·어느 형식을 읽었는지는 이 저장소로는 알 수 없습니다.
+
+## 남은 것 · 한계
+
+- **셋을 한꺼번에 바꿔 원인을 모릅니다.** 하나씩 바꿨으면 "암호문을 보내고 있었다" 한 줄로 끝났을 문제예요. 같은 버릇이 그해 11월 [배포 첫날 커밋 열 개](/blog/배포-첫날-커밋-열-개)에서 다시 나옵니다.
+- **암호화 키가 `'temp'`로 번들에 있습니다.** 팀원이 만든 훅이라 제가 정한 건 아니지만, 가져다 쓰면서 한 번도 묻지 않았어요. 넉 달 뒤 TripTune에서 같은 이름의 `useSaveLocalContent`·`setEncryptedCookie`를 다시 만들었는데, 그쪽은 [암호화 자체를 안 했습니다](/blog/액세스-토큰을-7일-쿠키에-넣고-있었다). 이름은 가져가고 하는 일은 뺀 셈이에요.
+- **성공 판정을 `blacklist` 배열 길이로 합니다.** 서버가 응답 모양을 바꾸면 조용히 로그아웃이 안 되는데, 그 계약은 코드 어디에도 적혀 있지 않습니다.
+- 로그아웃 요청만 인터셉터 밖의 맨 `axios`로 나갑니다. 왜 인터셉터를 피했는지는 커밋에 없어요. 지금 보면 로그아웃 주소 분기를 인터셉터에 넣었다 뺐다 하다가 포기한 흔적으로 읽힙니다.
+
+관련 글: [직짱건강 — 백엔드를 기다리지 않고 설문 인터페이스를 먼저 완성한 방법](/blog/직짱-건강-직장인을-위한-올인원-헬스케어-서비스-개발) · [로그아웃은 PATCH인가 DELETE인가](/blog/로그아웃-시-patch-방식과-delete-방식의-비교) · [액세스 토큰을 7일 쿠키에 넣고 있었다](/blog/액세스-토큰을-7일-쿠키에-넣고-있었다) · [리프레시 토큰을 프런트가 지울 수 있나요](/blog/리프레시-토큰을-프런트가-지울-수-있나요)
