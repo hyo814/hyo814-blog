@@ -1,0 +1,73 @@
+---
+title: '99클럽 코테 스터디 17일차 TIL + 오늘의 학습 키워드: 탐욕법'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: 'function minimumTime(N) {     let time = 0; // 총 소요 시간     let currentString = ""; // 현재 입력된 문자열          // 첫 번째 ''daldidalgo'' 입력     currentString += replayKe…'
+---
+
+# 99클럽 코테 스터디 17일차 TIL + 오늘의 학습 키워드: 탐욕법
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787229113)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+const replayKeyword = "daldidalgo";
+const lastKeyword = "daldidan";
+
+function minimumTime(N) {
+    let time = 0; // 총 소요 시간
+    let currentString = ""; // 현재 입력된 문자열
+    
+    // 첫 번째 'daldidalgo' 입력
+    currentString += replayKeyword;
+    time += replayKeyword.length;
+    
+    // 현재 반복 횟수
+    let repeatCount = 1;
+
+    // 목표 반복 횟수에 도달할 때까지 복사/붙여넣기
+    while (repeatCount < N) {
+        if (repeatCount * 2 <= N) {
+            // 두 배로 복사하여 붙여넣기
+            currentString += currentString;
+            repeatCount *= 2;
+        } else {
+            // 한 번만 추가하여 목표 도달
+            currentString += replayKeyword;
+            repeatCount += 1;
+        }
+        time++;
+    }
+
+    // 마지막 'daldidan' 추가
+    currentString += lastKeyword;
+    time += lastKeyword.length;
+
+    return time;
+}
+
+// 예제 실행
+console.log(minimumTime(2)); // 예제 출력 11
+```
+
+애드 혹 알고리즘의 특징
+
+- 비기너: https://www.acmicpc.net/problem/25497 (45분)
+
+• 미들러: https://www.acmicpc.net/problem/31926 (1시간 15분)
+
+• 챌린저: https://www.acmicpc.net/problem/2056 (1시간 15분)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787229113/01.png)

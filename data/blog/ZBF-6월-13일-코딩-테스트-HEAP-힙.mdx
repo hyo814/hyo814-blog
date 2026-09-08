@@ -1,0 +1,219 @@
+---
+title: '[ZBF] 6월 13일 코딩 테스트 : HEAP (힙)'
+date: '2024-06-13'
+tags: [코딩테스트]
+draft: false
+summary: '힙(Heap)은 우선순위 큐(Priority Queue)를 구현하는 데 사용되는 완전 이진 트리 자료 구조입니다. 힙은 최대 힙(Max Heap)과 최소 힙(Min Heap)으로 나눌 수 있으며, 각 노드의 부모 노드와 자식 노드 간의 우선순위 관계를 유지합니다.'
+---
+
+# [ZBF] 6월 13일 코딩 테스트 : HEAP (힙)
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223476422853)에 2024년 6월 13일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+힙(Heap)은 우선순위 큐(Priority Queue)를 구현하는 데 사용되는 완전 이진 트리 자료 구조입니다. 힙은 최대 힙(Max Heap)과 최소 힙(Min Heap)으로 나눌 수 있으며, 각 노드의 부모 노드와 자식 노드 간의 우선순위 관계를 유지합니다.
+
+**힙(Heap) 자료 구조**
+
+**최대 힙(Max Heap)**
+
+최대 힙에서는 부모 노드가 자식 노드보다 항상 크거나 같습니다.
+
+루트 노드에는 가장 큰 값이 위치합니다.
+
+**최소 힙(Min Heap)**
+
+최소 힙에서는 부모 노드가 자식 노드보다 항상 작거나 같습니다.
+
+루트 노드에는 가장 작은 값이 위치합니다.
+
+**힙의 주요 연산**
+
+**삽입(Insertion)**
+
+새로운 요소를 힙의 마지막에 추가하고, 부모 노드와 비교하여 적절한 위치로 이동합니다.
+
+**삭제(Deletion)**
+
+루트 노드를 제거하고, 힙의 마지막 요소를 루트로 이동시킨 후, 자식 노드와 비교하여 적절한 위치로 이동합니다.
+
+**힙 구현 (JavaScript)**
+
+```js
+class MinHeap {
+    constructor() {
+        this.heap = [];
+    }
+
+    getParentIndex(index) {
+        return Math.floor((index - 1) / 2);
+    }
+
+    getLeftChildIndex(index) {
+        return index * 2 + 1;
+    }
+
+    getRightChildIndex(index) {
+        return index * 2 + 2;
+    }
+
+    swap(index1, index2) {
+        [this.heap[index1], this.heap[index2]] = [this.heap[index2], this.heap[index1]];
+    }
+
+    insert(value) {
+        this.heap.push(value);
+        this.heapifyUp();
+    }
+
+    heapifyUp() {
+        let index = this.heap.length - 1;
+        while (index > 0) {
+            let parentIndex = this.getParentIndex(index);
+            if (this.heap[parentIndex] > this.heap[index]) {
+                this.swap(parentIndex, index);
+                index = parentIndex;
+            } else {
+                break;
+            }
+        }
+    }
+
+    extractMin() {
+        if (this.heap.length === 0) {
+            return null;
+        }
+        if (this.heap.length === 1) {
+            return this.heap.pop();
+        }
+        const min = this.heap[0];
+        this.heap[0] = this.heap.pop();
+        this.heapifyDown(0);
+        return min;
+    }
+
+    heapifyDown(index) {
+        let smallest = index;
+        const leftChildIndex = this.getLeftChildIndex(index);
+        const rightChildIndex = this.getRightChildIndex(index);
+
+        if (leftChildIndex < this.heap.length && this.heap[leftChildIndex] < this.heap[smallest]) {
+            smallest = leftChildIndex;
+        }
+
+        if (rightChildIndex < this.heap.length && this.heap[rightChildIndex] < this.heap[smallest]) {
+            smallest = rightChildIndex;
+        }
+
+        if (smallest !== index) {
+            this.swap(index, smallest);
+            this.heapifyDown(smallest);
+        }
+    }
+}
+
+// 사용 예제
+const minHeap = new MinHeap();
+minHeap.insert(10);
+minHeap.insert(5);
+minHeap.insert(20);
+minHeap.insert(3);
+console.log(minHeap.extractMin()); // 3
+console.log(minHeap.extractMin()); // 5
+console.log(minHeap.extractMin()); // 10
+console.log(minHeap.extractMin()); // 20
+```
+
+**최대 힙(Max Heap) 구현**
+
+```js
+class MaxHeap {
+    constructor() {
+        this.heap = [];
+    }
+
+    getParentIndex(index) {
+        return Math.floor((index - 1) / 2);
+    }
+
+    getLeftChildIndex(index) {
+        return index * 2 + 1;
+    }
+
+    getRightChildIndex(index) {
+        return index * 2 + 2;
+    }
+
+    swap(index1, index2) {
+        [this.heap[index1], this.heap[index2]] = [this.heap[index2], this.heap[index1]];
+    }
+
+    insert(value) {
+        this.heap.push(value);
+        this.heapifyUp();
+    }
+
+    heapifyUp() {
+        let index = this.heap.length - 1;
+        while (index > 0) {
+            let parentIndex = this.getParentIndex(index);
+            if (this.heap[parentIndex] < this.heap[index]) {
+                this.swap(parentIndex, index);
+                index = parentIndex;
+            } else {
+                break;
+            }
+        }
+    }
+
+    extractMax() {
+        if (this.heap.length === 0) {
+            return null;
+        }
+        if (this.heap.length === 1) {
+            return this.heap.pop();
+        }
+        const max = this.heap[0];
+        this.heap[0] = this.heap.pop();
+        this.heapifyDown(0);
+        return max;
+    }
+
+    heapifyDown(index) {
+        let largest = index;
+        const leftChildIndex = this.getLeftChildIndex(index);
+        const rightChildIndex = this.getRightChildIndex(index);
+
+        if (leftChildIndex < this.heap.length && this.heap[leftChildIndex] > this.heap[largest]) {
+            largest = leftChildIndex;
+        }
+
+        if (rightChildIndex < this.heap.length && this.heap[rightChildIndex] > this.heap[largest]) {
+            largest = rightChildIndex;
+        }
+
+        if (largest !== index) {
+            this.swap(index, largest);
+            this.heapifyDown(largest);
+        }
+    }
+}
+
+// 사용 예제
+const maxHeap = new MaxHeap();
+maxHeap.insert(10);
+maxHeap.insert(5);
+maxHeap.insert(20);
+maxHeap.insert(3);
+console.log(maxHeap.extractMax()); // 20
+console.log(maxHeap.extractMax()); // 10
+console.log(maxHeap.extractMax()); // 5
+console.log(maxHeap.extractMax()); // 3
+```
+
+**힙은 특정 요소의 삽입 및 삭제가 효율적이며, 우선순위 큐 구현에 자주 사용됩니다. 최소 힙과 최대 힙은 각각 최소값과 최대값을 빠르게 추출할 수 있는 자료 구조로, 알고리즘 문제 해결에 유용합니다.**
+
+---
+
+[**https://school.programmers.co.kr/learn/courses/30/parts/12117**](https://school.programmers.co.kr/learn/courses/30/parts/12117)
+
+- [프로그래머스 스쿨 - 온라인 IT 특화 교육 전문 플랫폼](https://school.programmers.co.kr/learn/courses/30/parts/12117) — 프로그래머스 스쿨은 IT 분야 교육 전반의 과정을 제공하는 온라인 교육 플랫폼입니다. 프로그래밍, 데이터, 인공지능 등의 학습부터 코딩 테스트, 과제 테스트 연습까지, 프로그래머스 스쿨과 함께 성장해 보세요!

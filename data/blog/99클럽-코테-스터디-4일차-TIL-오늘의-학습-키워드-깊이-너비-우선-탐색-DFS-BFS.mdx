@@ -1,0 +1,92 @@
+---
+title: '99클럽 코테 스터디 4일차 TIL + 오늘의 학습 키워드: 깊이/너비 우선 탐색(DFS/BFS)'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: '// 정점의 수 N (5 ≤ N ≤ 100,000), 간선의 수 M (1 ≤ M ≤ 200,000), 시작 정점 R (1 ≤ R ≤ N) let N = Number(input[0].split('' '')[0]) let M = Number(input[0].split('' '')[1]) let …'
+---
+
+# 99클럽 코테 스터디 4일차 TIL + 오늘의 학습 키워드: 깊이/너비 우선 탐색(DFS/BFS)
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787253271)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+let fs = require('fs');
+const filePath = process.platform === `linux` ? `/dev/stdin` : `예제.txt`; 
+let input = fs.readFileSync(filePath).toString().split('\n');
+const c = console.log
+
+// 정점의 수 N (5 ≤ N ≤ 100,000), 간선의 수 M (1 ≤ M ≤ 200,000), 시작 정점 R (1 ≤ R ≤ N)
+let N = Number(input[0].split(' ')[0])
+let M = Number(input[0].split(' ')[1])
+let R = Number(input[0].split(' ')[2])
+
+const dfs = (N, M, R) => {
+  
+  //간선연결시키기 , 정렬하기
+  let graph = {}
+
+  for(let i = 1 ; i < N+1 ; i++){
+    graph[i] = []  
+  }
+
+  for(let i = 1 ; i < M+1 ; i++){
+    u = Number(input[i].split(' ')[0])
+    v = Number(input[i].split(' ')[1])
+
+    // 무방향그래프
+    graph[u].push(v)
+    graph[v].push(u)
+
+  }
+
+  for(let i =1 ; i < M+1 ; i++){
+    if (graph[i]){
+    graph[i].sort((a,b)=>{
+      return a-b
+    })
+  }
+  }
+  
+
+  const visited = new Array(N).fill(0); // [0, 0, 0, 0, 0] // 탐색을 마친 노드들
+  
+  let cnt = 1
+
+  let needVisit = []; // 탐색해야할 노드들
+
+  needVisit.push(R); // 노드 탐색 시작
+
+  while (needVisit.length !== 0) { // 탐색해야할 노드가 남아있다면
+    const node = needVisit.pop(); 
+    if (visited[node-1] === 0 ) { // 해당 노드가 탐색된 적 없다면
+      visited[node-1] = cnt; 
+      cnt +=1
+
+      needVisit.push(...graph[node].reverse()) // stack이니까 뒤에서 부터 빼줘야하니까 꺼구로 뒤집음. b와 c 중 b를 먼저 하게끔.
+    }
+  }
+  return visited;
+
+  };
+  
+c(dfs(N,M,R).join('\n'))
+```
+
+- 비기너: [https://school.programmers.co.kr/learn/courses/30/lessons/81301](https://school.programmers.co.kr/learn/courses/30/lessons/81301)
+- 미들러: [https://www.acmicpc.net/problem/24479](https://www.acmicpc.net/problem/24479)
+- 챌린저: [https://www.acmicpc.net/problem/1865](https://www.acmicpc.net/problem/1865)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787253271/01.png)

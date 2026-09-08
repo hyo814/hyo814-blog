@@ -1,0 +1,64 @@
+---
+title: '99클럽 코테 스터디 19일차 TIL + 오늘의 학습 키워드: 탐욕법'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: 'input.forEach((v) => {   v = v.split(" ");   v = v.map((v) => parseInt(v));   times.push([v[0], 1]);   times.push([v[1], -1]); });'
+---
+
+# 99클럽 코테 스터디 19일차 TIL + 오늘의 학습 키워드: 탐욕법
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787219375)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+```js
+let input = require("fs")
+  .readFileSync("/dev/stdin")
+  .toString()
+  .trim()
+  .split("\n");
+input.shift();
+
+const times = [];
+
+input.forEach((v) => {
+  v = v.split(" ");
+  v = v.map((v) => parseInt(v));
+  times.push([v[0], 1]);
+  times.push([v[1], -1]);
+});
+
+times.sort((a, b) => {
+  if (a[0] === b[0]) return a[1] - b[1];
+  return a[0] - b[0];
+});
+
+let answer = 0;
+let result = 0;
+
+for (let i = 0; i < times.length; i++) {
+  result += times[i][1];
+  answer = Math.max(result, answer);
+}
+
+console.log(answer);
+```
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+• 비기너: https://www.acmicpc.net/problem/1927 (30분)
+
+• 미들러: https://www.acmicpc.net/problem/1374 (1시간 30분)
+
+• 챌린저: https://www.acmicpc.net/problem/1022 (1시간 15분)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787219375/01.png)

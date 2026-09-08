@@ -1,0 +1,484 @@
+---
+title: '[ZBF] 5주차 기술 면접'
+date: '2024-06-13'
+tags: [기술노트, 면접]
+draft: false
+summary: 'console.log(doubled); // [2, 4, 6, 8, 10]'
+---
+
+# [ZBF] 5주차 기술 면접
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223478530040)에 2024년 6월 13일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+**Map과 FlatMap에 대한 설명**
+
+**Map**: map 함수는 배열이나 컬렉션의 각 요소에 동일한 함수나 연산을 적용하여 변환된 새로운 배열이나 컬렉션을 반환합니다.
+
+**FlatMap**: flatMap 함수는 배열이나 컬렉션의 각 요소에 동일한 함수나 연산을 적용하여 변환된 배열이나 컬렉션을 평평하게(flatten)한 후 반환합니다.
+
+```js
+// 배열의 각 요소에 2를 곱하는 예제
+const numbers = [1, 2, 3, 4, 5];
+const doubled = numbers.map(x => x * 2);
+
+console.log(doubled); // [2, 4, 6, 8, 10]
+
+// 각 숫자를 문자열로 변환하는 예제
+const stringNumbers = numbers.map(x => x.toString());
+
+console.log(stringNumbers); // ["1", "2", "3", "4", "5"]
+```
+
+```js
+// 배열의 각 요소를 배열로 변환하고 이를 평평하게 만드는 예제
+const numbers = [1, 2, 3, 4, 5];
+const nestedArrays = numbers.map(x => [x * 2]);
+
+console.log(nestedArrays); // [[2], [4], [6], [8], [10]]
+
+const flattened = numbers.flatMap(x => [x * 2]);
+
+console.log(flattened); // [2, 4, 6, 8, 10]
+
+// 문자열을 단어로 분리하는 예제
+const phrases = ["hello world", "javascript is fun"];
+const words = phrases.flatMap(phrase => phrase.split(" "));
+
+console.log(words); // ["hello", "world", "javascript", "is", "fun"]
+```
+
+**비동기 처리를 여러 개 하는 방법**
+
+비동기 처리를 여러 개 동시에 하거나 순차적으로 처리하는 방법에는 여러 가지가 있습니다. 자주 사용되는 방법으로는 Promise.all, Promise.race, Promise.allSettled, Promise.any와 async/await을 활용한 방식이 있습니다.
+
+**Promise.all**
+
+Promise.all은 여러 개의 비동기 작업을 병렬로 실행하고, 모든 작업이 완료될 때까지 기다립니다. 모든 작업이 성공하면 그 결과들을 배열로 반환합니다. 하나라도 실패하면 전체가 실패합니다.
+
+```js
+// 비동기 함수 예제
+function asyncTask(duration) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(`Task finished in ${duration}ms`);
+    }, duration);
+  });
+}
+
+const task1 = asyncTask(1000);
+const task2 = asyncTask(2000);
+const task3 = asyncTask(1500);
+
+Promise.all([task1, task2, task3])
+  .then(results => {
+    console.log(results); // ["Task finished in 1000ms", "Task finished in 2000ms", "Task finished in 1500ms"]
+  })
+  .catch(error => {
+    console.error(error);
+  });
+```
+
+**Promise.race**
+
+Promise.race는 여러 개의 비동기 작업 중 가장 먼저 완료된 작업의 결과를 반환합니다. 나머지 작업이 어떻게 되든 상관없이 가장 빨리 끝나는 작업의 결과만 관심이 있습니다.
+
+```js
+const task1 = asyncTask(1000);
+const task2 = asyncTask(2000);
+const task3 = asyncTask(1500);
+
+Promise.race([task1, task2, task3])
+  .then(result => {
+    console.log(result); // "Task finished in 1000ms" (가장 빠른 작업 결과)
+  })
+  .catch(error => {
+    console.error(error);
+  });
+```
+
+**Promise.allSettled**
+
+Promise.allSettled는 모든 비동기 작업이 완료될 때까지 기다리며, 각 작업의 성공/실패 여부와 관계없이 모든 작업의 결과를 배열로 반환합니다.
+
+```js
+const task1 = asyncTask(1000);
+const task2 = asyncTask(2000);
+const task3 = asyncTask(1500);
+
+Promise.allSettled([task1, task2, task3])
+  .then(results => {
+    results.forEach(result => console.log(result));
+    // {status: "fulfilled", value: "Task finished in 1000ms"}
+    // {status: "fulfilled", value: "Task finished in 2000ms"}
+    // {status: "fulfilled", value: "Task finished in 1500ms"}
+  });
+```
+
+**Promise.any**
+
+Promise.any는 여러 개의 비동기 작업 중 가장 먼저 성공한 작업의 결과를 반환합니다. 모든 작업이 실패할 때만 에러를 반환합니다.
+
+```js
+const task1 = asyncTask(1000);
+const task2 = asyncTask(2000);
+const task3 = asyncTask(1500);
+
+Promise.any([task1, task2, task3])
+  .then(result => {
+    console.log(result); // "Task finished in 1000ms" (가장 빠른 성공 작업 결과)
+  })
+  .catch(error => {
+    console.error(error);
+  });
+```
+
+**async/await와 for 루프**
+
+async/await를 사용하여 비동기 작업을 순차적으로 처리할 수도 있습니다.
+
+```js
+async function processTasks() {
+  const taskDurations = [1000, 2000, 1500];
+  for (const duration of taskDurations) {
+    const result = await asyncTask(duration);
+    console.log(result); // 각 작업의 결과를 순차적으로 출력
+  }
+}
+
+processTasks();
+```
+
+정리
+
+비동기 작업을 여러 개 처리하는 방법에는 다양한 방법이 있습니다. Promise.all은 모든 비동기 작업이 완료될 때까지 기다리고, Promise.race는 가장 먼저 완료된 작업의 결과를 반환합니다. Promise.allSettled는 모든 작업의 성공/실패 여부와 관계없이 결과를 반환하고, Promise.any는 가장 먼저 성공한 작업의 결과를 반환합니다. 마지막으로 async/await을 사용하여 비동기 작업을 순차적으로 처리할 수 있습니다.
+
+**이 코드는 동작하는 코드 인가?**
+
+```js
+const abc = async() => {
+  await setTimeout(...);
+}
+```
+
+이유는 setTimeout 함수는 프로미스를 반환하지 않기 때문입니다. setTimeout은 콜백 기반의 함수이기 때문에, await 키워드를 사용하려면 프로미스를 반환하도록 변경해야 합니다.
+
+이를 수정하여 동작하도록 하려면 setTimeout을 프로미스로 감싸야 합니다.
+
+```js
+// setTimeout을 프로미스로 감싸는 함수
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const abc = async () => {
+  await delay(1000); // 1초 대기
+  console.log("1초 후에 출력됩니다.");
+};
+
+abc();
+```
+
+- delay 함수는 setTimeout을 프로미스로 감싸서 특정 시간(ms)이 지난 후에 프로미스가 해결(resolved)되도록 합니다.
+- abc 함수는 async 함수로 선언되었으며, await 키워드를 사용하여 delay 함수가 완료될 때까지 대기합니다.
+- 1000ms (1초) 후에 "1초 후에 출력됩니다."라는 메시지를 출력합니다.
+
+**Promise를 반환하지 않는 비동기 함수의 대표적인 예로 콜백 기반의 함수들이 있습니다. XMLHttpRequest를 이용한 AJAX 호출이 그 좋은 예입니다. XMLHttpRequest는 프로미스를 반환하지 않으며, 콜백을 통해 결과를 처리합니다.**
+
+```js
+function makeRequest(url, callback) {
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", url);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+      callback(null, xhr.responseText);
+    } else if (xhr.readyState === 4) {
+      callback(xhr.status);
+    }
+  };
+  xhr.send();
+}
+
+makeRequest('https://jsonplaceholder.typicode.com/todos/1', function(error, response) {
+  if (error) {
+    console.error('Error:', error);
+  } else {
+    console.log('Response:', response);
+  }
+});
+```
+
+```js
+function makeRequest(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url);
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          resolve(xhr.responseText);
+        } else {
+          reject(xhr.status);
+        }
+      }
+    };
+    xhr.send();
+  });
+}
+
+const fetchData = async () => {
+  try {
+    const response = await makeRequest('https://jsonplaceholder.typicode.com/todos/1');
+    console.log('Response:', response);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
+
+fetchData();
+```
+
+- makeRequest 함수는 AJAX 요청을 만들고, 요청의 완료를 프로미스로 감싸서 반환합니다.
+- fetchData 함수는 async 함수로, await 키워드를 사용하여 makeRequest 함수가 완료될 때까지 대기합니다.
+- 요청이 성공하면 결과를 출력하고, 실패하면 에러를 출력합니다.
+
+**AJAX와 Fetch의 차이점**
+
+AJAX(Asynchronous JavaScript and XML)와 Fetch는 웹 애플리케이션에서 서버와 비동기적으로 데이터를 주고받기 위해 사용되는 기술입니다. 하지만 두 기술은 여러 가지 면에서 다릅니다.
+
+**1. API의 사용성**
+
+**AJAX (XMLHttpRequest)**
+
+- **콜백 기반**: AJAX는 주로 콜백을 통해 비동기 작업의 결과를 처리합니다.
+- **구문 복잡성**: XMLHttpRequest 객체를 사용하여 요청을 만들고, 상태를 추적해야 하며, 결과를 처리하는 코드를 작성하는 것이 비교적 복잡합니다.
+- **다양한 응답 형식**: 응답 데이터는 텍스트, JSON, XML 등 다양한 형식으로 처리할 수 있습니다.
+
+**Fetch**
+
+- **Promise 기반**: Fetch는 Promise를 반환하여 비동기 작업을 처리합니다. async/await과 함께 사용하면 더 간단하고 직관적인 코드를 작성할 수 있습니다.
+- **간결한 구문**: fetch 함수는 사용하기 간단하며, 요청과 응답 처리 코드가 더 읽기 쉽습니다.
+- **자동 JSON 파싱**: JSON 응답을 쉽게 파싱할 수 있는 메서드(response.json())를 제공합니다.
+
+**2. 기능 차이**
+
+**AJAX (XMLHttpRequest)**
+
+- **프로세스 제어**: 요청의 각 단계를 더 세밀하게 제어할 수 있습니다 (예: readyState 변경 추적).
+- **브라우저 호환성**: 오래된 브라우저에서도 잘 동작합니다.
+- **파일 업로드**: FormData 객체를 사용하여 파일 업로드를 쉽게 처리할 수 있습니다.
+
+**Fetch**
+
+- **스트림 처리**: fetch는 응답을 스트림으로 처리할 수 있어 대용량 데이터를 효율적으로 다룰 수 있습니다.
+- **CORS 제어**: fetch는 CORS 요청을 더 간단하게 처리할 수 있습니다.
+- **기본 지원 기능 부족**: fetch는 기본적으로 타임아웃이나 진행률 추적 같은 기능이 없으며, 이를 위해 추가 코드가 필요합니다.
+
+```js
+function makeRequest(url, callback) {
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", url);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        callback(null, xhr.responseText);
+      } else {
+        callback(xhr.status);
+      }
+    }
+  };
+  xhr.send();
+}
+
+makeRequest('https://jsonplaceholder.typicode.com/todos/1', function(error, response) {
+  if (error) {
+    console.error('Error:', error);
+  } else {
+    console.log('Response:', response);
+  }
+});
+```
+
+```js
+fetch('https://jsonplaceholder.typicode.com/todos/1')
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok ' + response.statusText);
+    }
+    return response.json();
+  })
+  .then(data => console.log('Response:', data))
+  .catch(error => console.error('Error:', error));
+```
+
+```js
+const fetchData = async () => {
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos/1');
+    if (!response.ok) {
+      throw new Error('Network response was not ok ' + response.statusText);
+    }
+    const data = await response.json();
+    console.log('Response:', data);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
+
+fetchData();
+```
+
+- **AJAX**는 콜백 기반의 복잡한 구문을 가지며 오래된 브라우저와의 호환성이 좋습니다.
+- **Fetch**는 Promise 기반으로 간결한 구문을 제공하며, 최신 기능과 간단한 사용성을 자랑하지만, 일부 기능은 기본적으로 지원되지 않습니다.
+
+**클로저:** 클로저는 함수와 그 함수가 선언된 렉시컬 환경의 조합입니다. 클로저는 함수가 생성될 때의 환경(변수 범위)을 기억하며, 생성된 이후에도 그 환경에 접근할 수 있습니다. 즉, 내부 함수가 외부 함수의 변수에 접근할 수 있는 기능을 제공합니다.
+
+```js
+function outerFunction(outerVariable) {
+  return function innerFunction(innerVariable) {
+    console.log('Outer Variable:', outerVariable);
+    console.log('Inner Variable:', innerVariable);
+  };
+}
+
+const newFunction = outerFunction('outside');
+newFunction('inside');
+```
+
+1. **outerFunction**: 외부 함수로 outerVariable이라는 매개변수를 가집니다.
+2. **innerFunction**: 내부 함수로, 외부 함수의 변수인 outerVariable과 자신의 매개변수인 innerVariable에 접근할 수 있습니다.
+3. **outerFunction('outside')**: 외부 함수를 호출하면 내부 함수를 반환합니다. 이때, outerVariable은 'outside'로 설정됩니다.
+4. **newFunction('inside')**: 반환된 내부 함수를 호출하면, 내부 함수는 outerVariable을 기억하고 있어 'outside'와 'inside'를 출력합니다.
+
+**고차 함수와 일급 객체에 대한 설명**
+
+**일급 객체**:
+
+- 일급 객체란 프로그래밍 언어에서 함수가 다른 변수와 동일하게 다루어질 수 있는 성질을 의미합니다.
+- 함수가 일급 객체로 취급되기 위해서는 다음과 같은 조건을 충족해야 합니다:
+  1. 변수에 함수를 할당할 수 있어야 합니다.
+  2. 함수의 인자로 함수를 전달할 수 있어야 합니다.
+  3. 함수의 반환 값으로 함수를 반환할 수 있어야 합니다.
+  4. 함수는 동적으로 생성될 수 있어야 합니다.
+
+**고차 함수**:
+
+- 고차 함수는 함수를 인자로 받거나(또는) 함수를 반환하는 함수를 의미합니다.
+- 즉, 함수를 다루는 함수라고 할 수 있습니다.
+
+```js
+// 함수를 인자로 받는 고차 함수
+function greet(name, formatter) {
+  console.log(formatter(name));
+}
+
+// 함수를 반환하는 고차 함수
+function createFormatter(greeting) {
+  return function(name) {
+    return `${greeting}, ${name}!`;
+  };
+}
+
+const formatter = createFormatter('Hello');
+greet('Alice', formatter); // "Hello, Alice!"
+```
+
+**콜백 함수**:
+
+- 콜백 함수는 고차 함수의 한 예로, 다른 함수에 인자로 전달되는 함수입니다.
+
+```js
+function processArray(arr, callback) {
+  const result = [];
+  for (let i = 0; i < arr.length; i++) {
+    result.push(callback(arr[i]));
+  }
+  return result;
+}
+
+const nums = [1, 2, 3, 4, 5];
+const squares = processArray(nums, function(num) {
+  return num * num;
+});
+
+console.log(squares); // [1, 4, 9, 16, 25]
+```
+
+**클로저**:
+
+- 클로저는 함수와 그 함수가 선언된 렉시컬 환경의 조합입니다.
+- 클로저는 고차 함수의 결과로 종종 사용되며, 함수가 생성될 때의 환경을 기억합니다.
+
+```js
+function createCounter() {
+  let count = 0;
+  return function() {
+    count++;
+    return count;
+  };
+}
+
+const counter = createCounter();
+console.log(counter()); // 1
+console.log(counter()); // 2
+console.log(counter()); // 3
+```
+
+**일급 객체**는 함수가 다른 변수와 동일하게 다루어질 수 있는 성질을 의미하며, 이를 통해 함수가 변수에 할당되고, 인자로 전달되고, 반환될 수 있습니다. **고차 함수**는 함수를 인자로 받거나 함수를 반환하는 함수입니다.
+
+콜백 함수는 고차 함수의 한 예로, 다른 함수에 인자로 전달되는 함수입니다. 예를 들어, 배열의 각 요소를 제곱하는 콜백 함수를 전달하여 배열을 처리할 수 있습니다.
+
+**클로저**는 함수와 그 함수가 선언된 환경의 조합으로, 함수가 생성될 때의 환경을 기억하여 나중에 그 환경에 접근할 수 있게 해줍니다. 카운터를 만드는 예제에서, 클로저를 사용하여 함수가 외부 변수인 count에 접근하고 그 값을 유지할 수 있습니다.
+
+this 키워드는 자바스크립트에서 매우 중요한 역할을 합니다. this는 함수가 호출될 때 결정되며, 호출 방식에 따라 값이 달라집니다.
+
+- **일반 함수 호출**: this는 전역 객체를 가리킵니다. (브라우저에서는 window, Node.js에서는 global)
+- **메서드 호출**: this는 해당 메서드를 소유한 객체를 가리킵니다.
+- **생성자 함수 호출**: this는 새로 생성된 객체를 가리킵니다.
+- **call, apply, bind를 사용한 호출**: this는 명시적으로 지정된 객체를 가리킵니다.
+- **화살표 함수**: this는 함수가 정의된 렉시컬 환경의 this 값을 유지합니다.
+
+```js
+var value = 1;
+
+var obj = {
+  value: 100,
+  foo: function() {
+    setTimeout(function() {
+      console.log("callback's this: ", this); // 전역 객체 (window in browsers, global in Node.js)
+      console.log("callback's this.value: ", this.value); // 1 (전역 객체의 value)
+
+      function bar() {
+        console.log("bar's this: ", this); // 전역 객체 (window in browsers, global in Node.js)
+      }
+
+      bar();
+    }, 1000);
+  }
+};
+
+obj.foo();
+```
+
+- var value = 1;: 전역 변수 value를 1로 설정합니다. 이는 전역 객체의 속성으로 추가됩니다.
+- var obj = \{ value: 100, foo: function() \{ ... \} \};: value 속성이 100인 객체 obj를 정의하고, foo라는 메서드를 추가합니다.
+- setTimeout(function() \{ ... \}, 1000);: setTimeout은 1초 후에 실행될 콜백 함수를 설정합니다. 이 함수는 일반 함수로 호출되므로 this는 전역 객체를 가리킵니다.
+
+```js
+var value = 1;
+
+var obj = {
+  value: 100,
+  foo: function() {
+    setTimeout(() => {
+      console.log("callback's this: ", this); // obj
+      console.log("callback's this.value: ", this.value); // 100 (obj의 value)
+
+      const bar = () => {
+        console.log("bar's this: ", this); // obj
+      };
+
+      bar();
+    }, 1000);
+  }
+};
+
+obj.foo();
+```

@@ -1,0 +1,79 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 12일차TIL + 스택 / 큐'
+date: '2025-02-04'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 막대기 https://www.acmicpc.net/problem/17608'
+---
+
+# [99클럽] 99클럽 코테 스터디 12일차TIL + 스택 / 큐
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223747131428)에 2025년 2월 4일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+[**https://www.acmicpc.net/problem/17608**](https://www.acmicpc.net/problem/17608)
+
+비기너 막대기 [https://www.acmicpc.net/problem/17608](https://www.acmicpc.net/problem/17608)
+
+미들러 숫자 정사각형 [https://www.acmicpc.net/problem/1051](https://www.acmicpc.net/problem/1051)
+
+챌린저 소용돌이 예쁘게 출력하기 [https://www.acmicpc.net/problem/1022](https://www.acmicpc.net/problem/1022)
+
+```js
+const fs = require("fs");
+let input = +fs.readFileSync("/dev/stdin").toString()
+let stick = 64
+const arr = []
+let count = 0
+let answer = 0
+
+if(input === 64) {
+    console.log(1)
+    return
+}
+
+while(stick>1) {
+    if(stick === input) {
+        console.log(1)
+        return
+    }
+    stick = stick/2 
+    if(stick > input) {
+        arr.push(stick)
+    }
+    else {
+        arr.push(stick)
+        arr.push(stick)
+    }
+}
+
+for(let i = 0 ; i < arr.length ; i ++) {
+    if(input - count >= arr[i]) {
+        count += arr[i]
+        answer += 1
+    }
+    
+    if(input - count === 0) {
+        console.log(answer)
+        return
+    }
+
+}
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223747131428/01.png)

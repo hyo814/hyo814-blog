@@ -1,0 +1,45 @@
+---
+title: '[코테] 주말 암기 공부'
+date: '2024-04-01'
+tags: [코딩테스트]
+draft: false
+summary: 'const array = [1, 2, 3, 4]; const squaredArray = array.map(element => element  element); console.log(squaredArray); // 출력: [1, 4, 9, 16]'
+---
+
+# [코테] 주말 암기 공부
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223402411378)에 2024년 4월 1일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+```js
+function multiply(a, b = 1) {
+return a * b;
+}
+
+const array = [1, 2, 3, 4];
+const squaredArray = array.map(element => element * element);
+console.log(squaredArray);
+// 출력: [1, 4, 9, 16]
+
+const name = "Alice";
+console.log(`Hello, ${name}!`);
+
+const obj = { a: 1, b: 2, c: 3 };
+const { a, b, c } = obj;
+
+async function fetchData() {
+const data = await fetch('https://api.example.com');
+const json = await data.json();
+console.log(json);
+}
+
+const arr1 = [1, 2, 3];
+const arr2 = [4, 5, 6];
+const combined = [...arr1, ...arr2];
+
+const array = [1, 2, 3, 4];
+array.forEach(element => console.log(element));
+// 출력: 1, 2, 3, 4
+
+const arr = [1, 2, 3, 4];
+const squares = arr.map(n => n * n);
+```

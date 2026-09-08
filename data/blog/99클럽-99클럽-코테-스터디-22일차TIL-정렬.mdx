@@ -1,0 +1,61 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 22일차TIL + 정렬'
+date: '2025-02-18'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 좌표 압축 https://www.acmicpc.net/problem/18870'
+---
+
+# [99클럽] 99클럽 코테 스터디 22일차TIL + 정렬
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223764600003)에 2025년 2월 18일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 좌표 압축 [https://www.acmicpc.net/problem/18870](https://www.acmicpc.net/problem/18870)
+
+미들러 가장 긴 증가하는 부분 수열 [https://www.acmicpc.net/problem/11053](https://www.acmicpc.net/problem/11053)
+
+챌린저 플로이드 [https://www.acmicpc.net/problem/11404](https://www.acmicpc.net/problem/11404)
+
+```js
+const fs = require('fs');
+
+function coordinateCompression(n, arr) {
+    // 중복 제거 후 정렬하여 압축된 좌표 리스트 생성
+    const sortedUnique = [...new Set(arr)].sort((a, b) => a - b);
+    
+    // 각 숫자의 압축된 값을 매핑
+    const indexMap = new Map();
+    sortedUnique.forEach((value, index) => {
+        indexMap.set(value, index);
+    });
+    
+    // 원래 배열의 좌표를 압축된 값으로 변환
+    return arr.map(value => indexMap.get(value));
+}
+
+// 입력 처리
+const input = fs.readFileSync('/dev/stdin').toString().trim().split('\n');
+const n = parseInt(input[0]);
+const arr = input[1].split(' ').map(Number);
+
+// 결과 출력
+console.log(coordinateCompression(n, arr).join(' '));
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223764600003/01.png)

@@ -1,0 +1,180 @@
+---
+title: '[ZBF] Vercel, Netlify, Heroku: 웹 애플리케이션 배포 플랫폼 비교'
+date: '2024-05-28'
+tags: [기술노트, 인프라]
+draft: false
+summary: 'Vercel, Netlify, Heroku는 각각의 장단점이 명확한 배포 플랫폼입니다. 프로젝트의 특성에 따라 적합한 플랫폼을 선택하는 것이 중요합니다. 정적 사이트나 JAMstack 아키텍처를 고려한다면 Netlify가 적합하며, Next.js 프로젝트를 사용한다면 Vercel이 최…'
+---
+
+# [ZBF] Vercel, Netlify, Heroku: 웹 애플리케이션 배포 플랫폼 비교
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223460873111)에 2024년 5월 28일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+**Vercel**
+
+**특징**
+
+- **개발자 친화적**: Vercel은 프론트엔드 개발자에게 특히 유리한 플랫폼입니다. Next.js 프레임워크를 제작한 회사로, Next.js 애플리케이션과의 통합이 매우 뛰어납니다.
+- **자동화된 배포**: GitHub, GitLab, Bitbucket과 연동하여 코드 변경 시 자동으로 배포할 수 있습니다.
+- **서버리스 함수**: Vercel은 서버리스 함수(Functions)를 통해 백엔드 로직을 쉽게 추가할 수 있습니다.
+- **미리 보기(Preview) 기능**: PR마다 미리 보기 URL을 제공하여 변경 사항을 쉽게 확인할 수 있습니다.
+
+**장점**
+
+- 빠르고 쉬운 배포
+- Next.js와의 완벽한 통합
+- 자동화된 배포 파이프라인
+- 서버리스 함수 지원
+
+**단점**
+
+- 서버리스 함수의 한계(제한된 런타임 및 메모리)
+- 복잡한 백엔드 애플리케이션에는 적합하지 않을 수 있음
+
+**Netlify**
+
+**특징**
+
+- **정적 사이트에 최적화**: Netlify는 정적 사이트와 JAMstack 아키텍처에 최적화된 플랫폼입니다.
+- **자동화된 배포**: GitHub, GitLab, Bitbucket과 연동하여 코드 변경 시 자동으로 배포할 수 있습니다.
+- **서버리스 함수**: Netlify Functions를 통해 서버리스 백엔드를 추가할 수 있습니다.
+- **폼 처리 및 인증**: Netlify는 기본적인 폼 처리 및 인증 기능을 제공합니다.
+
+**장점**
+
+- 빠르고 쉬운 정적 사이트 배포
+- 자동화된 배포 파이프라인
+- 서버리스 함수 지원
+- 기본적인 폼 처리 및 인증 기능
+
+**단점**
+
+- 정적 사이트 및 JAMstack 아키텍처에 최적화되어 있어 동적 웹 애플리케이션에는 한계가 있을 수 있음
+- 서버리스 함수의 한계(제한된 런타임 및 메모리)
+
+**Heroku**
+
+**특징**
+
+- **완전한 PaaS(Platform as a Service)**: Heroku는 완전한 PaaS로서, 프론트엔드와 백엔드 모두를 호스팅할 수 있습니다.
+- **다양한 언어 지원**: Node.js, Python, Ruby, Java 등 다양한 언어를 지원합니다.
+- **애드온**: Heroku는 데이터베이스, 캐시, 모니터링 등 다양한 애드온을 제공합니다.
+- **자동화된 배포**: GitHub와 연동하여 자동 배포를 설정할 수 있습니다.
+
+**장점**
+
+- 다양한 언어 및 프레임워크 지원
+- 완전한 PaaS로 프론트엔드와 백엔드 모두 호스팅 가능
+- 다양한 애드온 제공
+- 자동화된 배포 파이프라인
+
+**단점**
+
+- 무료 플랜의 제한(앱이 일정 시간 사용되지 않으면 슬립 상태로 전환)
+- 고사양 애플리케이션의 경우 비용이 많이 들 수 있음
+
+**결론**
+
+Vercel, Netlify, Heroku는 각각의 장단점이 명확한 배포 플랫폼입니다. 프로젝트의 특성에 따라 적합한 플랫폼을 선택하는 것이 중요합니다. 정적 사이트나 JAMstack 아키텍처를 고려한다면 Netlify가 적합하며, Next.js 프로젝트를 사용한다면 Vercel이 최상의 선택일 것입니다. 다양한 언어와 프레임워크를 지원하는 백엔드 애플리케이션을 배포하려면 Heroku가 가장 적합합니다.
+
+---
+
+**경험 했던 기억들 정리**
+
+**Vercel의 무료 플랜에서는 개인 GitHub 레포지토리를 쉽게 배포할 수 있지만, GitHub 조직(Organization) 레포지토리에서 배포하려면 유료 팀 플랜이 필요합니다.**
+
+**개인 레포로 클론하여 Vercel 무료 플랜으로 배포하기**
+
+**GitHub Organization에서 개인 레포지토리로 클론하기**
+
+**먼저, GitHub 조직 레포지토리를 개인 레포지토리로 클론해야 합니다. 이를 위해 GitHub Actions를 사용할 수 있습니다. 이 방법은 조직 레포지토리의 내용을 개인 레포지토리로 복사하여 자동으로 업데이트되도록 합니다.**
+
+**GitHub Actions 설정:**
+
+- **조직 레포지토리에 SSH 키를 생성하고 설정합니다.**
+- **개인 레포지토리에 배포 키를 추가합니다.**
+- **아래와 같은 GitHub Actions 워크플로우 파일을 생성하여** **.github/workflows** **디렉토리에 추가합니다.**
+
+```js
+name: Push to Personal Repo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  push-to-personal-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Push to personal repository
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.SSH_DEPLOY_KEY }}
+          external_repository: <your-username>/<personal-repo-name>
+          publish_branch: main
+```
+
+1. **이 워크플로우는 조직 레포지토리의 변경 사항을 개인 레포지토리로 푸시합니다.**
+
+**2. Vercel 프로젝트 설정**
+
+- **클론된 개인 레포지토리를 Vercel에 배포합니다.Vercel 대시보드에서 "New Project"를 선택합니다.개인 GitHub 계정을 선택하고, 클론된 레포지토리를 선택하여 "Import"를 클릭합니다.Vercel이 자동으로 프레임워크와 빌드 설정을 감지하며, 필요에 따라 환경 변수를 설정할 수 있습니다."Deploy" 버튼을 클릭하여 배포를 완료합니다.**
+  - **클론된 개인 레포지토리를 Vercel에 배포합니다.**
+    - **Vercel 대시보드에서 "New Project"를 선택합니다.**
+    - **개인 GitHub 계정을 선택하고, 클론된 레포지토리를 선택하여 "Import"를 클릭합니다.**
+    - **Vercel이 자동으로 프레임워크와 빌드 설정을 감지하며, 필요에 따라 환경 변수를 설정할 수 있습니다.**
+    - **"Deploy" 버튼을 클릭하여 배포를 완료합니다.**
+
+---
+
+**Netlify에서 React와 Next.js 애플리케이션을 배포하는 방법은 약간의 차이가 있습니다.**
+
+**[REACT]**
+
+**Netlify에서 React 애플리케이션 배포 시 "Page Not Found" 오류 해결 방법**
+
+**React 애플리케이션을 Netlify에 배포한 후, 특정 페이지로 직접 접근할 때 "Page Not Found" 오류가 발생하는 문제를 겪으셨나요? 이는 React Router와 같은 클라이언트 측 라우팅 라이브러리를 사용할 때 발생할 수 있는 일반적인 문제입니다. Netlify는 이를 해결하기 위한 간단한 방법을 제공합니다. 바로** **_redirects** **파일을 사용하는 것입니다.**
+
+**문제 원인**
+
+**React 애플리케이션은 클라이언트 측 라우팅을 사용하여 브라우저의 URL을 관리합니다. 그러나 Netlify는 서버 측에서 요청을 처리하기 때문에 루트 경로가 아닌 다른 페이지로 직접 접근할 때 이를 알지 못하고 "Page Not Found" 오류를 반환합니다.**
+
+**해결 방법**
+
+**이 문제를 해결하려면 Netlify의** **_redirects** **파일을 사용하여 모든 요청을** **index.html로 리디렉션하면 됩니다. 이를 통해 Netlify는 모든 요청을** **index.html로 전달하고, React Router가 클라이언트 측에서 라우팅을 처리하도록 합니다.**
+
+**html 200**
+
+**결론**
+
+**Netlify에서 React 애플리케이션을 배포할 때 발생하는 "Page Not Found" 오류를 해결하기 위해서는** **_redirects** **파일을 사용하여 모든 요청을** **index.html로 리디렉션하면 됩니다.**
+
+---
+
+**[NEXT]**
+
+**Next.js와 같은 프레임워크에서는 SPA(단일 페이지 애플리케이션)와 다르게 서버 측 렌더링(SSR)과 정적 사이트 생성(SSG)을 모두 지원합니다. 따라서, React와 달리 Next.js를 Netlify에 배포할 때 몇 가지 추가적인 설정이 필요할 수 있습니다. Next.js 프로젝트에서 Netlify의** **_redirects** **파일을 사용할 때 빈 화면이 보이는 문제는 주로 다음과 같은 이유로 발생합니다.**
+
+**이유 및 해결 방법**
+
+**1. 서버 측 렌더링 문제**
+
+**Next.js는 기본적으로 서버 측에서 페이지를 렌더링합니다.** **_redirects** **파일을 통해 모든 요청을** **index.html로 리디렉션하면, 서버 측에서 필요한 데이터를 가져오지 못하고 클라이언트 측에서 빈 화면을 렌더링할 수 있습니다.**
+
+**2. 정적 파일 문제**
+
+**Next.js 프로젝트는 정적 파일을** **public** **폴더에 저장하지만, Next.js의 빌드 과정에서 생성된 정적 파일과 서버리스 함수는 별도의 설정이 필요합니다. Netlify의** **next-on-netlify** **플러그인을 사용하면 이러한 문제를 해결할 수 있습니다.**
+
+[**https://answers.netlify.com/t/nextjs-site-is-blank/72067**](https://answers.netlify.com/t/nextjs-site-is-blank/72067)
+
+- [NextJS Site is blank](https://answers.netlify.com/t/nextjs-site-is-blank/72067) — Hey! I’m migrating a CRA app to Next.js. I think I’ve done everything correctly and my site builds, but when I preview it - there’s nothing. Just a blank page. After looking around on the support forums I’ve seen this is commonly due to JS and CSS not being loaded - which is true. Static pages in my...
+
+[**https://answers.netlify.com/t/succesfull-deployment-of-next-js-14-website-but-seeing-blank-page/113130**](https://answers.netlify.com/t/succesfull-deployment-of-next-js-14-website-but-seeing-blank-page/113130)
+
+- [Succesfull deployment of next js 14 website but seeing blank page](https://answers.netlify.com/t/succesfull-deployment-of-next-js-14-website-but-seeing-blank-page/113130) — Hey I added my next js 14 project and it build succesfully. However when visiting the website I get a blank page, no nothing. I followed other support articles for similar issues but can’t find the issue. Any help? These are the settings.
+
+![image](/static/images/naver/223460873111/01.png)
+
+**후에 REACT 때 했던 부분들을 지우고 성공 했습니다 ~!**

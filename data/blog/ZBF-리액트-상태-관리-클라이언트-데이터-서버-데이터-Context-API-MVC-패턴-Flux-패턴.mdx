@@ -1,0 +1,440 @@
+---
+title: '[ZBF] 리액트 상태 관리: 클라이언트 데이터, 서버 데이터, Context API, MVC 패턴, Flux 패턴'
+date: '2024-05-26'
+tags: [기술노트, React]
+draft: false
+summary: '리액트는 사용자가 인터페이스를 쉽게 구축할 수 있도록 도와주는 라이브러리입니다. 리액트의 강력한 기능 중 하나는 상태(state) 관리입니다. 상태 관리는 애플리케이션의 데이터가 시간에 따라 어떻게 변화하는지를 관리하는 방법입니다.'
+---
+
+# [ZBF] 리액트 상태 관리: 클라이언트 데이터, 서버 데이터, Context API, MVC 패턴, Flux 패턴
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223459216581)에 2024년 5월 26일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+리액트는 사용자가 인터페이스를 쉽게 구축할 수 있도록 도와주는 라이브러리입니다. 리액트의 강력한 기능 중 하나는 상태(state) 관리입니다. 상태 관리는 애플리케이션의 데이터가 시간에 따라 어떻게 변화하는지를 관리하는 방법입니다.
+
+**클라이언트 데이터 상태 관리**
+
+클라이언트 데이터 상태 관리는 컴포넌트 내에서 상태를 관리하는 방법입니다. 리액트에서 상태를 관리하는 가장 기본적인 방법은 **useState** 훅을 사용하는 것입니다.
+
+```js
+import React, { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+    </div>
+  );
+}
+
+export default Counter;
+```
+
+**서버 데이터 상태 관리**
+
+서버 데이터 상태 관리는 서버에서 데이터를 가져와 리액트 컴포넌트에서 사용하는 방법입니다. 보통 **useEffect** 훅과 **fetch** API를 사용하여 구현합니다.
+
+```js
+import React, { useState, useEffect } from 'react';
+
+function DataFetcher() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    fetch('https://api.example.com/data')
+      .then(response => response.json())
+      .then(data => setData(data));
+  }, []);
+
+  if (!data) {
+    return <p>Loading...</p>;
+  }
+
+  return (
+    <div>
+      <h1>Data from Server:</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+}
+
+export default DataFetcher;
+```
+
+**Context API**
+
+Context API는 전역 상태를 관리하는 방법 중 하나입니다. 이를 통해 컴포넌트 트리 전체에 데이터를 전달할 수 있습니다.
+
+```js
+import React, { createContext, useState, useContext } from 'react';
+
+const MyContext = createContext();
+
+function MyProvider({ children }) {
+  const [state, setState] = useState('Hello, World!');
+
+  return (
+    <MyContext.Provider value={[state, setState]}>
+      {children}
+    </MyContext.Provider>
+  );
+}
+
+function MyComponent() {
+  const [state, setState] = useContext(MyContext);
+
+  return (
+    <div>
+      <p>{state}</p>
+      <button onClick={() => setState('Hello, React!')}>Change</button>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <MyProvider>
+      <MyComponent />
+    </MyProvider>
+  );
+}
+
+export default App;
+```
+
+**MVC 패턴**
+
+MVC(Model-View-Controller) 패턴은 애플리케이션을 세 가지 주요 부분으로 나누어 구조화하는 디자인 패턴입니다.
+
+- **Model**: 애플리케이션의 데이터 및 비즈니스 로직을 담당합니다.
+- **View**: 사용자 인터페이스를 담당합니다.
+- **Controller**: Model과 View 사이의 상호작용을 관리합니다.
+
+리액트에서는 보통 Model과 View를 구현하고, Controller 역할은 컴포넌트 자체가 담당하게 됩니다.
+
+**Flux 패턴**
+
+**Flux의 단방향 데이터 흐름**
+
+Flux는 Facebook에서 React 애플리케이션의 구조화를 위해 만든 아키텍처로, 단방향 데이터 흐름을 강제합니다. 단방향 데이터 흐름의 핵심 요소는 다음과 같습니다:
+
+1. **Action**: 사용자 또는 다른 소스에서 발생하는 이벤트입니다.
+2. **Dispatcher**: 모든 액션이 전달되는 중앙 허브로, 각 액션을 등록된 콜백에 전달합니다.
+3. **Store**: 애플리케이션의 상태(state)를 관리하며, 상태 변화를 발생시키는 로직을 포함합니다.
+4. **View**: 상태를 UI에 렌더링하는 역할을 합니다. React 컴포넌트가 이 역할을 수행합니다.
+
+이 흐름은 아래와 같이 진행됩니다:
+
+1. 사용자가 뷰(View)에서 액션(Action)을 발생시킵니다.
+2. 액션은 디스패처(Dispatcher)를 통해 스토어(Store)로 전달됩니다.
+3. 스토어(Store)는 상태를 업데이트하고 변경된 상태를 뷰(View)에 전달합니다.
+4. 뷰(View)는 새로운 상태를 반영하여 다시 렌더링됩니다.
+
+이렇게 데이터가 단방향으로 흐르기 때문에 상태 관리가 명확해지고, 디버깅이 쉬워집니다.
+
+**양방향 데이터 흐름**
+
+양방향 데이터 흐름은 데이터를 양쪽 방향으로 전달할 수 있는 구조를 말합니다. 이는 Flux와는 다른 패턴으로, 주로 양방향 바인딩을 지원하는 프레임워크에서 볼 수 있습니다. 대표적인 예로 Angular의 양방향 바인딩이 있습니다.
+
+Angular에서는 모델과 뷰가 상호 참조하면서 서로의 변화를 즉시 반영합니다. 이 방식의 장점은 코드를 단순화하고 빠른 UI 업데이트를 가능하게 하지만, 복잡한 애플리케이션에서는 데이터 흐름을 추적하기 어려울 수 있습니다.
+
+**비교**
+
+- **단방향 데이터 흐름(Flux)**:
+- 데이터가 한 방향으로만 흐름
+- 상태 변화가 명확하여 디버깅이 쉬움
+- 코드 구조가 명료함
+- **양방향 데이터 흐름**:
+- 데이터가 양방향으로 흐름
+- 모델과 뷰가 즉시 동기화됨
+- 복잡한 애플리케이션에서는 데이터 흐름 추적이 어려울 수 있음
+
+```js
+import { createStore } from 'redux';
+
+// Action
+const increment = () => ({
+  type: 'INCREMENT'
+});
+
+// Reducer
+const counter = (state = 0, action) => {
+  switch (action.type) {
+    case 'INCREMENT':
+      return state + 1;
+    default:
+      return state;
+  }
+};
+
+// Store
+const store = createStore(counter);
+
+store.subscribe(() => console.log(store.getState()));
+
+// Dispatch
+store.dispatch(increment()); // 1
+store.dispatch(increment()); // 2
+store.dispatch(increment()); // 3
+```
+
+**Context API를 사용할 때의 장단점**
+
+**장점**
+
+1. **전역 상태 관리**: Context API는 전역 상태를 손쉽게 관리할 수 있게 해줍니다. 이를 통해 컴포넌트 트리의 깊숙한 곳까지 상태를 전달할 수 있습니다.
+2. **코드 간소화**: Prop drilling(깊은 컴포넌트 트리에서 props를 계속 전달하는 과정)을 피할 수 있어 코드가 간소화됩니다.
+3. **비교적 간단한 사용법**: 리액트의 기본 기능으로 제공되기 때문에 별도의 라이브러리를 설치할 필요가 없고, 배우기도 상대적으로 쉽습니다.
+
+**단점**
+
+1. **성능 문제**: Context API는 상태가 변경될 때마다 해당 Context를 구독하고 있는 모든 컴포넌트가 다시 렌더링됩니다. 큰 애플리케이션에서는 성능 문제가 발생할 수 있습니다.
+2. **복잡한 상태 관리**: Context API는 간단한 전역 상태를 관리하기에 적합하지만, 상태가 복잡해지면 관리가 어려워질 수 있습니다. 이런 경우에는 Redux와 같은 더 강력한 상태 관리 라이브러리를 사용하는 것이 좋습니다.
+3. **디버깅 어려움**: Context API를 많이 사용하면 상태 추적과 디버깅이 어려울 수 있습니다. 상태 변화가 어디서 일어났는지 추적하기 힘들어질 수 있습니다.
+
+**서버 데이터 상태 관리를 할 때 주의해야 할 점**
+
+1. **비동기 처리**: 서버 데이터는 비동기적으로 가져오기 때문에 이를 적절히 처리해야 합니다. **useEffect** 훅을 사용하여 데이터를 가져오고 상태를 업데이트해야 하며, 로딩 상태와 오류 처리를 추가하는 것이 좋습니다.
+2. **에러 핸들링**: 서버 요청은 실패할 가능성이 항상 존재합니다. 네트워크 오류, 서버 오류, 잘못된 데이터 등 다양한 원인이 있을 수 있습니다. 이를 처리하기 위한 적절한 에러 핸들링 로직을 구현해야 합니다.
+3. **캐싱**: 서버 데이터를 자주 요청하면 성능이 저하될 수 있습니다. 필요에 따라 데이터를 캐싱하여 불필요한 요청을 줄이는 것이 좋습니다.
+4. **데이터 동기화**: 서버 데이터와 클라이언트 데이터 간의 동기화 문제를 해결해야 합니다. 서버 데이터가 변경되었을 때 클라이언트가 이를 적시에 반영하도록 하는 것이 중요합니다.
+5. **보안**: 서버와의 통신에서 민감한 데이터가 오고 갈 수 있습니다. HTTPS를 사용하고, 필요한 경우 인증과 권한 부여를 통해 데이터를 보호해야 합니다.
+6. **최적화**: 불필요한 데이터 요청을 줄이고, 필요한 경우 요청을 병합하거나 데이터를 페이징하는 등 최적화가 필요합니다.
+
+```js
+import React, { useState, useEffect } from 'react';
+
+function DataFetcher() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('https://api.example.com/data')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setData(data);
+        setLoading(false);
+      })
+      .catch(error => {
+        setError(error);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p>Error: {error.message}</p>;
+  }
+
+  return (
+    <div>
+      <h1>Data from Server:</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+}
+
+export default DataFetcher;
+```
+
+**리액트에서 서버 데이터를 효과적으로 캐싱하는 방법**
+
+리액트에서 서버 데이터를 효과적으로 캐싱하는 방법은 여러 가지가 있습니다. 여기서는 대표적인 몇 가지 방법을 소개합니다.
+
+**1. React Query 사용하기**
+
+React Query는 서버 상태를 관리하고 캐싱을 자동으로 처리해주는 강력한 라이브러리입니다. 데이터를 가져오고, 캐싱하고, 동기화하는 기능을 쉽게 구현할 수 있습니다.
+
+```js
+import React from 'react';
+import { useQuery } from 'react-query';
+
+function fetchData() {
+  return fetch('https://api.example.com/data').then(response => response.json());
+}
+
+function DataFetcher() {
+  const { data, error, isLoading } = useQuery('fetchData', fetchData, {
+    staleTime: 5000, // 캐시 유효 기간 (5초)
+    cacheTime: 10000 // 캐시 보관 기간 (10초)
+  });
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <div>
+      <h1>Data from Server:</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+}
+
+export default DataFetcher;
+```
+
+**SWR 사용하기**
+
+SWR은 Vercel에서 만든 React 훅 라이브러리로, 데이터 페칭을 단순화하고 캐싱을 자동으로 처리합니다.
+
+```js
+import useSWR from 'swr';
+
+const fetcher = url => fetch(url).then(res => res.json());
+
+function DataFetcher() {
+  const { data, error } = useSWR('https://api.example.com/data', fetcher, {
+    refreshInterval: 5000 // 5초마다 데이터 갱신
+  });
+
+  if (!data) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <div>
+      <h1>Data from Server:</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+}
+
+export default DataFetcher;
+```
+
+**로컬 스토리지 사용하기**
+
+로컬 스토리지를 사용하여 데이터를 캐싱할 수도 있습니다. 이는 브라우저에 데이터를 저장하여 페이지를 새로고침해도 데이터가 유지되도록 합니다.
+
+```js
+import React, { useState, useEffect } from 'react';
+
+function DataFetcher() {
+  const [data, setData] = useState(() => JSON.parse(localStorage.getItem('data')));
+  const [loading, setLoading] = useState(!data);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!data) {
+      fetch('https://api.example.com/data')
+        .then(response => response.json())
+        .then(data => {
+          setData(data);
+          localStorage.setItem('data', JSON.stringify(data));
+          setLoading(false);
+        })
+        .catch(error => {
+          setError(error);
+          setLoading(false);
+        });
+    }
+  }, [data]);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <div>
+      <h1>Data from Server:</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+}
+
+export default DataFetcher;
+```
+
+**Context API를 사용할 때 성능 문제를 최소화하는 방법**
+
+**1. Context 분리**
+
+상태가 자주 변경되는 부분과 변경되지 않는 부분을 분리하여 여러 Context로 나누어 사용합니다. 이는 불필요한 렌더링을 줄이는 데 도움이 됩니다.
+
+```js
+const UserContext = createContext();
+const ThemeContext = createContext();
+
+// 상태가 자주 변경되는 부분과 그렇지 않은 부분을 분리
+```
+
+**React.memo 사용**
+
+컨텍스트 소비자 컴포넌트에 **React.memo**를 사용하여 불필요한 재렌더링을 방지합니다.
+
+```js
+const MyComponent = React.memo(() => {
+  const user = useContext(UserContext);
+  // Component logic
+});
+```
+
+**useMemo와 useCallback 사용**
+
+복잡한 계산이 필요한 값이나 함수는 **useMemo**와 **useCallback** 훅을 사용하여 메모이제이션합니다.
+
+```js
+const value = useMemo(() => calculateExpensiveValue(a, b), [a, b]);
+const callback = useCallback(() => doSomething(a), [a]);
+```
+
+**서버 데이터와 클라이언트 데이터를 동기화하는 가장 좋은 방법**
+
+**실시간 데이터 동기화**
+
+WebSocket을 사용하여 서버와 클라이언트 간의 실시간 데이터 동기화를 구현합니다.
+
+```js
+useEffect(() => {
+  const socket = new WebSocket('wss://example.com/socket');
+  socket.onmessage = event => {
+    const newData = JSON.parse(event.data);
+    setData(newData);
+  };
+  return () => socket.close();
+}, []);
+```
+
+**정기적인 데이터 갱신**
+
+정기적으로 데이터를 갱신하여 서버와 클라이언트 간의 데이터 동기화를 유지합니다. 이는 **setInterval** 또는 SWR의 **refreshInterval** 옵션을 사용하여 구현할 수 있습니다.
+
+```js
+useEffect(() => {
+  const interval = setInterval(() => {
+    fetch('https://api.example.com/data')
+      .then(response => response.json())
+      .then(newData => setData(newData));
+  }, 5000);
+  return () => clearInterval(interval);
+}, []);
+```
+
+**Optimistic UI 업데이트**
+
+서버에 데이터를 업데이트할 때 클라이언트에서 먼저 UI를 업데이트하고 서버 응답을 기다리는 방식을 사용합니다.
+
+```js
+const updateData = newData => {
+  setData(newData); // Optimistic update
+  fetch('https://api.example.com/update', {
+    method: 'POST',
+    body: JSON.stringify(newData)
+  })
+    .then(response => response.json())
+    .catch(error => {
+      // Rollback on error
+      setData(prevData);
+    });
+};
+```

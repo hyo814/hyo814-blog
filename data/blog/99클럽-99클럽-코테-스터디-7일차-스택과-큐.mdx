@@ -1,0 +1,56 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 7일차 + 스택과 큐'
+date: '2025-04-09'
+tags: [코딩테스트]
+draft: false
+summary: 'const N = Number(input[0]); let count = 0;'
+---
+
+# [99클럽] 99클럽 코테 스터디 7일차 + 스택과 큐
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223826840112)에 2025년 4월 9일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+const fs = require('fs');
+const input = fs.readFileSync('/dev/stdin').toString().trim().split('\n');
+
+const N = Number(input[0]);
+let count = 0;
+
+for (let i = 1; i <= N; i++) {
+const word = input[i];
+const stack = [];
+
+for (const char of word) {
+if (stack.length > 0 && stack[stack.length - 1] === char) {
+stack.pop(); // 같은 글자면 짝이 되므로 제거
+} else {
+stack.push(char); // 스택에 추가
+}
+}
+
+if (stack.length === 0) {
+count++; // 스택이 비어있으면 좋은 단어
+}
+}
+
+console.log(count);
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223826840112/01.png)

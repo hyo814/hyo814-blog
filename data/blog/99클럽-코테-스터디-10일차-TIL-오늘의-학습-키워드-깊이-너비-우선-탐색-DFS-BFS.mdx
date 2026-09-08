@@ -1,0 +1,70 @@
+---
+title: '99클럽 코테 스터디 10일차 TIL + 오늘의 학습 키워드: 깊이/너비 우선 탐색(DFS/BFS)'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: '// 단방향 그래프 만들기 arr.map(([from, to]) => graph[from].push(to));'
+---
+
+# 99클럽 코테 스터디 10일차 TIL + 오늘의 학습 키워드: 깊이/너비 우선 탐색(DFS/BFS)
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787250728)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+const filePath = process.platform === 'linux' ? '/dev/stdin' : './input.txt';
+const input = require('fs').readFileSync(filePath).toString().trim().split('\n');
+const [N, M, K, X] = input.shift().split(' ').map(Number);
+const arr = input.map((v) => v.split(' ').map(Number));
+const graph = [...Array(N + 1)].map(() => []);
+const distance = Array(N + 1).fill(0); // 도로의 거리를 카운트하면서 방문 체크에 이용할 배열
+let answer = [];
+
+// 단방향 그래프 만들기
+arr.map(([from, to]) => graph[from].push(to));
+
+const bfs = (start) => {
+  const queue = [start];
+  distance[start] = 1;
+
+  while (queue.length) {
+    const now = queue.shift();
+    if (distance[now] == K + 1) {
+      answer.push(now);
+      continue;
+    }
+    for (const next of graph[now]) {
+      if (!distance[next]) {
+        queue.push(next);
+        distance[next] = distance[now] + 1;
+      }
+    }
+  }
+};
+
+bfs(X);
+if (answer.length) {
+  answer = answer.sort((a, b) => a - b).join('\n');
+} else answer = -1;
+
+console.log(answer);
+```
+
+- 비기너: https://school.programmers.co.kr/learn/courses/30/lessons/1845 (45분)
+
+- 미들러: https://www.acmicpc.net/problem/18352 (1시간)
+
+- 챌린저: https://www.acmicpc.net/problem/1253 (1시간)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787250728/01.png)

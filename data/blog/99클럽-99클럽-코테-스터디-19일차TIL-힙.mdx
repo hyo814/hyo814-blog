@@ -1,0 +1,68 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 19일차TIL + 힙'
+date: '2025-02-13'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 절댓값 힙 https://www.acmicpc.net/problem/11286'
+---
+
+# [99클럽] 99클럽 코테 스터디 19일차TIL + 힙
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223759036631)에 2025년 2월 13일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 절댓값 힙 [https://www.acmicpc.net/problem/11286](https://www.acmicpc.net/problem/11286)
+
+미들러 신입 사원 [https://www.acmicpc.net/problem/1946](https://www.acmicpc.net/problem/1946)
+
+챌린저 무지의 먹방 라이브 [https://www.acmicpc.net/problem/28107](https://www.acmicpc.net/problem/28107)
+
+```js
+const fs = require('fs');
+const input = fs.readFileSync('/dev/stdin').toString().trim().split('\n').map(Number);
+
+class AbsHeap {
+    constructor() {
+        this.heap = [];
+    }
+    
+    push(val) {
+        this.heap.push(val);
+        this.heap.sort((a, b) => Math.abs(a) - Math.abs(b) || a - b);
+    }
+    
+    pop() {
+        return this.heap.length ? this.heap.shift() : 0;
+    }
+}
+
+const absHeap = new AbsHeap();
+const result = [];
+
+for (let i = 1; i < input.length; i++) {
+    if (input[i] === 0) {
+        result.push(absHeap.pop());
+    } else {
+        absHeap.push(input[i]);
+    }
+}
+
+console.log(result.join('\n'));
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223759036631/01.png)

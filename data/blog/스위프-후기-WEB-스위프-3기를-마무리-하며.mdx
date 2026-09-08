@@ -1,0 +1,219 @@
+---
+title: '[스위프 후기] [WEB] 스위프 3기를 마무리 하며...!'
+date: '2024-04-01'
+tags: [사이드프로젝트]
+draft: false
+summary: '2023년이 지나고 다양한 회사에 면접을 보러 다니지만 프로젝트 없이 면접을 보러 다녀도 되는 걸까? 와 공부를 주도적으로 하고는 싶은데 주변에는 개발자라고 해도 나와 같은 프론트나 백엔드 개발자는 소수인 상태라 고민이 많았다. 그렇다고 누군지 모르는데 온라인에서 붙잡고 저랑 프로그램…'
+---
+
+# [스위프 후기] [WEB] 스위프 3기를 마무리 하며...!
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223402425615)에 2024년 4월 1일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 참여 동기
+
+2023년이 지나고 다양한 회사에 면접을 보러 다니지만 프로젝트 없이 면접을 보러 다녀도 되는 걸까? 와 공부를 주도적으로 하고는 싶은데 주변에는 개발자라고 해도 나와 같은 프론트나 백엔드 개발자는 소수인 상태라 고민이 많았다. 그렇다고 누군지 모르는데 온라인에서 붙잡고 저랑 프로그램 만들어주세요는... 해가 거꾸로 뜰 일일지 몰라 하면서 알아본 스위프! 인데 특히 나는 이러한 혜택 때문에 했던거 같다.
+
+1. 프로젝트에만 집중할 수 있는 환경!
+
+![협업 과정 툴](/static/images/naver/223402425615/01.png)
+
+2. 서비스 활성화를 위한 전폭적인 지원!
+
+3. 포트폴리오로 활용할 수 있도록 프로젝트 결과물 보존!
+
+6. 기업 채용 연계 서비스 제공!
+
+>> 백엔드 서버 일부 고민 이슈로 인하여 2번과 3번은 놓치긴 했었지만 단 시간 집중은 좋았던거 같다.
+
+---
+
+- 배웠던 점과 성장한 점:
+
+가. 상태 관리에 대하여
+
+[https://blog.naver.com/ggamjige8888/223403247357](https://blog.naver.com/ggamjige8888/223403247357)
+
+나. 지도? 지도 사용 해보자 (구글지도로 채택)
+
+[https://blog.naver.com/ggamjige8888/223403249515](https://blog.naver.com/ggamjige8888/223403249515)
+
+다. react-query ?
+
+[https://blog.naver.com/ggamjige8888/223403298870](https://blog.naver.com/ggamjige8888/223403298870)
+
+---
+
+- 어려웠던 점 / 극복한 점:
+
+가. 아마도 지도 페이지에 대해서 더 많은 공부를 해야할 것 같았다.
+
+지도에서 위도와 경도를 통해 거리감을 측정을 하는데 이 부분에서 값을 정확하게 가지고 오지 않으면 신규 업데이트가 되지가 않았었고 고민 끝에 refresh를 넣어 작동 하도록 수정을 했으나 리액트 쿼리가 아닌 점과 refresh로 인위적인 방법이지 않을까 싶다.
+
+```js
+  const loadPlaceDetails = () => {
+        if (!window.google || !navigator.geolocation) {
+            setIsLoading(false);
+            return;
+        }
+        
+        setIsLoading(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLocation = new window.google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                const service = new window.google.maps.places.PlacesService(document.createElement('div'));
+                
+                const detailsPromises = hospitalFirstData.map((hospital) =>
+                    new Promise<HospitalDetail | null>((resolve, reject) => {
+                        if (hospital.googleMapId) {
+                            service.getDetails({placeId: hospital.googleMapId}, (result:any, status:any) => {
+                                if (status === window.google.maps.places.PlacesServiceStatus.OK && result && result.geometry && result.geometry.location) {
+                                    let hospitalLat = result.geometry.location.lat;
+                                    let hospitalLng = result.geometry.location.lng;
+                                    if (typeof hospitalLat === 'function') {
+                                        hospitalLat = hospitalLat();
+                                    }
+                                    if (typeof hospitalLng === 'function') {
+                                        hospitalLng = hospitalLng();
+                                    }
+                                    const hospitalLocation = new window.google.maps.LatLng(Number(hospitalLat), Number(hospitalLng));
+                                    const distanceMeters = window.google.maps.geometry?.spherical.computeDistanceBetween(
+                                        userLocation,
+                                        hospitalLocation
+                                    );
+                                    if (!isNaN(distanceMeters)) {
+                                        const distanceKm = (distanceMeters / 1000).toFixed(2);
+                                        resolve({
+                                            id: result.place_id,
+                                            name: result.name,
+                                            address: result.formatted_address,
+                                            bookmarkDate: hospital.bookmarkDate,
+                                            distance: `${distanceKm} km`,
+                                        });
+                                    } else {
+                                        resolve(null);
+                                    }
+                                } else {
+                                    reject(new Error(`${hospital.googleMapId}의 구글맵 ID에 에러 발생하였습니다.`));
+                                }
+                            });
+                        } else {
+                            reject(new Error('구글 맵 ID가 제공되지 않았습니다.'));
+                        }
+                    }),
+                );
+                
+                Promise.allSettled(detailsPromises).then((results) => {
+                    const successfulDetails = results
+                        .filter((result): result is PromiseFulfilledResult<HospitalDetail | null> => result.status === 'fulfilled')
+                        .map((result) => result.value)
+                        .filter((detail): detail is HospitalDetail => detail !== null);
+                    setHospitalInfo(successfulDetails);
+                    setIsHospitalDetailsLoaded(true);
+                }).catch(error => {
+                    console.error('구글맵 병원 정보 로드 중 에러 발생:', error);
+                })
+                    .finally(() => {
+                        setIsLoading(false);
+                    });
+            },
+            (error) => {
+                console.error('Geolocation 에러 발생:', error);
+                setIsLoading(false);
+            },
+        );
+    };
+```
+
+나. 로그인 / 로그아웃
+
+매번 할때마다 신기술이 늘어나는거 같아서 새로운 경우 였는데...
+
+Axios vs AxiosInstance
+
+Axios: 단일 HTTP 요청을 간단하게 처리할 때 유용. 각 요청마다 다른 설정을 적용해야 할 때 적합
+
+AxiosInstance: 프로젝트 내 여러 곳에서 공통된 설정을 공유해야 할 때 유리. 코드 중복을 줄이고, 유지보수성을 향상
+
+로컬 컨텐츠 저장 및 암호화/복호화 사용(**useSaveLocalContent**), Axios 인터셉터 설정(**useAxiosConfig**),
+
+토큰 관리(**useToken**)
+
+**1. 로컬 컨텐츠 저장 및 암호화/복호화 (useSaveLocalContent)**
+
+- **encryptData**와 **decryptData** 함수는 각각 데이터를 암호화하고 복호화하는 데 사용.
+- 여기서 **CryptoJS.AES.encrypt**와 **CryptoJS.AES.decrypt** 메소드가 사용되며, 이들은 강력한 암호화 알고리즘인 AES를 사용
+- **setEncryptedCookie** 함수는 쿠키에 데이터를 저장할 때 데이터를 암호화하여 저장
+- **getDecryptedCookie** 함수는 쿠키에서 데이터를 가져올 때 해당 데이터를 복호화하여 실제 값을 반환
+
+**2. Axios 인터셉터 설정 (useAxiosConfig)**
+
+- Axios 인터셉터를 사용하면 HTTP 요청과 응답을 가로챌 O
+- 요청을 보내기 전에 헤더에 인증 토큰을 추가하거나, 응답을 받았을 때 특정 조건(예: 401 Unauthorized)에 따라 자동으로 토큰을 새로 발급받는 로직을 구현
+- **setAxiosInterceptors** 함수 내에서, 요청 인터셉터는 모든 요청에 **Authorization** 헤더를 추가하고, 응답 인터셉터는 401 응답을 받았을 경우 자동으로 토큰을 새로고침하는 로직을 구현
+
+**3. 토큰 관리 (useToken)**
+
+- **loginSaveToken** 함수는 로그인 성공 시 받은 접근 토큰(**access_token**)과 갱신 토큰(**refresh_token**)을 쿠키에 저장
+- **logoutDeleteToken** 함수는 사용자가 로그아웃할 때 저장된 토큰을 삭제
+
+**AxiosInstance와 토큰 동작 원리**
+
+- **AxiosInstance**는 Axios 라이브러리를 사용하여 생성된 HTTP 클라이언트 인스턴스. 이 인스턴스를 사용하여 API 서버와의 HTTP 통신을 수행할 수 있으며, 인터셉터를 설정하여 모든 요청과 응답을 중간에서 가로채고 필요한 로직(예: 헤더에 토큰 추가, 오류 처리 등)을 적용
+- 토큰은 사용자 인증을 위해 서버에서 발급하는 문자열입니다. 접근 토큰(**access_token**)은 리소스에 접근할 권한을 부여하며, 유효 기간이 짧습니다. 갱신 토큰(**refresh_token**)은 접근 토큰이 만료되었을 때 새로운 접근 토큰을 발급받기 위해 사용되며, 상대적으로 긴 유효 기간을 가짐
+
+---
+
+- 수료 후 소감 작성 / 이후 일정 :
+
+면접도 보고 사전과제도 하고 한 2달 동안은 진짜로 정신이 하나도 없었던것 같다. 물론 막바지에 이르니까 일부 포기 하는 경우도 발생을 했었다..
+
+![새벽 시간이 익숙한 hyo..](/static/images/naver/223402425615/02.png)
+
+제일 아쉬웠던 부분이 내 기상 시간 아닐까? 싶다....
+
+밤에 집중이 잘 된다는 이유로 새벽까지 풀다보면 하루가 이미 초과 되어 있었다... ㅎㅎ
+
+그래도 주저 하지 않고 꾸준히 하는 동료들을 더 많이 만난 기분에 감사하기도 했고 종종 귀찮다는 마음을 잠재울 수 있던게 다행이였던거 같기도 하다..
+
+이제 아침에 코딩하는 사람이 되어 보아야지..
+
+네트워크 데이 다양한 사람들이 모이고 온라인으로만 본 사람들을 본다는게 내적 친밀감과 한편으로는 내성향이 쌓여 뚝딱 거리면서도 두달 동안 진행을 해온 프로젝트를 마무리 한다는 마음에 그래도 속이 시원 했었다 그냥 기한 두지 않고 했으면 중간에 포기 했을 만 한데 말이다.
+
+![image](/static/images/naver/223402425615/03.jpg)
+
+![image](/static/images/naver/223402425615/04.jpg)
+
+![image](/static/images/naver/223402425615/05.jpg)
+
+![image](/static/images/naver/223402425615/06.jpg)
+
+![image](/static/images/naver/223402425615/07.jpg)
+
+![image](/static/images/naver/223402425615/08.jpg)
+
+![image](/static/images/naver/223402425615/09.jpg)
+
+![image](/static/images/naver/223402425615/10.jpg)
+
+![image](/static/images/naver/223402425615/11.jpg)
+
+---
+
+[https://hyo814.notion.site/3-5fd48f1439f440fdb9fffe0e2e55cac7?pvs=74](https://hyo814.notion.site/3-5fd48f1439f440fdb9fffe0e2e55cac7?pvs=74)
+
+- [스위프 3기 - 직짱건강 | Notion](https://hyo814.notion.site/3-5fd48f1439f440fdb9fffe0e2e55cac7?pvs=74) — https://zigzzang.site
+
+[https://zigzzang.site](https://zigzzang.site/)
+
+- [직짱건강](https://zigzzang.site/) — 책상에 앉아 일을 많이 하는 당신! 현재 건강 상태가 어떤지 체크해볼까요? 체크 하러 가기
+
+---
+
+[https://swyp.softr.app/?utm_source=boottent&utm_medium=referral](https://swyp.softr.app/?utm_source=boottent&utm_medium=referral)
+
+- [스위프 4기](https://swyp.softr.app/?utm_source=boottent&utm_medium=referral) — IT 직군 취업을 위한 사이드 프로젝트, 기획자·디자이너·개발자가 한 팀으로
+
+[https://teamswyg.notion.site/4d100f8f635f48be88f6d348c44ba3ac?v=f3a457167c7343fcacb1b86ad6b16466](https://teamswyg.notion.site/4d100f8f635f48be88f6d348c44ba3ac?v=f3a457167c7343fcacb1b86ad6b16466)
+
+- [스위프(SWYP) 프로젝트 | Notion](https://teamswyg.notion.site/4d100f8f635f48be88f6d348c44ba3ac?v=f3a457167c7343fcacb1b86ad6b16466) — Built with Notion, the all-in-one connected workspace with publishing capabilities.

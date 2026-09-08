@@ -1,0 +1,198 @@
+---
+title: '[ZBF] 6월 12일 코딩 테스트 : 스택(Stack)과 큐(Queue)'
+date: '2024-06-12'
+tags: [코딩테스트]
+draft: false
+summary: '스택은 LIFO(Last In, First Out) 구조로, 마지막에 삽입된 요소가 가장 먼저 제거됩니다. 스택의 주요 연산은 push(삽입), pop(제거), peek(가장 위의 요소 확인)입니다.'
+---
+
+# [ZBF] 6월 12일 코딩 테스트 : 스택(Stack)과 큐(Queue)
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223476422438)에 2024년 6월 12일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+**스택 (Stack)**
+
+스택은 LIFO(Last In, First Out) 구조로, 마지막에 삽입된 요소가 가장 먼저 제거됩니다. 스택의 주요 연산은 push(삽입), pop(제거), peek(가장 위의 요소 확인)입니다.
+
+```js
+class Stack {
+    constructor() {
+        this.items = [];
+    }
+
+    // 요소 추가
+    push(element) {
+        this.items.push(element);
+    }
+
+    // 요소 제거
+    pop() {
+        if (this.isEmpty()) {
+            return "Stack is empty";
+        }
+        return this.items.pop();
+    }
+
+    // 가장 위의 요소 확인
+    peek() {
+        if (this.isEmpty()) {
+            return "Stack is empty";
+        }
+        return this.items[this.items.length - 1];
+    }
+
+    // 스택이 비어있는지 확인
+    isEmpty() {
+        return this.items.length === 0;
+    }
+
+    // 스택 크기 확인
+    size() {
+        return this.items.length;
+    }
+
+    // 스택 비우기
+    clear() {
+        this.items = [];
+    }
+}
+
+// 스택 사용 예제
+const stack = new Stack();
+stack.push(10);
+stack.push(20);
+stack.push(30);
+console.log(stack.pop()); // 30
+console.log(stack.peek()); // 20
+console.log(stack.size()); // 2
+```
+
+**큐 (Queue)**
+
+큐는 FIFO(First In, First Out) 구조로, 먼저 삽입된 요소가 가장 먼저 제거됩니다. 큐의 주요 연산은 enqueue(삽입), dequeue(제거), front(가장 앞의 요소 확인)입니다.
+
+```js
+class Queue {
+    constructor() {
+        this.items = [];
+    }
+
+    // 요소 추가
+    enqueue(element) {
+        this.items.push(element);
+    }
+
+    // 요소 제거
+    dequeue() {
+        if (this.isEmpty()) {
+            return "Queue is empty";
+        }
+        return this.items.shift();
+    }
+
+    // 가장 앞의 요소 확인
+    front() {
+        if (this.isEmpty()) {
+            return "Queue is empty";
+        }
+        return this.items[0];
+    }
+
+    // 큐가 비어있는지 확인
+    isEmpty() {
+        return this.items.length === 0;
+    }
+
+    // 큐 크기 확인
+    size() {
+        return this.items.length;
+    }
+
+    // 큐 비우기
+    clear() {
+        this.items = [];
+    }
+}
+
+// 큐 사용 예제
+const queue = new Queue();
+queue.enqueue(10);
+queue.enqueue(20);
+queue.enqueue(30);
+console.log(queue.dequeue()); // 10
+console.log(queue.front()); // 20
+console.log(queue.size()); // 2
+```
+
+**스택과 큐의 활용 예제**
+
+**예제 1: 괄호의 유효성 검사 (스택 사용)**
+
+**주어진 문자열에서 모든 괄호가 유효하게 열리고 닫히는지 확인합니다.**
+
+```js
+function isValidParentheses(s) {
+    let stack = new Stack();
+    let map = {
+        '(': ')',
+        '{': '}',
+        '[': ']'
+    };
+
+    for (let char of s) {
+        if (map[char]) {
+            stack.push(char);
+        } else {
+            let topElement = stack.pop();
+            if (map[topElement] !== char) {
+                return false;
+            }
+        }
+    }
+    return stack.isEmpty();
+}
+
+// 테스트
+console.log(isValidParentheses("(){}[]")); // true
+console.log(isValidParentheses("([{}])")); // true
+console.log(isValidParentheses("(]")); // false
+```
+
+**예제 2: 최근 사용한 페이지 (큐 사용)**
+
+**웹 브라우저에서 최근 방문한 페이지를 기록하고, 가장 오래된 페이지를 제거합니다.**
+
+```js
+class RecentPages {
+    constructor(limit) {
+        this.queue = new Queue();
+        this.limit = limit;
+    }
+
+    visitPage(page) {
+        if (this.queue.size() === this.limit) {
+            this.queue.dequeue();
+        }
+        this.queue.enqueue(page);
+    }
+
+    getRecentPages() {
+        return this.queue.items;
+    }
+}
+
+// 테스트
+const recentPages = new RecentPages(3);
+recentPages.visitPage('page1');
+recentPages.visitPage('page2');
+recentPages.visitPage('page3');
+console.log(recentPages.getRecentPages()); // ['page1', 'page2', 'page3']
+recentPages.visitPage('page4');
+console.log(recentPages.getRecentPages()); // ['page2', 'page3', 'page4']
+```
+
+---
+
+[**https://school.programmers.co.kr/learn/courses/30/parts/12081**](https://school.programmers.co.kr/learn/courses/30/parts/12081)
+
+- [프로그래머스 스쿨 - 온라인 IT 특화 교육 전문 플랫폼](https://school.programmers.co.kr/learn/courses/30/parts/12081) — 프로그래머스 스쿨은 IT 분야 교육 전반의 과정을 제공하는 온라인 교육 플랫폼입니다. 프로그래밍, 데이터, 인공지능 등의 학습부터 코딩 테스트, 과제 테스트 연습까지, 프로그래머스 스쿨과 함께 성장해 보세요!

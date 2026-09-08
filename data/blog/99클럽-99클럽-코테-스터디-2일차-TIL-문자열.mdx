@@ -1,0 +1,114 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 2일차 TIL + 문자열'
+date: '2025-01-14'
+tags: [코딩테스트]
+draft: false
+summary: '코딩 테스트는 개발자의 기술력을 평가하기 위해 사용되며, 기술 스택과 사용 환경에 따라 요구되는 역량과 문제 풀이 방식이 달라질 수 있습니다. 특히 Node.js와 JavaScript는 같은 언어 기반이지만, 사용 목적과 환경에서 차이가 있기 때문에 코딩 테스트에서도 접근 방식이 다릅…'
+---
+
+# [99클럽] 99클럽 코테 스터디 2일차 TIL + 문자열
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223725316313)에 2025년 1월 14일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+**Node.js 코딩 테스트와 JavaScript 코딩 테스트의 차이점**
+
+코딩 테스트는 개발자의 기술력을 평가하기 위해 사용되며, 기술 스택과 사용 환경에 따라 요구되는 역량과 문제 풀이 방식이 달라질 수 있습니다. 특히 Node.js와 JavaScript는 같은 언어 기반이지만, 사용 목적과 환경에서 차이가 있기 때문에 코딩 테스트에서도 접근 방식이 다릅니다.
+
+이 글에서는 Node.js 코딩 테스트와 JavaScript 코딩 테스트의 주요 차이점을 다음과 같은 측면에서 설명합니다.
+
+---
+
+**1. 실행 환경의 차이**
+
+- **JavaScript 코딩 테스트**
+- 주로 브라우저 환경을 기반으로 진행됩니다.
+- DOM(Document Object Model) 조작이나 이벤트 처리와 같은 클라이언트 사이드 기능이 평가 대상이 됩니다.
+- 브라우저 API(예: window, document, localStorage 등)의 활용 능력을 요구할 수 있습니다.
+- **Node.js 코딩 테스트**
+- 서버 환경에서 실행되며, 브라우저와는 다른 실행 환경을 가집니다.
+- 파일 시스템 모듈(fs), 네트워킹 모듈(http), 비동기 I/O 등 서버 관련 기능 사용이 주 평가 대상입니다.
+- Node.js 특유의 모듈 시스템(CommonJS 또는 ES Modules)에 대한 이해가 필요합니다.
+
+---
+
+**2. 요구 기술 스택의 차이**
+
+- **JavaScript 코딩 테스트**
+- 주로 HTML, CSS와 함께 사용되므로, 테스트에서 UI를 구현하거나 DOM 요소를 동적으로 업데이트하는 문제가 출제될 수 있습니다.
+- JavaScript ES6+ 문법을 활용한 로직 설계에 초점이 맞춰질 수 있습니다.
+- **Node.js 코딩 테스트**
+- Express.js와 같은 프레임워크를 사용하거나, RESTful API를 설계하는 문제가 나올 수 있습니다.
+- 데이터베이스 연동(MongoDB, MySQL 등), 비동기 처리(Promises, async/await) 등 백엔드 개발과 관련된 기술 요구 사항이 포함될 수 있습니다.
+
+---
+
+**3. 문제 유형의 차이**
+
+- **JavaScript 코딩 테스트 문제 유형**
+
+1. DOM 요소의 조작: 특정 HTML 요소를 찾아 스타일을 변경하거나, 이벤트를 처리하는 문제.
+2. 클라이언트 사이드 알고리즘: 배열, 객체 등의 자료구조를 활용한 데이터 처리 문제.
+3. UI/UX 문제: 버튼 클릭 시 특정 동작을 구현하거나 애니메이션 효과를 추가하는 문제.
+
+- **Node.js 코딩 테스트 문제 유형**
+
+1. 서버 구축: 간단한 HTTP 서버를 생성하여 요청에 응답하는 문제.
+2. 데이터베이스 연결: CRUD(Create, Read, Update, Delete) 기능을 구현하는 문제.
+3. 파일 처리: 파일 읽기/쓰기 작업을 비동기적으로 처리하는 문제.
+
+---
+
+**4. 시간 및 공간 복잡도 평가의 초점**
+
+- **JavaScript 코딩 테스트**
+- 주로 알고리즘의 효율성(시간 복잡도)을 평가합니다.
+- 공간 복잡도보다는 UI 요소와의 연동 속도, 반응성 등이 중요하게 여겨질 수 있습니다.
+- **Node.js 코딩 테스트**
+- 비동기 처리 능력과 I/O 작업의 효율성이 중점 평가 대상이 됩니다.
+- 메모리 사용량(공간 복잡도)과 병렬 처리(Concurrency) 관련 문제도 자주 등장합니다.
+
+---
+
+**5. 대표적인 테스트 도구 및 환경**
+
+- **JavaScript 코딩 테스트**
+- 브라우저 기반 테스트 툴: Chrome DevTools, CodePen 등.
+- 테스트 플랫폼: HackerRank, CodeSignal 등.
+- **Node.js 코딩 테스트**
+- 실행 환경: 로컬 Node.js 설치, Docker 컨테이너 기반 환경.
+- 테스트 프레임워크: Mocha, Jest, Supertest 등.
+
+[https://www.acmicpc.net/problem/11719](https://www.acmicpc.net/problem/11719)
+
+```js
+let fs = require("fs");
+let filePath = process.platform === "linux" ? "/dev/stdin" : "test.txt";
+
+let input = fs.readFileSync(filePath).toString();
+
+console.log(input);
+```
+
+비기너: 그대로 출력하기 [https://www.acmicpc.net/problem/11719](https://www.acmicpc.net/problem/11719)
+
+미들러: 랜선 자르기 [https://www.acmicpc.net/problem/1654](https://www.acmicpc.net/problem/1654)
+
+챌린저: 가사 검색 [https://school.programmers.co.kr/learn/courses/30/lessons/60060](https://school.programmers.co.kr/learn/courses/30/lessons/60060)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223725316313/01.png)

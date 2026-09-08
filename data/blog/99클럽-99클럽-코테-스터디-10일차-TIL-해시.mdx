@@ -1,0 +1,75 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 10일차 TIL + 해시'
+date: '2025-01-24'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 회상 https://www.acmicpc.net/problem/32953'
+---
+
+# [99클럽] 99클럽 코테 스터디 10일차 TIL + 해시
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223736727558)에 2025년 1월 24일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 회상 [https://www.acmicpc.net/problem/32953](https://www.acmicpc.net/problem/32953)
+
+미들러 빙산 [https://www.acmicpc.net/problem/2573](https://www.acmicpc.net/problem/2573)
+
+챌린저 한 번 남았다 [https://www.acmicpc.net/problem/13317](https://www.acmicpc.net/problem/13317)
+
+[https://www.acmicpc.net/problem/32953](https://www.acmicpc.net/problem/32953)
+
+```js
+// 모듈 import (필요시 파일 입출력에 사용)
+const readline = require("readline");
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+let input = [];
+
+rl.on("line", (line) => {
+  input.push(line);
+}).on("close", () => {
+  const [N, M] = input[0].split(" ").map(Number); // 첫 줄 입력: N(수업 수), M(최소 수업 수)
+  const studentCount = new Map(); // 학생별 수업 참여 횟수를 저장할 Map
+
+  let index = 1; // 현재 입력 라인 인덱스
+
+  for (let i = 0; i < N; i++) {
+    const Ki = Number(input[index]); // i번째 수업의 학생 수
+    const students = input[index + 1].split(" "); // i번째 수업의 학생 목록
+
+    // 학생 학번별 수업 참여 횟수 업데이트
+    students.forEach((student) => {
+      studentCount.set(student, (studentCount.get(student) || 0) + 1);
+    });
+
+    index += 2; // 다음 수업으로 이동
+  }
+
+  // M개 이상의 수업을 들은 학생 수 계산
+  const result = Array.from(studentCount.values()).filter((count) => count >= M).length;
+
+  console.log(result); // 결과 출력
+});
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223736727558/01.png)

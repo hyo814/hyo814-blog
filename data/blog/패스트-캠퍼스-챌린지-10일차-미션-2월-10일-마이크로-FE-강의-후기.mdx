@@ -1,0 +1,74 @@
+---
+title: '패스트 캠퍼스 챌린지 10일차 미션 (2월 10일) : 마이크로 FE 강의 후기'
+date: '2025-02-10'
+tags: [교육]
+draft: false
+summary: 'NPM Workspace와 Yarn Workspace 학습 후기'
+---
+
+# 패스트 캠퍼스 챌린지 10일차 미션 (2월 10일) : 마이크로 FE 강의 후기
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223755218244)에 2025년 2월 10일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+**본 포스팅은 패스트캠퍼스 환급 챌린지 참여를 위해 작성하였습니다.**
+
+**[ 마이크로 프론트엔드(MFA:Micro Frontend Architecture) : 대규모 서비스 설계부터 운영까지 (feat.모노레포&모듈페더레이션)**
+
+**1. 공부 시작 시각**
+
+![image](/static/images/naver/223755218244/01.jpg)
+
+**2. 공부 종료 시각**
+
+![image](/static/images/naver/223755218244/02.jpg)
+
+**3. 클립 1번 수강 인증 사진**
+
+![image](/static/images/naver/223755218244/03.png)
+
+**4. 클립 2번 수강 인증 사진**
+
+![image](/static/images/naver/223755218244/04.png)
+
+**5. 학습 인증샷 1장**
+
+![image](/static/images/naver/223755218244/05.jpg)
+
+**6. 학습 후기 700자**
+
+NPM Workspace와 Yarn Workspace 학습 후기
+
+이번에 NPM Workspace와 Yarn Workspace를 학습하면서, 모노레포(Monorepo) 환경을 구축하고 관리하는 방법에 대한 이해를 깊이 있게 할 수 있었다. 기존에는 여러 개의 패키지를 하나의 프로젝트에서 관리할 때 개별적으로 package.json을 설정하고, 각각의 node_modules을 설치하는 방식으로 진행했지만, Workspace 기능을 활용하면 훨씬 효율적으로 패키지를 관리할 수 있었다.
+
+1. NPM Workspace 학습 후기
+
+NPM v7 이상에서 지원하는 NPM Workspace를 활용하면 여러 개의 패키지를 하나의 package.json에서 관리할 수 있다. 우선 workspaces 속성을 활용하면 하위 패키지를 쉽게 정의할 수 있으며, npm install을 실행하면 각 패키지의 node_modules가 중앙에서 관리되면서 디스크 공간을 절약할 수 있었다.
+
+또한 npm run을 통해 하위 패키지의 스크립트를 실행하는 기능도 상당히 유용했다. 예를 들어 npm run build --workspace=packages/a 명령어를 사용하면 특정 패키지의 빌드 스크립트만 실행할 수 있어 프로젝트 구조를 유지하면서도 유연하게 작업을 수행할 수 있었다.
+
+NPM Workspace를 사용하면서 몇 가지 주의할 점도 발견했다. 예를 들어, 하위 패키지에서 다른 패키지의 의존성을 명확하게 지정하지 않으면 예상치 못한 모듈 문제를 겪을 수 있었다. 또한, 기존 npm link 기능을 대체할 수 있는 npm install --workspace 옵션을 활용하면 패키지 간의 종속성을 쉽게 해결할 수 있다는 점도 유익했다.
+
+2. Yarn Workspace 학습 후기
+
+Yarn Workspace는 NPM보다 조금 더 안정적이고 강력한 기능을 제공하는 듯했다. 특히, yarn workspace 명령어를 활용하면 특정 패키지를 대상으로 명령을 실행하는 것이 더욱 직관적이었다. 예를 들어, yarn workspace my-package add lodash 명령을 실행하면 특정 워크스페이스에서만 lodash를 추가할 수 있어 의존성 관리가 훨씬 수월했다.
+
+또한, Yarn의 workspaces 설정을 활용하면 루트에서 yarn install 한 번으로 모든 패키지의 의존성을 설치할 수 있었으며, 중복된 모듈을 자동으로 정리해 주는 hoisting 기능도 상당히 인상적이었다. 이 기능 덕분에 여러 패키지에서 동일한 라이브러리를 설치할 경우, 상위 node_modules에서 공유하여 중복 설치를 방지할 수 있었다.
+
+Yarn v3에서는 Plug’n’Play (PnP) 기능이 도입되어 node_modules 없이도 패키지를 빠르게 로딩할 수 있다는 점도 흥미로웠다. 다만, 일부 패키지가 PnP 환경을 완벽하게 지원하지 않는 문제가 있어 기존 방식과의 호환성을 고려해야 했다.
+
+3. NPM vs Yarn Workspace 비교
+
+- 설치 속도: Yarn이 더 빠르고, PnP 기능을 활용하면 추가적인 최적화가 가능했다.
+- 명령어 직관성: Yarn의 yarn workspace 명령어가 NPM보다 더 직관적이었다.
+- 호환성: NPM은 기본적으로 Node.js와 함께 제공되므로 별도 설치 없이 사용할 수 있지만, Yarn의 일부 기능(특히 PnP)은 일부 패키지와의 호환성 문제를 야기할 수도 있다.
+- Hoisting 기능: Yarn이 더 정교한 방식으로 중복 패키지를 관리하여 디스크 공간을 더 효율적으로 활용할 수 있었다.
+
+4. 학습을 마치며
+
+모노레포 환경을 구축할 때 NPM Workspace와 Yarn Workspace 중 어떤 것을 선택할지는 프로젝트의 규모와 요구사항에 따라 다를 수 있다. 만약 기본적인 기능만 필요하고, 추가적인 설정 없이 사용하고 싶다면 NPM Workspace가 적합할 것이고, 더 빠른 패키지 관리와 향상된 성능을 원한다면 Yarn Workspace가 더 좋은 선택이 될 것이다.
+
+이번 학습을 통해 워크스페이스 기능을 활용하면 대규모 프로젝트에서도 패키지 간의 의존성을 체계적으로 관리할 수 있다는 점을 직접 경험할 수 있었다. 앞으로 실무에서도 활용해 보고, 더 나은 모노레포 전략을 연구해볼 계획이다.
+
+**> 필수 URL https://bit.ly/4gL1f1o**
+
+**#패스트캠퍼스** **#직장인자기계발** **#직장인공부** **#환급챌린지** **#패스트캠퍼스후기** **#오공완**

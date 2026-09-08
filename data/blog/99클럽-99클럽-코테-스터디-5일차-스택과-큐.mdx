@@ -1,0 +1,58 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 5일차 + 스택과 큐'
+date: '2025-04-04'
+tags: [코딩테스트]
+draft: false
+summary: 'push(x) {     this.q2.push(x);     while (this.q1.length) {       this.q2.push(this.q1.shift());     }     [this.q1, this.q2] = [this.q2, this.q1];   }'
+---
+
+# [99클럽] 99클럽 코테 스터디 5일차 + 스택과 큐
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223822547214)에 2025년 4월 4일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+class MyStack {
+  constructor() {
+    this.q1 = [];
+    this.q2 = [];
+  }
+
+  push(x) {
+    this.q2.push(x);
+    while (this.q1.length) {
+      this.q2.push(this.q1.shift());
+    }
+    [this.q1, this.q2] = [this.q2, this.q1];
+  }
+
+  pop() {
+    return this.q1.shift();
+  }
+
+  top() {
+    return this.q1[0];
+  }
+
+  empty() {
+    return this.q1.length === 0;
+  }
+}
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223822547214/01.png)

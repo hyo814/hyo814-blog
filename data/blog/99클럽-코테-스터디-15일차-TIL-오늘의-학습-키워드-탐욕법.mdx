@@ -1,0 +1,67 @@
+---
+title: '99클럽 코테 스터디 15일차 TIL + 오늘의 학습 키워드: 탐욕법'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: 'const readline = require("readline").createInterface({   input: process.stdin,   output: process.stdout, });'
+---
+
+# 99클럽 코테 스터디 15일차 TIL + 오늘의 학습 키워드: 탐욕법
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787235307)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+let input = [];
+
+const readline = require("readline").createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+readline.on("line", (line) => {
+  input.push(line);
+});
+
+readline.on("close", () => {
+  solution(input);
+  process.exit();
+});
+
+const solution = (inp) => {
+  let ans = [];
+  for (let i = 2; i < inp.length; i = i + 2) {
+    let arr = inp[i].split(" ");
+    let str = "";
+    str += arr[0];
+    for (let j = 1; j < arr.length; j++) {
+      if (str.charCodeAt(0) >= arr[j].charCodeAt(0)) {
+        str = arr[j] + str;
+      } else {
+        str = str + arr[j];
+      }
+    }
+    ans.push(str);
+  }
+  console.log(ans.join("\n"));
+};
+```
+
+- 비기너: https://school.programmers.co.kr/learn/courses/30/lessons/12906 (30분)
+
+- 미들러: https://www.acmicpc.net/problem/13417 (1시간 15분)
+
+- 챌린저: https://www.acmicpc.net/problem/2665 (1시간 30분)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787235307/01.png)

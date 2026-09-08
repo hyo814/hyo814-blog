@@ -1,0 +1,239 @@
+---
+title: '[WEB] 코코아톡 CSS 02편'
+date: '2020-03-14'
+tags: [교육]
+draft: false
+summary: 'html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, …'
+---
+
+# [WEB] 코코아톡 CSS 02편
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/221852489011)에 2020년 3월 14일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+```js
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html,
+body,
+div,
+span,
+applet,
+object,
+iframe,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote,
+pre,
+a,
+abbr,
+acronym,
+address,
+big,
+cite,
+code,
+del,
+dfn,
+em,
+img,
+ins,
+kbd,
+q,
+s,
+samp,
+small,
+strike,
+strong,
+sub,
+sup,
+tt,
+var,
+b,
+u,
+i,
+center,
+dl,
+dt,
+dd,
+ol,
+ul,
+li,
+fieldset,
+form,
+label,
+legend,
+table,
+caption,
+tbody,
+tfoot,
+thead,
+tr,
+th,
+td,
+article,
+aside,
+canvas,
+details,
+embed,
+figure,
+figcaption,
+footer,
+header,
+hgroup,
+menu,
+nav,
+output,
+ruby,
+section,
+summary,
+time,
+mark,
+audio,
+video {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
+}
+
+/* HTML5 display-role reset for older browsers */
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+menu,
+nav,
+section {
+    display: block;
+}
+
+body {
+    line-height: 1;
+}
+
+ol,
+ul {
+    list-style: none;
+}
+
+blockquote,
+q {
+    quotes: none;
+}
+
+blockquote:before,
+blockquote:after,
+q:before,
+q:after {
+    content: '';
+    content: none;
+}
+
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+```
+
+```js
+.settings .settings__sections {
+    border-top: 1px solid #f7f7f7;
+    padding-top: 30px;
+}
+
+.settings__setting .settings__icon {
+    font-size: 20px;
+    margin-right: 20px;
+    cursor: pointer;
+}
+
+.settings__setting .settings__title {
+    font-size: 22px;
+    font-weight: 300;
+}
+
+.settings .settings__setting {
+    margin-bottom: 30px;
+}
+
+.settings .settings__setting:last-child {
+    margin-bottom: 0px;
+}
+```
+
+```js
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    opacity: 0.7;
+}
+
+.status-bar i {
+    font-size: 14px;
+}
+
+.status-bar .status-bar__battery-level {
+    margin-left: 5px;
+}
+```
+
+```js
+@import "reset.css";
+@import "status-bar.css";
+@import url("https://fonts.googleapis.com/css?family=Open+Sans:300:400,600");
+@import "header.css";
+@import "nav-bar.css";
+@import "friend.css";
+@import "friends.css";
+@import "find.css";
+@import "more.css";
+@import "settings.css";
+@import "chat.css";
+@import "mobile.css";
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: white;
+    padding: 10px 20px;
+    columns: #020202;
+    font-family: "Open Sans", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+main {
+    animation: fadeIn 0.5s ease-in-out;
+}
+```

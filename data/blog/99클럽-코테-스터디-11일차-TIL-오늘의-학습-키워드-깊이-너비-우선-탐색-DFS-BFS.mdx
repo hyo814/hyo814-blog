@@ -1,0 +1,88 @@
+---
+title: '99클럽 코테 스터디 11일차 TIL + 오늘의 학습 키워드: 깊이/너비 우선 탐색(DFS/BFS)'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: 'const [N, M] = input[0].split('' '').map(Number);'
+---
+
+# 99클럽 코테 스터디 11일차 TIL + 오늘의 학습 키워드: 깊이/너비 우선 탐색(DFS/BFS)
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787248116)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+const fs = require('fs');
+const input = fs.readFileSync('/dev/stdin').toString().trim().split('\n');
+
+const [N, M] = input[0].split(' ').map(Number);
+
+// 그래프와 역 그래프 초기화
+const graph = Array.from({ length: N + 1 }, () => []);
+const reverseGraph = Array.from({ length: N + 1 }, () => []);
+
+for (let i = 1; i <= M; i++) {
+    const [u, v] = input[i].split(' ').map(Number);
+    graph[u].push(v);
+    reverseGraph[v].push(u);
+}
+
+// 팬클럽이 있는 정점들
+const fanClubNodes = input[M + 2].split(' ').map(Number);
+
+// DFS로 도달 가능한 모든 정점을 찾는 함수
+function findReachableNodes(graph, startNodes) {
+    const visited = Array(N + 1).fill(false);
+    const reachable = Array(N + 1).fill(false);
+
+    function dfs(node) {
+        visited[node] = true;
+        reachable[node] = true;
+        for (const neighbor of graph[node]) {
+            if (!visited[neighbor]) {
+                dfs(neighbor);
+            }
+        }
+    }
+
+    for (const node of startNodes) {
+        if (!visited[node]) {
+            dfs(node);
+        }
+    }
+    return reachable;
+}
+
+// 팬클럽 정점에서 도달 가능한 모든 정점 찾기 (역방향 그래프 사용)
+const reachableFromFanClub = findReachableNodes(reverseGraph, fanClubNodes);
+
+// 출발 정점에서 도달 가능한 모든 정점 찾기
+const reachableFromStart = findReachableNodes(graph, [1]);
+
+// 결과 판단
+const result = reachableFromStart.some((reachable, node) => reachable && !reachableFromFanClub[node]) ? "yes" : "Yes";
+console.log(result);
+```
+
+- 비기너: https://school.programmers.co.kr/learn/courses/30/lessons/42576 (45분)
+
+- 미들러: https://www.acmicpc.net/problem/25195 (1시간 15분)
+
+- 챌린저: https://www.acmicpc.net/problem/1461 (1시간)
+
+비기너: https://www.acmicpc.net/problem/7785 (회사에 있는 사람 / 해시) 미들러: https://www.acmicpc.net/ problem/2573 (빙산 / BFS)
+
+챌린저: https://school.programmers.co.kr/learn/courses/30/lessons/60059 (좌물쇠 와 열쇠 / 기출)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787248116/01.png)

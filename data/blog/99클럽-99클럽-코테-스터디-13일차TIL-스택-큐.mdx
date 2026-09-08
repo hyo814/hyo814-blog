@@ -1,0 +1,70 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 13일차TIL + 스택 / 큐'
+date: '2025-02-05'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 큐 https://www.acmicpc.net/problem/10845'
+---
+
+# [99클럽] 99클럽 코테 스터디 13일차TIL + 스택 / 큐
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223748231022)에 2025년 2월 5일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 큐 [https://www.acmicpc.net/problem/10845](https://www.acmicpc.net/problem/10845)
+
+미들러 부등호 [https://www.acmicpc.net/problem/2529](https://www.acmicpc.net/problem/2529)
+
+챌린저 스타 수열 [https://school.programmers.co.kr/learn/courses/30/lessons/70130](https://school.programmers.co.kr/learn/courses/30/lessons/70130)
+
+```js
+const fs = require('fs');
+const input = fs.readFileSync('/dev/stdin').toString().split('\n');
+
+const queue = [];
+const answer = [];
+const len = Number(input[0]);
+
+for(let i=1; i<=len; i++){
+    let cmd = input[i].split(' ');
+    switch(cmd[0]) {
+        case 'push':
+            queue.push(cmd[1]);
+            break;
+        case 'pop':
+            answer.push(queue.shift() || -1);
+            break;
+        case 'size':
+            answer.push(queue.length);
+            break;
+        case 'empty':
+            answer.push(queue[0] ? 0 : 1);
+            break;
+        case 'front':
+            answer.push(queue[0] || -1);
+            break;
+        case 'back':
+            answer.push(queue[queue.length-1] || -1);
+            break;
+    }
+}
+
+console.log(answer.join('\n'));
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223748231022/01.png)

@@ -1,0 +1,143 @@
+---
+title: '[WEB] 카카오톡 만들기< HTML 2 편>'
+date: '2020-03-07'
+tags: [교육]
+draft: false
+summary: '<head>     <meta charset="UTF-8">     <meta name="viewport" content="width=device-width, initial-scale=1.0">     <link rel="stylesheet" href="https://use.fonta…'
+---
+
+# [WEB] 카카오톡 만들기\< HTML 2 편>
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/221842051516)에 2020년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+6. INDEX
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <title>Chats | Kakao Clone </title>
+</head>
+
+<body class="chats-body">
+    <div class="status-bar">
+        <div class="status-bar__columon">
+            <span class="status-bar__clock">10:26</span>
+        </div>
+        <div class="status-bar__columon">
+            <i class="fas fa-clock"></i>
+            <i class="fas fa-volume-mute"></i>
+            <i class="fas fa-wifi"></i>
+            <span class="status-bar__battery-level">100%</span>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    <header class="header">
+        <div class="header__header-column">
+            <h1 class="header__title">Chats</h1>
+        </div>
+        <div class="header__header-column">
+            <span class="header__icon">
+                <i class="fas fa-search"></i>
+            </span>
+            <span class="header__icon"></span>
+            <i class="fas fa-comment"></i>
+            </span>
+            <span class="header__icon">
+                <a href="settings.html">
+                    <i class="fas fa-cog"></i>
+                </a>
+            </span>
+        </div>
+    </header>
+    <br>
+    <main class="chats">
+        <ul class="chats__list">
+            <li class="chats__chat chat">
+                <a href="chat.html">
+                    <div class="chats__column">
+                        <img class="chat__avatar g-avatar" src="images/avatar2.png" height="45" width="45" />
+                        <div class="chat__content">
+                            <span class="chat__username">
+                                LEE SEUNG HYUB
+                            </span>
+                            <span class="chat__preview"> Thank you see you soon ! </span>
+                        </div>
+                    </div>
+                    <div class="chats__column">
+                        <span class="chat__timestamp"> Tuesday, October 1, 2019 </span>
+                    </div>
+                </a>
+            </li>
+        </ul>
+
+    </main>
+    <nav class="nav">
+        <ul class="nav__list">
+            <li class="nav__list-item"><a href="freinds.html" class="nav__list-link">
+                    <i class="far fa-user"></i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="index.html" class="nav__list-link">
+                    <i class="fas fa-comment">
+                    </i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="find.html" class="nav__list-link">
+                    <i class="fas fa-search">
+                    </i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="more.html" class="nav__list-link">
+                    <i class="fas fa-ellipsis-h">
+                    </i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</body>
+
+</html>
+```
+
+참고사항
+
+1. 인강이 영어이다 보니 새롭게 다가왔었다.
+
+2. ko 가 아닌 en 형태라 최소한의 한글을 쓰고자 하였다.
+
+3. 클론 코딩이여도 샘플링으로 더 잘 된 현실적인 모습을 보이고 싶었다.
+
+배운 점
+
+html을 자유롭게 이용 할 수 있다.
+
+class를 통해 연결된 구조를 알 수 있다.
+
+font awesome을 알고 있다.
+
+생각이 들었던 점
+
+자바 스크립트를 통해 동작 구현 가능하게 만들 수 있겠다.
+
+큐레이터 형식을 통해 본인의 성격을 닮은 노래 혹은 인물,책을 떠올리게 할 수 있는 것을 만들고 싶다.
+
+\<촬영>
+
+초안 01
+
+카카오톡 클론 코딩을 보고 따라한 케이스
+
+응용 01
+
+초안 01 보다 현실적인 면과 좋아하는 요소를 넣어 응용한 케이스
+
+[https://github.com/hyo814/kakao-solution](https://github.com/hyo814/kakao-solution)
+
+- [GitHub - hyo814/kakao-solution: kakao clone play](https://github.com/hyo814/kakao-solution) — kakao clone play. Contribute to hyo814/kakao-solution development by creating an account on GitHub.

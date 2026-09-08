@@ -1,0 +1,178 @@
+---
+title: '코딩 테스트 개요 및 문제 풀이를 위한 자바스크립트 문법 07'
+date: '2024-02-04'
+tags: [코딩테스트]
+draft: false
+summary: 'function dfs(queens, row, n, results) {     if (row === n) {       results.push(queens.map(q => ".".repeat(q) + "Q" + ".".repeat(n - q - 1)));       return;   …'
+---
+
+# 코딩 테스트 개요 및 문제 풀이를 위한 자바스크립트 문법 07
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223343773861)에 2024년 2월 4일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+**백트래킹(Backtracking)**
+
+**백트래킹은 "되돌아가기"라는 뜻을 가진 알고리즘으로, 주로 조합, 순열, 부분집합 같은 모든 가능한 경우의 수를 찾아보는 문제에 사용됩니다. 백트래킹은 가능한 모든 방법을 시도해보되, 현재의 경로가 해결책으로 이어질 수 없다고 판단되면, 이전의 단계로 돌아가(Backtrack) 다른 경로를 시도하는 방식입니다.**
+
+- **기본 원리: 현재 선택이 문제의 해결책으로 이어질 수 있는지 확인하고, 가능성이 없다면 이전 단계로 돌아가 다른 선택을 시도합니다.**
+- **예시: N-Queens 문제, 수도쿠**
+
+**깊이 우선 탐색(DFS, Depth-First Search)**
+
+**깊이 우선 탐색은 그래프의 깊은 부분을 우선적으로 탐색하는 알고리즘입니다. 시작점에서 한 방향으로 갈 수 있는 만큼 깊게 탐색한 후, 더 이상 갈 곳이 없으면 이전 분기점으로 돌아가 다른 방향의 탐색을 계속합니다.**
+
+- **기본 원리: 시작 노드에서 출발하여 한 방향으로 최대한 깊게 탐색하고, 더 이상 탐색할 수 없을 때는 가장 마지막에 확인한 분기점으로 돌아가 다른 방향의 탐색을 이어갑니다.**
+- **적용: 미로 찾기, 퍼즐 게임**
+
+**너비 우선 탐색(BFS, Breadth-First Search)**
+
+**너비 우선 탐색은 시작점에서 가까운 노드를 먼저 탐색하고, 점점 더 멀리 있는 노드를 탐색하는 방법입니다. 이 알고리즘은 레벨 순서대로 탐색합니다. 즉, 시작 노드와 가장 가까운 노드부터 차례대로 모든 노드를 방문합니다.**
+
+- **기본 원리: 시작 노드에서 출발하여 인접한 모든 노드를 먼저 탐색한 후, 탐색한 노드들의 인접 노드를 차례로 탐색하면서 진행합니다.**
+- **적용: 최단 경로 찾기, 소셜 네트워크에서의 친구 찾기**
+
+**이제 각각의 알고리즘에 대해 JavaScript로 기본적인 구현 예를 살펴보겠습니다.**
+
+**백트래킹 예제: N-Queens 문제**
+
+**N-Queens 문제는 N×N 체스판 위에 N개의 퀸을 서로 공격할 수 없게 배치하는 문제입니다. 이 문제를 해결하기 위해 백트래킹 알고리즘을 사용할 수 있습니다. 아래는 백트래킹을 이용한 기본적인 접근 방법을 설명하기 위한 코드 스케치입니다.**
+
+```js
+function solveNQueens(n) {
+  const results = [];
+  dfs([], 0, n, results);
+  return results;
+
+  function dfs(queens, row, n, results) {
+    if (row === n) {
+      results.push(queens.map(q => ".".repeat(q) + "Q" + ".".repeat(n - q - 1)));
+      return;
+    }
+
+    for (let col = 0; col < n; col++) {
+      if (queens.every((queenRow, qRow) => col !== queenRow && Math.abs(col - queenRow) !== row - qRow)) {
+        dfs(queens.concat(col), row + 1, n, results);
+      }
+    }
+  }
+}
+```
+
+**DFS 예제: 그래프 탐색**
+
+**DFS를 사용하여 그래프의 모든 노드를 탐색하는 기본적인 방법은 다음과 같습니다.**
+
+```js
+function dfs(graph, start) {
+  const visited = new Set();
+  function explore(vertex) {
+    if (visited.has(vertex)) return;
+    visited.add(vertex);
+    console.log(vertex);
+    graph[vertex].forEach(neighbor => {
+      if (!visited.has(neighbor)) {
+        explore(neighbor);
+      }
+    });
+  }
+  explore(start);
+  return visited;
+}
+```
+
+**; \}**
+
+**BFS 예제: 그래프 탐색**
+
+**BFS를 사용하여 그래프의 모든 노드를 레벨별로 탐색하는 방법은 다음과 같습니다.**
+
+**javascript**
+
+```js
+function bfs(graph, start) {
+  const visited = new Set();
+  const queue = [start];
+  
+  while (queue.length > 0) {
+    const vertex = queue.shift();
+    if (visited.has(vertex)) continue;
+    visited.add(vertex);
+    console.log(vertex);
+    graph[vertex].forEach(neighbor => {
+      if (!visited.has(neighbor)) {
+        queue.push(neighbor);
+      }
+    });
+  }
+  return visited;
+}
+```
+
+**백트래킹(Backtracking) 상세 설명**
+
+**백트래킹은 결정 트리(decision tree)를 사용하여 모든 가능한 해를 탐색합니다. 결정 트리는 각 노드가 하나의 결정을 나타내며, 리프 노드(leaf node)는 최종 결정의 조합을 나타냅니다. 백트래킹은 이 트리를 깊이 우선 방식으로 탐색하며, 각 단계에서 유망하지 않은(promise가 없는) 노드를 가지치기(pruning)하여 탐색 공간을 줄입니다.**
+
+- **가지치기(Pruning): 현재 선택이 문제의 제약 조건을 위반하거나 해결책으로 이어질 가능성이 없는 경우, 그 선택을 더 이상 추적하지 않고 다른 선택으로 넘어갑니다.**
+- **유망성 검사(Promising): 현재 노드가 해결책에 이르는 경로의 일부일 가능성이 있는지 확인하는 과정입니다.**
+
+**예제 구현: 백트래킹을 사용하여 0부터 n-1까지의 모든 순열을 생성하는 함수를 예로 들어보겠습니다.**
+
+```js
+function generatePermutations(arr, start, end) {
+  if (start === end) {
+    console.log(arr);
+    return;
+  }
+  for (let i = start; i <= end; i++) {
+    [arr[start], arr[i]] = [arr[i], arr[start]]; // 스왑
+    generatePermutations(arr, start + 1, end);
+    [arr[start], arr[i]] = [arr[i], arr[start]]; // 원상 복구
+  }
+}
+```
+
+**깊이 우선 탐색(DFS) 상세 설명**
+
+**DFS는 그래프의 깊은 부분을 탐색하는데 집중하며, 가능한 한 멀리 있는 노드를 우선적으로 방문합니다. DFS는 스택(stack)을 사용하거나 재귀 호출을 이용하여 구현할 수 있습니다. 탐색 과정에서 각 노드를 방문할 때마다 해당 노드를 "방문한 상태"로 표시하여, 같은 노드를 중복하여 방문하는 것을 방지합니다.**
+
+**예제 구현: 간단한 DFS 알고리즘 예제입니다.**
+
+```js
+function dfs(graph, node, visited = new Set()) {
+  if (visited.has(node)) return;
+  visited.add(node);
+  console.log(node);
+  const neighbors = graph[node];
+  for (const neighbor of neighbors) {
+    dfs(graph, neighbor, visited);
+  }
+}
+```
+
+**ited); \} \}**
+
+**너비 우선 탐색(BFS) 상세 설명**
+
+**BFS는 시작점에서 가장 가까운 노드부터 차례대로 탐색합니다. 이 방법은 큐(queue)를 사용하여 구현되며, 각 노드를 방문할 때마다 그 노드의 모든 인접 노드를 큐에 추가합니다. 이후, 큐에서 노드를 하나씩 꺼내면서 탐색을 진행합니다. BFS는 주로 최단 경로 문제에 사용됩니다.**
+
+**예제 구현: BFS 알고리즘의 간단한 예제입니다.**
+
+```js
+function bfs(graph, start) {
+  const visited = new Set();
+  const queue = [start];
+
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (visited.has(node)) continue;
+    visited.add(node);
+    console.log(node);
+    const neighbors = graph[node];
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor)) {
+        queue.push(neighbor);
+      }
+    }
+  }
+}
+```

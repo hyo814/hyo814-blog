@@ -1,0 +1,130 @@
+---
+title: '[ZBF] 6월 15일 코딩테스트: 완전 탐색'
+date: '2024-06-16'
+tags: [코딩테스트]
+draft: false
+summary: '완전 탐색(Brute Force Search)은 가능한 모든 경우의 수를 탐색하여 해답을 찾는 방법입니다. 단순하지만 확실한 해결책을 제공하는 알고리즘으로, 문제의 크기가 작을 때 유용합니다.'
+---
+
+# [ZBF] 6월 15일 코딩테스트: 완전 탐색
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223480910196)에 2024년 6월 16일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+완전 탐색(Brute Force Search)은 가능한 모든 경우의 수를 탐색하여 해답을 찾는 방법입니다. 단순하지만 확실한 해결책을 제공하는 알고리즘으로, 문제의 크기가 작을 때 유용합니다.
+
+**완전 탐색 (Brute Force Search)란?**
+
+완전 탐색은 말 그대로 가능한 모든 경우의 수를 모두 탐색하는 알고리즘입니다. 주어진 문제에서 가능한 모든 선택지를 하나씩 검토하여 해답을 찾는 방식입니다. 예를 들어, 비밀번호를 추측할 때 가능한 모든 조합을 시도하는 것이 완전 탐색입니다.
+
+**완전 탐색의 특징**
+
+1. **단순함**: 구현이 매우 간단하고 직관적입니다.
+2. **확실한 결과**: 가능한 모든 경우를 탐색하기 때문에 반드시 답을 찾을 수 있습니다.
+3. **비효율적**: 경우의 수가 많아지면 시간이 많이 걸리기 때문에, 문제의 크기가 커지면 실용적이지 않습니다.
+
+**완전 탐색의 예**
+
+**예제 1: 숫자 맞추기 게임**
+
+숫자 맞추기 게임에서 1부터 100 사이의 숫자를 맞추는 프로그램을 완전 탐색으로 구현할 수 있습니다.
+
+```js
+// 숫자 맞추기 게임 예제
+function guessNumber(target) {
+    for (let i = 1; i <= 100; i++) {
+        if (i === target) {
+            return i;
+        }
+    }
+}
+
+let targetNumber = 42; // 맞춰야 할 숫자
+console.log(guessNumber(targetNumber)); // 42
+```
+
+**예제 2: 순열 생성**
+
+n개의 원소로 구성된 배열의 모든 순열을 생성하는 방법을 완전 탐색으로 구현할 수 있습니다.
+
+```js
+// 순열 생성 예제
+function permute(arr) {
+    let result = [];
+
+    function permuteHelper(temp, remaining) {
+        if (remaining.length === 0) {
+            result.push(temp);
+            return;
+        }
+
+        for (let i = 0; i < remaining.length; i++) {
+            permuteHelper(temp.concat(remaining[i]), remaining.slice(0, i).concat(remaining.slice(i + 1)));
+        }
+    }
+
+    permuteHelper([], arr);
+    return result;
+}
+
+let array = [1, 2, 3];
+console.log(permute(array)); 
+```
+
+**예제 3: 부분 집합 구하기**
+
+주어진 배열의 모든 부분 집합을 구하는 예제입니다.
+
+```js
+// 부분 집합 구하기 예제
+function getSubsets(arr) {
+    let result = [];
+
+    function subsetHelper(index, current) {
+        if (index === arr.length) {
+            result.push([...current]);
+            return;
+        }
+
+        // 현재 원소를 포함하지 않는 경우
+        subsetHelper(index + 1, current);
+        // 현재 원소를 포함하는 경우
+        current.push(arr[index]);
+        subsetHelper(index + 1, current);
+        current.pop();
+    }
+
+    subsetHelper(0, []);
+    return result;
+}
+
+let array = [1, 2, 3];
+console.log(getSubsets(array)); 
+```
+
+**완전 탐색의 시간 복잡도**
+
+완전 탐색의 시간 복잡도는 문제에 따라 다르지만, 일반적으로 O(n!) 또는 O(2^n) 등 매우 큰 값을 가집니다. 이는 완전 탐색이 모든 가능한 경우를 다 탐색하기 때문입니다. 따라서 입력 크기가 커질수록 실행 시간이 급격히 증가합니다.
+
+**완전 탐색의 장단점**
+
+**장점**
+
+- **간단하고 직관적**: 구현이 쉽고 이해하기 쉽습니다.
+- **완벽한 해답 보장**: 가능한 모든 경우를 탐색하기 때문에 반드시 답을 찾을 수 있습니다.
+
+**단점**
+
+- **비효율적**: 경우의 수가 많아지면 시간이 많이 걸립니다.
+- **실용성 부족**: 큰 입력 크기를 가진 문제에는 적합하지 않습니다.
+
+**완전 탐색의 활용**
+
+완전 탐색은 다음과 같은 상황에서 유용합니다.
+
+- 입력 크기가 작을 때
+- 최적화된 알고리즘을 찾기 전, 문제를 이해하기 위한 초기 단계
+- 최적화 알고리즘의 결과를 검증할 때
+
+[https://school.programmers.co.kr/learn/courses/30/parts/12230](https://school.programmers.co.kr/learn/courses/30/parts/12230)
+
+- [프로그래머스 스쿨 - 온라인 IT 특화 교육 전문 플랫폼](https://school.programmers.co.kr/learn/courses/30/parts/12230) — 프로그래머스 스쿨은 IT 분야 교육 전반의 과정을 제공하는 온라인 교육 플랫폼입니다. 프로그래밍, 데이터, 인공지능 등의 학습부터 코딩 테스트, 과제 테스트 연습까지, 프로그래머스 스쿨과 함께 성장해 보세요!

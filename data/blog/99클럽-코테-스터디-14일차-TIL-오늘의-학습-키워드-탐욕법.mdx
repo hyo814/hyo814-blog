@@ -1,0 +1,67 @@
+---
+title: '99클럽 코테 스터디 14일차 TIL + 오늘의 학습 키워드: 탐욕법'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: 'for(i of list){         if(money === 0){             break;         }         //몫을 count하면서 잔돈 개수 카운트         count += parseInt(money / i);         money %= i;…'
+---
+
+# 99클럽 코테 스터디 14일차 TIL + 오늘의 학습 키워드: 탐욕법
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787238054)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+function solution(pay, input, list) {
+    let money = pay - input;
+    let count = 0;
+
+    for(i of list){
+        if(money === 0){
+            break;
+        }
+        //몫을 count하면서 잔돈 개수 카운트
+        count += parseInt(money / i);
+        money %= i;
+    }
+    console.log(count);
+}
+
+const { format } = require("path");
+const readline = require("readline");
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+});
+
+let input;
+rl.on("line", function (line) {
+    input = parseInt(line);
+    rl.close();
+}).on("close", function () {
+    
+    let pay = 1000;
+    let list = [500, 100, 50, 10, 5, 1];
+    solution(pay, input, list);
+    process.exit();
+});
+```
+
+- 비기너: https://leetcode.com/problems/implement-stack-using-queues/description/ (30분)
+
+- 미들러: https://www.acmicpc.net/problem/14916 (1시간 15분)
+
+- 챌린저: https://school.programmers.co.kr/learn/courses/30/lessons/150365 (1시간 30분)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787238054/01.png)

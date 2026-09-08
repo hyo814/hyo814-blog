@@ -1,0 +1,72 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 23일차TIL + 정렬'
+date: '2025-02-19'
+tags: [코딩테스트]
+draft: false
+summary: 'const rl = readline.createInterface({   input: process.stdin,   output: process.stdout });'
+---
+
+# [99클럽] 99클럽 코테 스터디 23일차TIL + 정렬
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223765716914)에 2025년 2월 19일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+const readline = require("readline");
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+let input = [];
+
+rl.on("line", (line) => {
+  input.push(line.trim());
+}).on("close", () => {
+  solve(input);
+  process.exit(0);
+});
+
+function solve(input) {
+  let index = 0;
+  const T = parseInt(input[index++], 10);
+  let results = [];
+
+  for (let t = 0; t < T; t++) {
+    if (input[index] === "") index++; // 줄바꿈 처리
+    const [N, M] = input[index++].split(" ").map(Number);
+    const sejunArmy = input[index++].split(" ").map(Number);
+    const sebiArmy = input[index++].split(" ").map(Number);
+    
+    // 가장 강한 병사 찾기
+    const maxSejun = Math.max(...sejunArmy);
+    const maxSebi = Math.max(...sebiArmy);
+    
+    if (maxSejun >= maxSebi) {
+      results.push("S");
+    } else {
+      results.push("B");
+    }
+  }
+  
+  console.log(results.join("\n"));
+}
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223765716914/01.png)

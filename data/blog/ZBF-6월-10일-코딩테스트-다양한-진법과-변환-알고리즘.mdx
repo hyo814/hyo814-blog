@@ -1,0 +1,181 @@
+---
+title: '[ZBF] 6월 10일 코딩테스트 : 다양한 진법과 변환 알고리즘'
+date: '2024-06-10'
+tags: [코딩테스트]
+draft: false
+summary: '진법은 숫자를 표현하는 방식으로, 기본적으로 사용하는 10진법 외에도 2진법, 8진법, 16진법 등이 있습니다. 각 진법은 특정한 숫자 집합과 자리값을 사용하여 수를 표현합니다.'
+---
+
+# [ZBF] 6월 10일 코딩테스트 : 다양한 진법과 변환 알고리즘
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223473623545)에 2024년 6월 10일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+진법은 숫자를 표현하는 방식으로, 기본적으로 사용하는 10진법 외에도 2진법, 8진법, 16진법 등이 있습니다. 각 진법은 특정한 숫자 집합과 자리값을 사용하여 수를 표현합니다.
+
+1. 2진법 (Binary)
+
+2진법은 0과 1 두 가지 숫자만 사용하는 진법으로, 컴퓨터 시스템에서 기본적으로 사용됩니다. 각 자리의 값은 2의 거듭제곱으로 계산됩니다.
+
+이진수 변환 알고리즘 (10진수를 2진수로)
+
+1. 입력된 10진수를 2로 나누고, 나머지를 기록합니다.
+
+2. 몫을 다시 2로 나누고, 나머지를 기록합니다.
+
+3. 몫이 0이 될 때까지 이 과정을 반복합니다.
+
+4. 기록한 나머지를 역순으로 읽으면 이진수가 됩니다.
+
+**1. 10진수를 2진수로 변환**
+
+```js
+function decimalToBinary(n) {
+    let binary = '';
+    while (n > 0) {
+        binary = (n % 2) + binary;
+        n = Math.floor(n / 2);
+    }
+    return binary || '0';
+}
+
+console.log(decimalToBinary(11)); // 출력: 1011
+```
+
+2. 8진법 (Octal)
+
+8진법은 0부터 7까지의 숫자를 사용하는 진법으로, 각 자리의 값은 8의 거듭제곱으로 계산됩니다.
+
+8진수 변환 알고리즘 (10진수를 8진수로)
+
+1. 입력된 10진수를 8로 나누고, 나머지를 기록합니다.
+
+2. 몫을 다시 8로 나누고, 나머지를 기록합니다.
+
+3. 몫이 0이 될 때까지 이 과정을 반복합니다.
+
+4. 기록한 나머지를 역순으로 읽으면 8진수가 됩니다.
+
+**2. 10진수를 8진수로 변환**
+
+```js
+function decimalToOctal(n) {
+    let octal = '';
+    while (n > 0) {
+        octal = (n % 8) + octal;
+        n = Math.floor(n / 8);
+    }
+    return octal || '0';
+}
+
+console.log(decimalToOctal(15)); // 출력: 17
+```
+
+3. 16진법 (Hexadecimal)
+
+16진법은 0부터 9까지와 A부터 F까지의 문자를 사용하는 진법으로, 각 자리의 값은 16의 거듭제곱으로 계산됩니다.
+
+16진수 변환 알고리즘 (10진수를 16진수로)
+
+1. 입력된 10진수를 16으로 나누고, 나머지를 기록합니다. (나머지가 10 이상이면 A-F로 변환)
+
+2. 몫을 다시 16으로 나누고, 나머지를 기록합니다.
+
+3. 몫이 0이 될 때까지 이 과정을 반복합니다.
+
+4. 기록한 나머지를 역순으로 읽으면 16진수가 됩니다.
+
+**3. 10진수를 16진수로 변환**
+
+```js
+function decimalToHexadecimal(n) {
+    const hexChars = '0123456789ABCDEF';
+    let hexadecimal = '';
+    while (n > 0) {
+        hexadecimal = hexChars[n % 16] + hexadecimal;
+        n = Math.floor(n / 16);
+    }
+    return hexadecimal || '0';
+}
+
+console.log(decimalToHexadecimal(31)); // 출력: 1F
+```
+
+**진법 간 변환**
+
+**진법 간의 변환은 일반적으로 다음과 같은 두 단계를 거칩니다:**
+
+**1. 기준 진법에서 10진법으로 변환: 각 자리 값을 10진법으로 변환하여 더합니다.**
+
+**2. 10진법에서 목표 진법으로 변환: 앞서 설명한 알고리즘을 사용하여 목표 진법으로 변환합니다.**
+
+**4. 2진수를 10진수로 변환**
+
+```js
+function binaryToDecimal(binary) {
+    let decimal = 0;
+    for (let i = 0; i < binary.length; i++) {
+        decimal = decimal * 2 + parseInt(binary[i], 10);
+    }
+    return decimal;
+}
+
+console.log(binaryToDecimal('1011')); // 출력: 11
+```
+
+**5. 8진수를 10진수로 변환**
+
+```js
+function octalToDecimal(octal) {
+    let decimal = 0;
+    for (let i = 0; i < octal.length; i++) {
+        decimal = decimal * 8 + parseInt(octal[i], 10);
+    }
+    return decimal;
+}
+
+console.log(octalToDecimal('17')); // 출력: 15
+```
+
+**6. 16진수를 10진수로 변환**
+
+```js
+function hexadecimalToDecimal(hexadecimal) {
+    let decimal = 0;
+    const hexChars = '0123456789ABCDEF';
+    for (let i = 0; i < hexadecimal.length; i++) {
+        decimal = decimal * 16 + hexChars.indexOf(hexadecimal[i].toUpperCase());
+    }
+    return decimal;
+}
+
+console.log(hexadecimalToDecimal('1F')); // 출력: 31
+```
+
+**7. 2진수를 16진수로 변환**
+
+```js
+function binaryToHexadecimal(binary) {
+    const decimal = binaryToDecimal(binary);
+    return decimalToHexadecimal(decimal);
+}
+
+console.log(binaryToHexadecimal('1011')); // 출력: B
+```
+
+---
+
+[**https://school.programmers.co.kr/learn/challenges?order=acceptance_desc&languages=javascript&page=1&search=%EC%A7%84%EC%88%98**](https://school.programmers.co.kr/learn/challenges?order=acceptance_desc&languages=javascript&page=1&search=%EC%A7%84%EC%88%98)
+
+- [코딩테스트 연습 | 프로그래머스 스쿨](https://school.programmers.co.kr/learn/challenges?order=acceptance_desc&languages=javascript&page=1&search=%EC%A7%84%EC%88%98) — 개발자 취업의 필수 관문 코딩테스트를 철저하게 연습하고 대비할 수 있는 문제를 총망라! 프로그래머스에서 선발한 문제로 유형을 파악하고 실력을 업그레이드해 보세요!
+
+[**https://school.programmers.co.kr/learn/courses/30/lessons/12899**](https://school.programmers.co.kr/learn/courses/30/lessons/12899)
+
+- [코딩테스트 연습 - 124 나라의 숫자](https://school.programmers.co.kr/learn/courses/30/lessons/12899) — 124 나라가 있습니다. 124 나라에서는 10진법이 아닌 다음과 같은 자신들만의 규칙으로 수를 표현합니다. 124 나라에는 자연수만 존재합니다. 124 나라에는 모든 수를 표현할 때 1, 2, 4만 사용합니다. 예를 들어서 124 나라에서 사용하는 숫자는 다음과 같이 변환됩니다. 10진법 124 나라 10진법 124 나라 1 1 6 14 2 2 7 21 3 4 8 22 4 11 9 24 5 12 10 41 자연수 n이 매개변수로 주어질 때, n을 124 나라에서 사용하는 숫자로 바꾼 값을 return 하도록 solution 함수를...
+
+[**https://school.programmers.co.kr/learn/courses/30/lessons/120885**](https://school.programmers.co.kr/learn/courses/30/lessons/120885)
+
+- [코딩테스트 연습 - 이진수 더하기](https://school.programmers.co.kr/learn/courses/30/lessons/120885) — 이진수를 의미하는 두 개의 문자열 bin1 과 bin2 가 매개변수로 주어질 때, 두 이진수의 합을 return하도록 solution 함수를 완성해주세요. 제한사항 return 값은 이진수를 의미하는 문자열입니다. 1 ≤ bin1 , bin2 의 길이 ≤ 10 bin1 과 bin2 는 0과 1로만 이루어져 있습니다. bin1 과 bin2 는 "0"을 제외하고 0으로 시작하지 않습니다. 입출력 예 bin1 bin2 result "10" "11" "101" "1001" "1111" "11000" 입출력 예 설명 입출력 예 #1 10 +...
+
+[**https://school.programmers.co.kr/learn/courses/30/lessons/68935**](https://school.programmers.co.kr/learn/courses/30/lessons/68935)
+
+- [코딩테스트 연습 - 3진법 뒤집기](https://school.programmers.co.kr/learn/courses/30/lessons/68935) — 자연수 n이 매개변수로 주어집니다. n을 3진법 상에서 앞뒤로 뒤집은 후, 이를 다시 10진법으로 표현한 수를 return 하도록 solution 함수를 완성해주세요. 제한사항 n은 1 이상 100,000,000 이하인 자연수입니다. 입출력 예 n result 45 7 125 229 입출력 예 설명 입출력 예 #1 답을 도출하는 과정은 다음과 같습니다. n (10진법) n (3진법) 앞뒤 반전(3진법) 10진법으로 표현 45 1200 0021 7 따라서 7을 return 해야 합니다. 입출력 예 #2 답을 도출하는 과정은 다음과 같...

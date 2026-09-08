@@ -1,0 +1,64 @@
+---
+title: '99클럽 코테 스터디 9일차 TIL + 오늘의 학습 키워드: 깊이/너비 우선 탐색(DFS/BFS)'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: 'const bfs = (start, [ex, ey], l, visited) => {   const queue = [start];   while (queue.length) {     const [x, y, depth] = queue.shift();     if (x === ex && y…'
+---
+
+# 99클럽 코테 스터디 9일차 TIL + 오늘의 학습 키워드: 깊이/너비 우선 탐색(DFS/BFS)
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787251684)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+const offset = [
+  [-1, -2], [-2, -1], [-2, 1], [-1, 2],
+  [1, 2], [2, 1], [2, -1], [1, -2]
+];
+
+const bfs = (start, [ex, ey], l, visited) => {
+  const queue = [start];
+  while (queue.length) {
+    const [x, y, depth] = queue.shift();
+    if (x === ex && y === ey) {
+      return depth;
+    }
+    for (let i = 0; i < 8; i++) {
+      const nx = x + offset[i][0];
+      const ny = y + offset[i][1];
+      if (nx >= 0 && nx < l && ny >= 0 && ny < l && !visited[nx][ny]) {
+        visited[nx][ny] = true;
+        queue.push([nx, ny, depth + 1]);
+      }
+    }
+  }
+}
+
+const input = require('fs').readFileSync('/dev/stdin').toString().trim().split("\n");
+for (let i = 0; i < +input[0]; i++) {
+  const l = +input[i * 3 + 1];
+  const [sx, sy] = input[i * 3 + 2].split(' ').map(v => +v);
+  const [ex, ey] = input[i * 3 + 3].split(' ').map(v => +v);
+  const visited = [...Array(l)].map(() => Array(l).fill(false));
+  visited[sx][sy] = true;
+  console.log(bfs([sx, sy, 0], [ex, ey], l, visited));
+}
+```
+
+- 비기너: [https://www.acmicpc.net/problem/9933](https://www.acmicpc.net/problem/9933)
+- 미들러: [https://www.acmicpc.net/problem/7562](https://www.acmicpc.net/problem/7562)
+- 챌린저: [https://school.programmers.co.kr/learn/courses/30/lessons/77486](https://school.programmers.co.kr/learn/courses/30/lessons/77486)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787251684/01.png)

@@ -1,0 +1,72 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 24일차TIL + 정렬'
+date: '2025-02-20'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 개미 https://www.acmicpc.net/problem/3048'
+---
+
+# [99클럽] 99클럽 코테 스터디 24일차TIL + 정렬
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223766971461)에 2025년 2월 20일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 개미 [https://www.acmicpc.net/problem/3048](https://www.acmicpc.net/problem/3048)
+
+미들러 합분해 [https://www.acmicpc.net/problem/2225](https://www.acmicpc.net/problem/2225)
+
+챌린저 택배 [https://www.acmicpc.net/problem/1719](https://www.acmicpc.net/problem/1719)
+
+```js
+const readline = require("readline");
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+let input = [];
+
+rl.on("line", (line) => {
+  input.push(line.trim());
+}).on("close", () => {
+  const [N1, N2] = input[0].split(" ").map(Number);
+  let firstGroup = input[1].split("").reverse();
+  let secondGroup = input[2].split("");
+  const T = Number(input[3]);
+
+  let ants = [...firstGroup, ...secondGroup];
+  let directions = new Array(N1).fill(1).concat(new Array(N2).fill(-1));
+
+  for (let t = 0; t < T; t++) {
+    let newPositions = [...ants];
+    for (let i = 0; i < ants.length - 1; i++) {
+      if (directions[i] === 1 && directions[i + 1] === -1) {
+        [newPositions[i], newPositions[i + 1]] = [newPositions[i + 1], newPositions[i]];
+        [directions[i], directions[i + 1]] = [directions[i + 1], directions[i]];
+        i++; 
+      }
+    }
+    ants = newPositions;
+  }
+
+  console.log(ants.join(""));
+});
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223766971461/01.png)

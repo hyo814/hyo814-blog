@@ -1,0 +1,75 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 21일차TIL + 정렬'
+date: '2025-02-17'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 파일정리 https://www.acmicpc.net/problem/20291'
+---
+
+# [99클럽] 99클럽 코테 스터디 21일차TIL + 정렬
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223763339162)에 2025년 2월 17일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 파일정리 [https://www.acmicpc.net/problem/20291](https://www.acmicpc.net/problem/20291)
+
+미들러 피보나치 함수 [https://www.acmicpc.net/problem/1003](https://www.acmicpc.net/problem/1003)
+
+챌린저 파괴되지 않은 건물 [https://school.programmers.co.kr/learn/courses/30/lessons/92344](https://school.programmers.co.kr/learn/courses/30/lessons/92344)
+
+```js
+const fs = require('fs');
+
+// 입력을 처리하는 함수
+function processInput(input) {
+    const lines = input.trim().split('\n');
+    const n = parseInt(lines[0], 10);
+    const extensionCount = {};
+
+    for (let i = 1; i <= n; i++) {
+        const fileName = lines[i].trim();
+        const extension = fileName.split('.').pop();
+
+        if (extensionCount[extension]) {
+            extensionCount[extension]++;
+        } else {
+            extensionCount[extension] = 1;
+        }
+    }
+
+    // 확장자를 사전순으로 정렬
+    const sortedExtensions = Object.keys(extensionCount).sort();
+    
+    // 출력
+    sortedExtensions.forEach(ext => {
+        console.log(`${ext} ${extensionCount[ext]}`);
+    });
+}
+
+// 표준 입력을 처리
+let inputData = '';
+process.stdin.on('data', chunk => {
+    inputData += chunk;
+});
+
+process.stdin.on('end', () => {
+    processInput(inputData);
+});
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223763339162/01.png)

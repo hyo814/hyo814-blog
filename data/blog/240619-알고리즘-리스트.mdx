@@ -1,0 +1,683 @@
+---
+title: '240619 알고리즘 : 리스트'
+date: '2024-06-19'
+tags: [코딩테스트]
+draft: false
+summary: '리스트는 데이터의 순차적인 컬렉션입니다. 배열이라고도 하며, 일반적으로 고정된 크기를 가지지 않고 동적으로 크기를 조절할 수 있습니다. 리스트의 요소는 인덱스로 접근할 수 있으며, 다양한 프로그래밍 언어에서 지원됩니다.'
+---
+
+# 240619 알고리즘 : 리스트
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223484237519)에 2024년 6월 19일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+**리스트 (List)**
+
+리스트는 데이터의 순차적인 컬렉션입니다. 배열이라고도 하며, 일반적으로 고정된 크기를 가지지 않고 동적으로 크기를 조절할 수 있습니다. 리스트의 요소는 인덱스로 접근할 수 있으며, 다양한 프로그래밍 언어에서 지원됩니다.
+
+```js
+// 자바스크립트의 배열 예제
+let fruits = ['Apple', 'Banana', 'Cherry'];
+console.log(fruits[0]); // 'Apple'
+```
+
+**연결 리스트 (Linked List)**
+
+연결 리스트는 각 요소가 노드로 구성되며, 각 노드는 데이터와 다음 노드를 가리키는 포인터를 포함합니다. 연결 리스트는 배열과 달리 요소의 삽입과 삭제가 용이하며, 동적 크기를 가집니다. 하지만 인덱스를 통한 접근 속도는 느립니다.
+
+**단일 연결 리스트 (Singly Linked List)**
+
+단일 연결 리스트에서 각 노드는 다음 노드에 대한 포인터를 가집니다.
+
+```js
+// 자바스크립트로 단일 연결 리스트 구현 예제
+class Node {
+  constructor(value) {
+    this.value = value;
+    this.next = null;
+  }
+}
+
+class SinglyLinkedList {
+  constructor() {
+    this.head = null;
+  }
+
+  append(value) {
+    let newNode = new Node(value);
+    if (!this.head) {
+      this.head = newNode;
+      return;
+    }
+    let current = this.head;
+    while (current.next) {
+      current = current.next;
+    }
+    current.next = newNode;
+  }
+
+  display() {
+    let current = this.head;
+    while (current) {
+      console.log(current.value);
+      current = current.next;
+    }
+  }
+}
+
+let list = new SinglyLinkedList();
+list.append('Apple');
+list.append('Banana');
+list.append('Cherry');
+list.display(); // Apple, Banana, Cherry 출력
+```
+
+**이중 연결 리스트 (Doubly Linked List)**
+
+이중 연결 리스트는 각 노드가 다음 노드와 이전 노드를 가리키는 포인터를 가집니다. 양방향으로 순회가 가능해 더 유연하지만, 노드가 추가되면서 메모리 사용량이 증가합니다.
+
+```js
+// 자바스크립트로 이중 연결 리스트 구현 예제
+class DoublyNode {
+  constructor(value) {
+    this.value = value;
+    this.next = null;
+    this.prev = null;
+  }
+}
+
+class DoublyLinkedList {
+  constructor() {
+    this.head = null;
+    this.tail = null;
+  }
+
+  append(value) {
+    let newNode = new DoublyNode(value);
+    if (!this.head) {
+      this.head = newNode;
+      this.tail = newNode;
+      return;
+    }
+    this.tail.next = newNode;
+    newNode.prev = this.tail;
+    this.tail = newNode;
+  }
+
+  display() {
+    let current = this.head;
+    while (current) {
+      console.log(current.value);
+      current = current.next;
+    }
+  }
+}
+
+let doublyList = new DoublyLinkedList();
+doublyList.append('Apple');
+doublyList.append('Banana');
+doublyList.append('Cherry');
+doublyList.display(); // Apple, Banana, Cherry 출력
+```
+
+**원형 연결 리스트 (Circular Linked List)**
+
+원형 연결 리스트는 마지막 노드가 첫 번째 노드를 가리키는 연결 리스트입니다. 이는 리스트의 끝을 쉽게 감지할 수 있게 해줍니다.
+
+**리스트와 연결 리스트 비교**
+
+- **리스트**: 배열과 같은 형태로, 인덱스를 통한 빠른 접근이 가능하지만, 요소의 삽입과 삭제가 비효율적일 수 있습니다.
+- **연결 리스트**: 노드로 구성되며, 요소의 삽입과 삭제가 효율적이지만, 인덱스를 통한 접근이 느립니다.
+
+---
+
+**스택 (Stack)**
+
+스택은 후입선출(LIFO, Last In First Out) 방식의 데이터 구조입니다. 스택은 두 가지 주요 연산을 지원합니다:
+
+- **push**: 스택의 맨 위에 요소를 추가합니다.
+- **pop**: 스택의 맨 위에 있는 요소를 제거하고 반환합니다.
+
+```js
+class Stack {
+  constructor() {
+    this.items = [];
+  }
+
+  push(element) {
+    this.items.push(element);
+  }
+
+  pop() {
+    if (this.items.length === 0) return "Underflow";
+    return this.items.pop();
+  }
+
+  peek() {
+    return this.items[this.items.length - 1];
+  }
+
+  isEmpty() {
+    return this.items.length === 0;
+  }
+
+  printStack() {
+    return this.items.join(" ");
+  }
+}
+
+let stack = new Stack();
+stack.push(10);
+stack.push(20);
+stack.push(30);
+console.log(stack.printStack()); // 10 20 30
+console.log(stack.pop()); // 30
+console.log(stack.peek()); // 20
+```
+
+**큐 (Queue)**
+
+큐는 선입선출(FIFO, First In First Out) 방식의 데이터 구조입니다. 큐는 두 가지 주요 연산을 지원합니다:
+
+- **enqueue**: 큐의 끝에 요소를 추가합니다.
+- **dequeue**: 큐의 앞에 있는 요소를 제거하고 반환합니다.
+
+```js
+class Queue {
+  constructor() {
+    this.items = [];
+  }
+
+  enqueue(element) {
+    this.items.push(element);
+  }
+
+  dequeue() {
+    if (this.items.length === 0) return "Underflow";
+    return this.items.shift();
+  }
+
+  front() {
+    if (this.items.length === 0) return "No elements in Queue";
+    return this.items[0];
+  }
+
+  isEmpty() {
+    return this.items.length === 0;
+  }
+
+  printQueue() {
+    return this.items.join(" ");
+  }
+}
+
+let queue = new Queue();
+queue.enqueue(10);
+queue.enqueue(20);
+queue.enqueue(30);
+console.log(queue.printQueue()); // 10 20 30
+console.log(queue.dequeue()); // 10
+console.log(queue.front()); // 20
+```
+
+**덱 (Deque, Double-Ended Queue)**
+
+덱은 양쪽 끝에서 요소의 삽입과 삭제가 가능한 큐입니다. 따라서 스택과 큐의 기능을 모두 제공합니다.
+
+```js
+class Deque {
+  constructor() {
+    this.items = [];
+  }
+
+  addFront(element) {
+    this.items.unshift(element);
+  }
+
+  addRear(element) {
+    this.items.push(element);
+  }
+
+  removeFront() {
+    if (this.items.length === 0) return "Underflow";
+    return this.items.shift();
+  }
+
+  removeRear() {
+    if (this.items.length === 0) return "Underflow";
+    return this.items.pop();
+  }
+
+  isEmpty() {
+    return this.items.length === 0;
+  }
+
+  printDeque() {
+    return this.items.join(" ");
+  }
+}
+
+let deque = new Deque();
+deque.addRear(10);
+deque.addRear(20);
+deque.addFront(30);
+console.log(deque.printDeque()); // 30 10 20
+console.log(deque.removeFront()); // 30
+console.log(deque.removeRear()); // 20
+```
+
+**우선순위 큐 (Priority Queue)**
+
+우선순위 큐는 각 요소가 우선순위를 가지며, 우선순위가 높은 요소가 먼저 처리되는 큐입니다. 일반 큐와 달리, 요소가 큐에 삽입될 때 우선순위에 따라 정렬됩니다.
+
+```js
+class PriorityQueue {
+  constructor() {
+    this.items = [];
+  }
+
+  enqueue(element, priority) {
+    let queueElement = { element, priority };
+    let added = false;
+    for (let i = 0; i < this.items.length; i++) {
+      if (this.items[i].priority > queueElement.priority) {
+        this.items.splice(i, 1, queueElement);
+        added = true;
+        break;
+      }
+    }
+    if (!added) {
+      this.items.push(queueElement);
+    }
+  }
+
+  dequeue() {
+    if (this.items.length === 0) return "Underflow";
+    return this.items.shift();
+  }
+
+  front() {
+    if (this.items.length === 0) return "No elements in Queue";
+    return this.items[0];
+  }
+
+  isEmpty() {
+    return this.items.length === 0;
+  }
+
+  printPQueue() {
+    return this.items.map(item => `${item.element}(${item.priority})`).join(" ");
+  }
+}
+
+let pQueue = new PriorityQueue();
+pQueue.enqueue("A", 2);
+pQueue.enqueue("B", 1);
+pQueue.enqueue("C", 3);
+console.log(pQueue.printPQueue()); // B(1) A(2) C(3)
+console.log(pQueue.dequeue().element); // B
+console.log(pQueue.front().element); // A
+```
+
+---
+
+**이중 연결 리스트 (Doubly Linked List)**
+
+이중 연결 리스트는 각 노드가 데이터와 함께 두 개의 포인터를 가지는 데이터 구조입니다. 하나는 다음 노드를 가리키고, 다른 하나는 이전 노드를 가리킵니다. 이는 단일 연결 리스트와 달리 양방향으로 순회할 수 있게 합니다. 이중 연결 리스트는 삽입, 삭제 및 양방향 순회가 용이하지만, 각 노드가 추가적인 포인터를 가지므로 메모리 사용량이 증가합니다.
+
+**이중 연결 리스트의 구조**
+
+- **노드 (Node)**: 데이터와 두 개의 포인터(next와 prev)를 포함합니다.
+- **헤드 (Head)**: 리스트의 첫 번째 노드를 가리킵니다.
+- **테일 (Tail)**: 리스트의 마지막 노드를 가리킵니다.
+
+**이중 연결 리스트의 주요 연산**
+
+1. **노드 삽입**
+2. **노드 삭제**
+3. **노드 검색**
+4. **리스트 순회**
+
+```js
+class DoublyNode {
+  constructor(value) {
+    this.value = value;
+    this.next = null;
+    this.prev = null;
+  }
+}
+
+class DoublyLinkedList {
+  constructor() {
+    this.head = null;
+    this.tail = null;
+    this.size = 0;
+  }
+
+  // 리스트의 끝에 노드 추가
+  append(value) {
+    const newNode = new DoublyNode(value);
+    if (this.head === null) {
+      this.head = newNode;
+      this.tail = newNode;
+    } else {
+      this.tail.next = newNode;
+      newNode.prev = this.tail;
+      this.tail = newNode;
+    }
+    this.size++;
+  }
+
+  // 특정 위치에 노드 삽입
+  insert(value, index) {
+    if (index < 0 || index > this.size) return null;
+
+    const newNode = new DoublyNode(value);
+    let current = this.head;
+    let previous;
+    
+    if (index === 0) {
+      if (!this.head) {
+        this.head = newNode;
+        this.tail = newNode;
+      } else {
+        newNode.next = this.head;
+        this.head.prev = newNode;
+        this.head = newNode;
+      }
+    } else if (index === this.size) {
+      this.tail.next = newNode;
+      newNode.prev = this.tail;
+      this.tail = newNode;
+    } else {
+      for (let i = 0; i < index; i++) {
+        previous = current;
+        current = current.next;
+      }
+      newNode.next = current;
+      newNode.prev = previous;
+      previous.next = newNode;
+      current.prev = newNode;
+    }
+    this.size++;
+  }
+
+  // 특정 위치의 노드 삭제
+  remove(index) {
+    if (index < 0 || index >= this.size) return null;
+
+    let current = this.head;
+    let previous;
+    
+    if (index === 0) {
+      this.head = current.next;
+      if (this.head) {
+        this.head.prev = null;
+      } else {
+        this.tail = null;
+      }
+    } else if (index === this.size - 1) {
+      current = this.tail;
+      this.tail = this.tail.prev;
+      this.tail.next = null;
+    } else {
+      for (let i = 0; i < index; i++) {
+        previous = current;
+        current = current.next;
+      }
+      previous.next = current.next;
+      current.next.prev = previous;
+    }
+    this.size--;
+    return current.value;
+  }
+
+  // 리스트 출력
+  display() {
+    let current = this.head;
+    while (current) {
+      console.log(current.value);
+      current = current.next;
+    }
+  }
+}
+
+// 예제 사용
+let doublyList = new DoublyLinkedList();
+doublyList.append('Apple');
+doublyList.append('Banana');
+doublyList.append('Cherry');
+doublyList.insert('Date', 2); // 특정 위치에 삽입
+doublyList.display(); // Apple, Banana, Date, Cherry 출력
+console.log('삭제된 값:', doublyList.remove(1)); // Banana 삭제
+doublyList.display(); // Apple, Date, Cherry 출력
+```
+
+**이중 연결 리스트의 장점**
+
+1. **양방향 순회: 노드를 앞으로 또는 뒤로 쉽게 순회할 수 있습니다.**
+2. **노드 삽입 및 삭제가 용이: 주어진 노드의 앞이나 뒤에 노드를 삽입하거나 삭제할 때 포인터만 수정하면 됩니다.**
+3. **더블 링크: 이전 노드와 다음 노드에 대한 링크를 모두 가짐으로써 특정 노드의 삭제나 삽입이 더 직관적입니다.**
+
+**이중 연결 리스트의 단점**
+
+1. **메모리 사용 증가: 각 노드가 두 개의 포인터를 가지므로 단일 연결 리스트보다 메모리 사용량이 많습니다.**
+2. **복잡성 증가: 포인터가 두 개여서 관리해야 할 것이 많아지므로 코드의 복잡성이 증가합니다.**
+
+---
+
+**이중 연결 리스트에서 특정 값을 가진 노드를 검색하는 방법은 무엇인가요?**
+
+**이중 연결 리스트에서 특정 값을 가진 노드를 검색하려면 리스트의 헤드부터 시작해서 각 노드를 순차적으로 탐색합니다. 노드의 값이 찾고자 하는 값과 일치하면 그 노드를 반환하고, 일치하는 노드가 없으면 null을 반환합니다.**
+
+```js
+class DoublyNode {
+  constructor(value) {
+    this.value = value;
+    this.next = null;
+    this.prev = null;
+  }
+}
+
+class DoublyLinkedList {
+  constructor() {
+    this.head = null;
+    this.tail = null;
+    this.size = 0;
+  }
+
+  append(value) {
+    const newNode = new DoublyNode(value);
+    if (this.head === null) {
+      this.head = newNode;
+      this.tail = newNode;
+    } else {
+      this.tail.next = newNode;
+      newNode.prev = this.tail;
+      this.tail = newNode;
+    }
+    this.size++;
+  }
+
+  // 특정 값을 가진 노드 검색
+  find(value) {
+    let current = this.head;
+    while (current) {
+      if (current.value === value) {
+        return current;
+      }
+      current = current.next;
+    }
+    return null;
+  }
+
+  display() {
+    let current = this.head;
+    while (current) {
+      console.log(current.value);
+      current = current.next;
+    }
+  }
+}
+
+let doublyList = new DoublyLinkedList();
+doublyList.append('Apple');
+doublyList.append('Banana');
+doublyList.append('Cherry');
+
+let foundNode = doublyList.find('Banana');
+console.log(foundNode ? foundNode.value : 'Not found'); // Banana
+foundNode = doublyList.find('Date');
+console.log(foundNode ? foundNode.value : 'Not found'); // Not found
+```
+
+**이중 연결 리스트와 단일 연결 리스트의 차이점은 무엇인가요?**
+
+**이중 연결 리스트와** **단일 연결 리스트의 주요 차이점은 다음과 같습니다:**
+
+**포인터 수:**
+
+**단일 연결 리스트: 각 노드는 하나의 next 포인터를 가집니다.**
+
+**이중 연결 리스트: 각 노드는 두 개의 포인터(next와 prev)를 가집니다.**
+
+**양방향 순회:**
+
+**단일 연결 리스트: 오직 한 방향(앞에서 뒤로)으로만 순회할 수 있습니다.**
+
+**이중 연결 리스트: 양방향(앞에서 뒤로, 뒤에서 앞으로)으로 순회할 수 있습니다.**
+
+**노드 삽입 및 삭제의 용이성:**
+
+**단일 연결 리스트: 특정 노드를 삭제하거나 중간에 삽입할 때 이전 노드를 알아야 하므로 약간 더 복잡합니다.**
+
+**이중 연결 리스트: 각 노드가 prev 포인터를 가지므로, 특정 노드를 삭제하거나 중간에 삽입할 때 더 용이합니다.**
+
+**메모리 사용량:**
+
+**단일 연결 리스트: 각 노드가 하나의 포인터를 가지므로 메모리 사용량이 더 적습니다.**
+
+**이중 연결 리스트: 각 노드가 두 개의 포인터를 가지므로 메모리 사용량이 더 많습니다.**
+
+**이중 연결 리스트에서 리스트의 중간에 노드를 삽입하는 방법은 무엇인가요?**
+
+**이중 연결 리스트에서 중간에 노드를 삽입하려면, 삽입할 위치의 이전 노드와 다음 노드를 찾아서 새 노드를 그 사이에 연결합니다.**
+
+```js
+class DoublyNode {
+  constructor(value) {
+    this.value = value;
+    this.next = null;
+    this.prev = null;
+  }
+}
+
+class DoublyLinkedList {
+  constructor() {
+    this.head = null;
+    this.tail = null;
+    this.size = 0;
+  }
+
+  append(value) {
+    const newNode = new DoublyNode(value);
+    if (this.head === null) {
+      this.head = newNode;
+      this.tail = newNode;
+    } else {
+      this.tail.next = newNode;
+      newNode.prev = this.tail;
+      this.tail = newNode;
+    }
+    this.size++;
+  }
+
+  // 특정 위치에 노드 삽입
+  insert(value, index) {
+    if (index < 0 || index > this.size) return null;
+
+    const newNode = new DoublyNode(value);
+    let current = this.head;
+    let previous;
+
+    if (index === 0) {
+      if (!this.head) {
+        this.head = newNode;
+        this.tail = newNode;
+      } else {
+        newNode.next = this.head;
+        this.head.prev = newNode;
+        this.head = newNode;
+      }
+    } else if (index === this.size) {
+      this.tail.next = newNode;
+      newNode.prev = this.tail;
+      this.tail = newNode;
+    } else {
+      for (let i = 0; i < index; i++) {
+        previous = current;
+        current = current.next;
+      }
+      newNode.next = current;
+      newNode.prev = previous;
+      previous.next = newNode;
+      current.prev = newNode;
+    }
+    this.size++;
+  }
+
+  display() {
+    let current = this.head;
+    while (current) {
+      console.log(current.value);
+      current = current.next;
+    }
+  }
+}
+
+// 예제 사용
+let doublyList = new DoublyLinkedList();
+doublyList.append('Apple');
+doublyList.append('Banana');
+doublyList.append('Cherry');
+doublyList.insert('Date', 2); // 특정 위치에 삽입
+doublyList.display(); // Apple, Banana, Date, Cherry 출력
+```
+
+---
+
+**덱 (Deque, Double-Ended Queue)**
+
+**덱(Deque)은 양쪽 끝에서 요소의 삽입과 삭제가 가능한 데이터 구조입니다. 스택과 큐의 특성을 모두 가집니다. 덱은 두 가지 주요 연산을 지원합니다:**
+
+1. **앞에서 요소 삽입 및 삭제**
+2. **뒤에서 요소 삽입 및 삭제**
+
+**이러한 유연성 덕분에 덱은 다양한 상황에서 유용하게 사용될 수 있습니다.**
+
+**덱의 주요 연산**
+
+- **addFront(element): 덱의 앞쪽에 요소를 추가합니다.**
+- **addRear(element): 덱의 뒤쪽에 요소를 추가합니다.**
+- **removeFront(): 덱의 앞쪽에서 요소를 제거하고 반환합니다.**
+- **removeRear(): 덱의 뒤쪽에서 요소를 제거하고 반환합니다.**
+- **peekFront(): 덱의 앞쪽 요소를 반환합니다 (제거하지 않음).**
+- **peekRear(): 덱의 뒤쪽 요소를 반환합니다 (제거하지 않음).**
+- **isEmpty(): 덱이 비어 있는지 확인합니다.**
+- **size(): 덱의 요소 개수를 반환합니다.**
+
+**덱의 활용 사례**
+
+1. **회문 검사: 덱을 사용하여 문자열이 회문인지 검사할 수 있습니다. 양쪽 끝에서 문자를 비교하면 됩니다.**
+2. **최대/최소 슬라이딩 윈도우: 덱을 사용하여 슬라이딩 윈도우의 최대 또는 최소 값을 효율적으로 찾을 수 있습니다.**
+3. **스케줄링 알고리즘: 작업 스케줄링에서 양쪽 끝에서 작업을 추가/삭제하는데 유용합니다.**
+4. **BFS (너비 우선 탐색): 그래프 탐색에서 큐처럼 사용될 수 있습니다. 양방향에서 노드를 처리해야 할 때 유용합니다.**
+
+**덱의 장점**
+
+- **양쪽 끝에서 삽입과 삭제가 가능: 스택과 큐의 기능을 모두 제공합니다.**
+- **유연성: 다양한 데이터 처리 요구에 적응할 수 있습니다.**
+
+**덱의 단점**
+
+- **복잡성 증가: 양쪽 끝에서의 연산을 모두 지원하므로 코드의 복잡성이 증가할 수 있습니다.**
+- **메모리 사용: 배열 기반 구현의 경우, 빈번한 삽입/삭제 시 메모리 재할당이 발생할 수 있습니다.**

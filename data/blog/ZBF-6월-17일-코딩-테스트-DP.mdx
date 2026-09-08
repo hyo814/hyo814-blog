@@ -1,0 +1,208 @@
+---
+title: '[ZBF] 6월 17일 코딩 테스트: DP'
+date: '2024-06-17'
+tags: [코딩테스트]
+draft: false
+summary: '동적 계획법(Dynamic Programming, DP)은 복잡한 문제를 단순한 하위 문제로 나누어 해결하는 알고리즘 기법입니다. 이 방법은 각 하위 문제를 한 번만 해결하고 그 결과를 재사용함으로써 시간 복잡도를 줄이는 데 효과적입니다.'
+---
+
+# [ZBF] 6월 17일 코딩 테스트: DP
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223481857880)에 2024년 6월 17일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+동적 계획법(Dynamic Programming, DP)은 복잡한 문제를 단순한 하위 문제로 나누어 해결하는 알고리즘 기법입니다. 이 방법은 각 하위 문제를 한 번만 해결하고 그 결과를 재사용함으로써 시간 복잡도를 줄이는 데 효과적입니다.
+
+**동적 계획법의 기본 개념**
+
+1. **분할 정복(Divide and Conquer):** 문제를 더 작은 하위 문제로 나눔.
+2. **최적 부분 구조(Optimal Substructure):** 하위 문제의 최적 해가 전체 문제의 최적 해를 구성.
+3. **중복되는 부분 문제(Overlapping Subproblems):** 동일한 하위 문제가 여러 번 재계산되는 것을 방지하기 위해 메모이제이션(Memoization) 또는 테이블 작성(Tabulation) 기법 사용.
+
+**동적 계획법의 두 가지 접근 방식**
+
+1. **탑다운(Top-Down) 접근법:** 메모이제이션(Memoization)을 사용하는 방법으로, 재귀적으로 문제를 해결하면서 이미 계산된 결과를 저장해두고 재사용.
+2. **바텀업(Bottom-Up) 접근법:** 테이블 작성(Tabulation)을 사용하는 방법으로, 작은 하위 문제부터 차례대로 해결하여 최종 문제의 해를 구함.
+
+예제: 피보나치 수열
+
+피보나치 수열은 다음과 같이 정의됩니다:
+
+- F(0) = 0F(1) = 1F(n) = F(n-1) + F(n-2) (n >= 2)
+  - F(0) = 0
+  - F(1) = 1
+  - F(n) = F(n-1) + F(n-2) (n >= 2)
+
+```js
+// 메모이제이션을 사용한 피보나치 수열
+function fib(n, memo = {}) {
+  if (n in memo) return memo[n]; // 이미 계산된 값이 있으면 반환
+  if (n <= 1) return n;
+  memo[n] = fib(n - 1, memo) + fib(n - 2, memo); // 재귀적으로 계산
+  return memo[n];
+}
+
+console.log(fib(10)); // 55
+```
+
+```js
+// 테이블 작성을 사용한 피보나치 수열
+function fib(n) {
+  if (n <= 1) return n;
+  
+  let dp = [0, 1];
+  for (let i = 2; i <= n; i++) {
+    dp[i] = dp[i - 1] + dp[i - 2];
+  }
+  return dp[n];
+}
+
+console.log(fib(10)); // 55
+```
+
+예제: 최장 공통 부분 문자열(Longest Common Subsequence, LCS)
+
+두 문자열이 주어졌을 때, 이들 문자열의 최장 공통 부분 문자열의 길이를 구하는 문제를 생각해 봅시다.
+
+```js
+// 최장 공통 부분 문자열 (LCS) 문제 해결
+function lcs(str1, str2) {
+  const m = str1.length;
+  const k = str2.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(k + 1).fill(0));
+  
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= k; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  return dp[m][k];
+}
+
+console.log(lcs("ABCBDAB", "BDCAB")); // 4 (BCAB)
+```
+
+---
+
+**1. 배낭 문제(Knapsack Problem)**
+
+**문제 설명:**
+
+주어진 무게 제한 안에서 최대 가치를 얻기 위해 물건들을 어떻게 담을지 결정하는 문제입니다. 물건마다 무게와 가치가 주어지며, 각 물건은 하나씩만 담을 수 있습니다.
+
+```js
+function knapsack(weights, values, capacity) {
+  const n = weights.length;
+  const dp = Array.from({ length: n + 1 }, () => Array(capacity + 1).fill(0));
+
+  for (let i = 1; i <= n; i++) {
+    for (let w = 0; w <= capacity; w++) {
+      if (weights[i - 1] <= w) {
+        dp[i][w] = Math.max(dp[i - 1][w], dp[i - 1][w - weights[i - 1]] + values[i - 1]);
+      } else {
+        dp[i][w] = dp[i - 1][w];
+      }
+    }
+  }
+
+  return dp[n][capacity];
+}
+
+const weights = [1, 2, 3, 5];
+const values = [1, 6, 10, 16];
+const capacity = 7;
+
+console.log(knapsack(weights, values, capacity)); // 22
+```
+
+**2. 최소 비용 경로(Minimum Cost Path)**
+
+**문제 설명:**
+
+2차원 배열이 주어졌을 때, 왼쪽 상단에서 시작하여 오른쪽 하단까지 이동하는 데 드는 최소 비용을 구하는 문제입니다. 이동은 오른쪽 또는 아래쪽으로만 가능합니다.
+
+```js
+function minCostPath(cost, m, n) {
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  dp[0][0] = cost[0][0];
+
+  for (let i = 1; i <= m; i++) dp[i][0] = dp[i - 1][0] + cost[i][0];
+  for (let j = 1; j <= n; j++) dp[0][j] = dp[0][j - 1] + cost[0][j];
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = cost[i][j] + Math.min(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+
+  return dp[m][n];
+}
+
+const cost = [
+  [1, 3, 5],
+  [2, 1, 2],
+  [4, 3, 1]
+];
+
+console.log(minCostPath(cost, 2, 2)); // 8
+```
+
+**3. 동전 교환 문제(Coin Change Problem)**
+
+**문제 설명:**
+
+주어진 동전 종류와 목표 금액이 있을 때, 동전을 최소한으로 사용하여 목표 금액을 맞추는 문제입니다.
+
+```js
+function coinChange(coins, amount) {
+  const dp = Array(amount + 1).fill(Infinity);
+  dp[0] = 0;
+
+  for (let coin of coins) {
+    for (let i = coin; i <= amount; i++) {
+      dp[i] = Math.min(dp[i], dp[i - coin] + 1);
+    }
+  }
+
+  return dp[amount] === Infinity ? -1 : dp[amount];
+}
+
+const coins = [1, 2, 5];
+const amount = 11;
+
+console.log(coinChange(coins, amount)); // 3 (5 + 5 + 1)
+```
+
+**4. 문자열 편집 거리(Edit Distance)**
+
+**문제 설명:**
+
+두 문자열이 주어졌을 때, 하나의 문자열을 다른 문자열로 변환하는 데 필요한 최소 편집 연산 횟수를 구하는 문제입니다. 허용되는 편집 연산은 삽입, 삭제, 교체입니다.
+
+```js
+function editDistance(str1, str2) {
+  const m = str1.length;
+  const n = str2.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) {
+    for (let j = 0; j <= n; j++) {
+      if (i === 0) dp[i][j] = j;
+      else if (j === 0) dp[i][j] = i;
+      else if (str1[i - 1] === str2[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+      else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+
+  return dp[m][n];
+}
+
+console.log(editDistance("kitten", "sitting")); // 3
+```
+
+[https://school.programmers.co.kr/learn/courses/30/parts/12263](https://school.programmers.co.kr/learn/courses/30/parts/12263)
+
+- [프로그래머스 스쿨 - 온라인 IT 특화 교육 전문 플랫폼](https://school.programmers.co.kr/learn/courses/30/parts/12263) — 프로그래머스 스쿨은 IT 분야 교육 전반의 과정을 제공하는 온라인 교육 플랫폼입니다. 프로그래밍, 데이터, 인공지능 등의 학습부터 코딩 테스트, 과제 테스트 연습까지, 프로그래머스 스쿨과 함께 성장해 보세요!

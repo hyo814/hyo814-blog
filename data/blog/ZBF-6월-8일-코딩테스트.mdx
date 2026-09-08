@@ -1,0 +1,143 @@
+---
+title: '[ZBF] 6월 8일 코딩테스트'
+date: '2024-06-08'
+tags: [코딩테스트]
+draft: false
+summary: '두 행렬의 덧셈은 같은 위치에 있는 원소끼리 더하는 것입니다. 두 행렬의 크기가 같아야 덧셈이 가능합니다.'
+---
+
+# [ZBF] 6월 8일 코딩테스트
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223472447364)에 2024년 6월 8일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+행렬 연산 알고리즘
+
+1. 행렬의 덧셈
+
+두 행렬의 덧셈은 같은 위치에 있는 원소끼리 더하는 것입니다. 두 행렬의 크기가 같아야 덧셈이 가능합니다.
+
+```js
+// 행렬 덧셈 알고리즘
+function addMatrices(A, B) {
+let rows = A.length;
+let cols = A[0].length;
+let result = [];
+
+for (let i = 0; i < rows; i++) {
+result[i] = [];
+for (let j = 0; j < cols; j++) {
+result[i][j] = A[i][j] + B[i][j];
+}
+}
+return result;
+}
+```
+
+2. 행렬의 뺄셈
+
+행렬의 뺄셈은 덧셈과 유사하며, 같은 위치에 있는 원소끼리 빼는 것입니다. 역시 두 행렬의 크기가 같아야 합니다.
+
+```js
+// 행렬 뺄셈 알고리즘
+function subtractMatrices(A, B) {
+let rows = A.length;
+let cols = A[0].length;
+let result = [];
+
+for (let i = 0; i < rows; i++) {
+result[i] = [];
+for (let j = 0; j < cols; j++) {
+result[i][j] = A[i][j] - B[i][j];
+}
+}
+return result;
+}
+```
+
+3. 행렬의 곱셈
+
+행렬 곱셈은 두 행렬의 내적(dot product)으로 계산됩니다. A 행렬의 열 개수와 B 행렬의 행 개수가 같아야 곱셈이 가능합니다.
+
+```js
+// 행렬 곱셈 알고리즘
+function multiplyMatrices(A, B) {
+let rowsA = A.length;
+let colsA = A[0].length;
+let rowsB = B.length;
+let colsB = B[0].length;
+
+if (colsA !== rowsB) {
+throw new Error('A 행렬의 열 개수와 B 행렬의 행 개수가 같아야 합니다.');
+}
+
+let result = [];
+for (let i = 0; i < rowsA; i++) {
+result[i] = [];
+for (let j = 0; j < colsB; j++) {
+result[i][j] = 0;
+for (let k = 0; k < colsA; k++) {
+result[i][j] += A[i][k] * B[k][j];
+}
+}
+}
+return result;
+}
+```
+
+행렬의 나눗셈
+
+행렬의 나눗셈은 행렬의 곱셈처럼 간단하지 않습니다. 대신, 역행렬(inverse matrix) 개념을 사용해야 합니다. 역행렬을 구하는 방법은 복잡하며, 역행렬이 존재하지 않는 경우도 있습니다. 역행렬이 존재하는 경우, 행렬 A와 B가 있을 때 A를 B로 나누는 것은 A에 B의 역행렬을 곱하는 것과 같습니다.
+
+역행렬 구하기
+
+역행렬은 정사각 행렬(square matrix)에 대해서만 정의됩니다.
+
+```js
+function inverseMatrix(A) {
+let a = A[0][0], b = A[0][1], c = A[1][0], d = A[1][1];
+let determinant = a * d - b * c;
+
+if (determinant === 0) {
+throw new Error('역행렬이 존재하지 않습니다.');
+}
+
+return [
+[d / determinant, -b / determinant],
+[-c / determinant, a / determinant]
+];
+}
+
+// 행렬 나눗셈: A를 B로 나눈다 (A * B^-1)
+function divideMatrices(A, B) {
+let B_inv = inverseMatrix(B);
+return multiplyMatrices(A, B_inv);
+}
+```
+
+행렬의 크기가 다를 경우
+
+행렬 덧셈과 뺄셈
+
+```js
+function canAddOrSubtract(A, B) {
+return A.length === B.length && A[0].length === B[0].length;
+}
+```
+
+행렬 덧셈과 뺄셈을 수행하려면 두 행렬의 크기가 동일해야 합니다. 크기가 다른 행렬에 대해 덧셈이나 뺄셈을 시도하면 연산이 불가능합니다.
+
+행렬 곱셈
+
+행렬 곱셈은 A의 열의 개수와 B의 행의 개수가 동일해야 가능합니다. 그렇지 않으면 연산이 불가능합니다.
+
+```js
+function canMultiply(A, B) {
+return A[0].length === B.length;
+}
+```
+
+---
+
+[https://school.programmers.co.kr/learn/challenges?order=acceptance_desc&languages=javascript&page=1&search=%ED%96%89%EB%A0%AC](https://school.programmers.co.kr/learn/challenges?order=acceptance_desc&languages=javascript&page=1&search=%ED%96%89%EB%A0%AC)
+
+- [코딩테스트 연습 | 프로그래머스 스쿨](https://school.programmers.co.kr/learn/challenges?order=acceptance_desc&languages=javascript&page=1&search=%ED%96%89%EB%A0%AC) — 개발자 취업의 필수 관문 코딩테스트를 철저하게 연습하고 대비할 수 있는 문제를 총망라! 프로그래머스에서 선발한 문제로 유형을 파악하고 실력을 업그레이드해 보세요!

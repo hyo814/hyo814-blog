@@ -1,0 +1,485 @@
+---
+title: '[ZBF] 웹 소켓(WebSocket): 실시간 통신을 위한 강력한 도구'
+date: '2024-05-28'
+tags: [기술노트, 네트워크]
+draft: false
+summary: '웹 소켓(WebSocket)은 클라이언트와 서버 간의 양방향 통신을 가능하게 하는 프로토콜입니다. HTTP와 달리, 웹 소켓은 단일 연결을 통해 지속적인 데이터 전송을 허용하여 실시간 애플리케이션에 적합합니다. 특히, 채팅 애플리케이션과 비디오 스트리밍 및 판독 시스템에서 유용하게 사…'
+---
+
+# [ZBF] 웹 소켓(WebSocket): 실시간 통신을 위한 강력한 도구
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223460984279)에 2024년 5월 28일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+**1. 웹 소켓 소개**
+
+웹 소켓(WebSocket)은 클라이언트와 서버 간의 양방향 통신을 가능하게 하는 프로토콜입니다. HTTP와 달리, 웹 소켓은 단일 연결을 통해 지속적인 데이터 전송을 허용하여 실시간 애플리케이션에 적합합니다. 특히, 채팅 애플리케이션과 비디오 스트리밍 및 판독 시스템에서 유용하게 사용됩니다.
+
+**2. 웹 소켓을 이용한 채팅 애플리케이션**
+
+채팅 애플리케이션은 실시간으로 메시지를 주고받는 기능이 필수적입니다. 웹 소켓을 사용하여 간단한 채팅 애플리케이션을 구현해 보겠습니다.
+
+**2.1 서버 설정**
+
+먼저, Node.js와 WebSocket 라이브러리를 사용하여 서버를 설정합니다.
+
+```js
+// 서버 코드 (Node.js)
+const WebSocket = require('ws');
+
+const server = new WebSocket.Server({ port: 8080 });
+
+server.on('connection', ws => {
+  ws.on('message', message => {
+    console.log(`Received: ${message}`);
+    // 모든 클라이언트에게 메시지 브로드캐스트
+    server.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  });
+
+  ws.send('Welcome to the chat!');
+});
+
+console.log('WebSocket server is running on ws://localhost:8080');
+```
+
+**2.2 클라이언트 설정**
+
+HTML과 JavaScript를 사용하여 클라이언트를 설정합니다.
+
+```html
+<!-- 클라이언트 코드 (HTML) -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Chat</title>
+</head>
+<body>
+  <input id="messageInput" type="text" placeholder="Type a message..." />
+  <button onclick="sendMessage()">Send</button>
+  <div id="chatLog"></div>
+
+  <script>
+    const ws = new WebSocket('ws://localhost:8080');
+
+    ws.onopen = () => {
+      console.log('Connected to the WebSocket server');
+    };
+
+    ws.onmessage = event => {
+      const chatLog = document.getElementById('chatLog');
+      const message = document.createElement('p');
+      message.textContent = event.data;
+      chatLog.appendChild(message);
+    };
+
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      ws.send(input.value);
+      input.value = '';
+    }
+  </script>
+</body>
+</html>
+```
+
+**3.** **웹 소켓을 이용한 비디오 판독 시스템**
+
+비디오 판독 시스템은 실시간으로 비디오 스트림을 분석하고 판독 결과를 사용자에게 전달해야 합니다. 웹 소켓을 사용하여 이러한 시스템을 구현할 수 있습니다.
+
+**3.1 서버 설정**
+
+먼저, Node.js와 WebSocket 라이브러리를 사용하여 서버를 설정하고, 비디오 스트림을 처리하는 로직을 추가합니다.
+
+```js
+// 서버 코드 (Node.js)
+const WebSocket = require('ws');
+
+const server = new WebSocket.Server({ port: 8081 });
+
+server.on('connection', ws => {
+  ws.on('message', message => {
+    console.log(`Received frame: ${message}`);
+    // 비디오 프레임 처리 로직
+    const processedFrame = processFrame(message);
+
+    // 클라이언트에게 처리된 프레임 전송
+    ws.send(processedFrame);
+  });
+
+  ws.send('Ready to receive video frames');
+});
+
+function processFrame(frame) {
+  // 여기에서 비디오 프레임을 처리하고 결과를 반환하는 로직을 작성
+  return `Processed: ${frame}`;
+}
+
+console.log('WebSocket server for video processing is running on ws://localhost:8081');
+```
+
+**3.2 클라이언트 설정**
+
+HTML과 JavaScript를 사용하여 클라이언트를 설정하고, 비디오 스트림을 웹 소켓 서버로 전송합니다.
+
+```html
+<!-- 클라이언트 코드 (HTML) -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Video Processing</title>
+</head>
+<body>
+  <video id="videoElement" autoplay></video>
+  <div id="resultLog"></div>
+
+  <script>
+    const ws = new WebSocket('ws://localhost:8081');
+
+    ws.onopen = () => {
+      console.log('Connected to the WebSocket server');
+    };
+
+    ws.onmessage = event => {
+      const resultLog = document.getElementById('resultLog');
+      const result = document.createElement('p');
+      result.textContent = event.data;
+      resultLog.appendChild(result);
+    };
+
+    const videoElement = document.getElementById('videoElement');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        videoElement.srcObject = stream;
+        const mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = event => {
+          ws.send(event.data);
+        };
+
+        mediaRecorder.start(100); // 100ms마다 데이터 전송
+      })
+      .catch(error => {
+        console.error('Error accessing media devices.', error);
+      });
+  </script>
+</body>
+</html>
+```
+
+---
+
+**웹 소켓 연결이 끊어졌을 때 자동으로 재연결하는 방법**
+
+웹 소켓 연결이 끊어졌을 때 자동으로 재연결하는 기능을 구현하려면 재연결 로직을 작성해야 합니다.
+
+**1. 기본 재연결 로직**
+
+재연결을 위해 웹 소켓을 초기화하고, **onclose** 이벤트 핸들러에서 재연결을 시도합니다.
+
+```js
+let ws;
+let reconnectInterval = 1000; // 재연결 간격 초기 설정 (1초)
+
+function connect() {
+  ws = new WebSocket('ws://localhost:8080');
+
+  ws.onopen = () => {
+    console.log('Connected to the WebSocket server');
+    reconnectInterval = 1000; // 연결 성공 시 재연결 간격 초기화
+  };
+
+  ws.onmessage = event => {
+    console.log('Message from server:', event.data);
+  };
+
+  ws.onclose = () => {
+    console.log('Connection closed, attempting to reconnect...');
+    setTimeout(() => {
+      reconnectInterval = Math.min(reconnectInterval * 2, 30000); // 재연결 간격 증가 (최대 30초)
+      connect();
+    }, reconnectInterval);
+  };
+
+  ws.onerror = error => {
+    console.error('WebSocket error:', error);
+    ws.close(); // 오류 발생 시 연결 종료
+  };
+}
+
+connect();
+```
+
+**재연결 로직 설명**
+
+- **connect** 함수는 웹 소켓 연결을 초기화합니다.
+- **ws.onopen** 이벤트 핸들러는 연결이 성공했을 때 호출되며, 재연결 간격을 초기화합니다.
+- **ws.onmessage** 이벤트 핸들러는 서버로부터 메시지를 수신했을 때 호출됩니다.
+- **ws.onclose** 이벤트 핸들러는 연결이 닫혔을 때 호출되며, 재연결을 시도합니다.
+- **ws.onerror** 이벤트 핸들러는 오류가 발생했을 때 호출되며, 연결을 종료합니다.
+
+**웹 소켓을 사용하여 실시간에 대한 개발을 할 때 고려해야 할 점**
+
+웹 소켓을 사용하여 서버와 클라이언트 간의 빠르고 효율적인 통신이 필요합니다. 다음은 이를 구현할 때 고려해야 할 주요 사항들입니다.
+
+**1. 지연 시간(Latency) 최소화**
+
+- 지연 시간은 중요한 요소입니다. 서버와 클라이언트 간의 통신을 최적화하여 지연 시간을 최소화해야 합니다.
+- 서버의 위치를 최적화하고, 클라이언트의 지리적 위치에 따른 서버 분산을 고려합니다.
+
+**2. 상태 동기화(State Synchronization)**
+
+- 상태를 클라이언트와 서버 간에 동기화해야 합니다. 이를 위해 상태 업데이트를 주기적으로 전송하고, 서버에서의 상태 변경을 클라이언트에 빠르게 반영합니다.
+- 불필요한 데이터 전송을 줄이기 위해 필요한 정보만 전송하도록 합니다.
+
+**3. 안정적인 연결 유지**
+
+- 연결이 끊어졌을 때 자동으로 재연결하는 로직을 구현합니다.
+- 재연결 후 상태를 복원할 수 있도록 합니다.
+
+**4. 보안 고려**
+
+- 데이터 전송 시 보안 프로토콜(예: WSS)을 사용하여 데이터를 암호화합니다.
+- 클라이언트와 서버 간의 인증 및 권한 부여를 통해 불법적인 접근을 방지합니다.
+
+**5. 서버 확장성**
+
+- 많은 사용자가 동시에 접속할 수 있도록 서버를 확장 가능하게 설계합니다.
+- 로드 밸런싱을 사용하여 여러 서버에 부하를 분산시킵니다.
+
+**웹 소켓과 HTTP의 차이점**
+
+웹 소켓과 HTTP는 서로 다른 목적을 가진 프로토콜로, 주요 차이점은 다음과 같습니다.
+
+**1. 연결 방식**
+
+- **HTTP**: 요청-응답 기반의 단방향 통신. 클라이언트가 요청을 보내면 서버가 응답을 보냅니다. 각 요청마다 새로운 연결이 생성되고 종료됩니다.
+- **웹 소켓**: 양방향 통신이 가능한 지속적인 연결. 초기 연결 이후 클라이언트와 서버 간에 자유롭게 메시지를 주고받을 수 있습니다.
+
+**2. 실시간 데이터 전송**
+
+- **HTTP**: 실시간 데이터 전송에 적합하지 않습니다. 주기적으로 요청을 보내야 하므로 지연이 발생할 수 있습니다.
+- **웹 소켓**: 실시간 데이터 전송에 적합합니다. 지속적인 연결을 통해 즉각적인 데이터 전송이 가능합니다.
+
+**3. 데이터 오버헤드**
+
+- **HTTP**: 각 요청과 응답마다 헤더 정보를 포함하여 데이터 오버헤드가 큽니다.
+- **웹 소켓**: 초기 핸드셰이크 이후에는 데이터 프레임만 전송하여 오버헤드가 적습니다.
+
+**4. 사용 사례**
+
+- **HTTP**: 정적인 웹 페이지, API 요청 등 단방향 통신이 주로 필요한 경우.
+- **웹 소켓**: 채팅 애플리케이션, 실시간 게임, 실시간 데이터 스트리밍 등 양방향 통신이 필요한 경우.
+
+**웹 소켓을 사용하여 클라이언트 간의 P2P 통신을 설정**
+
+웹 소켓은 기본적으로 클라이언트와 서버 간의 통신을 위해 설계된 프로토콜입니다. 클라이언트 간의 직접적인 P2P (Peer-to-Peer) 통신을 지원하지 않습니다. 하지만, 웹 소켓을 통해 시그널링(Signaling) 서버를 사용하여 WebRTC 연결을 설정하고 P2P 통신을 구현할 수 있습니다.
+
+**WebRTC와 웹 소켓을 사용한 P2P 통신**
+
+1. **시그널링 서버**: WebRTC 연결을 설정하기 위해 클라이언트 간의 시그널링 정보를 교환할 시그널링 서버가 필요합니다. 이 역할을 웹 소켓 서버가 수행할 수 있습니다.
+2. **WebRTC 연결 설정**:
+
+- 클라이언트는 시그널링 서버(웹 소켓 서버)를 통해 서로의 연결 정보를 교환합니다.
+- WebRTC를 사용하여 직접적인 P2P 연결을 설정합니다.
+
+다음은 간단한 예제입니다.
+
+**시그널링 서버 (Node.js + WebSocket)**:
+
+```js
+const WebSocket = require('ws');
+const server = new WebSocket.Server({ port: 8080 });
+
+server.on('connection', ws => {
+  ws.on('message', message => {
+    // 수신한 메시지를 다른 모든 클라이언트에게 브로드캐스트
+    server.clients.forEach(client => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  });
+});
+
+console.log('WebSocket signaling server is running on ws://localhost:8080');
+```
+
+**클라이언트 (WebRTC + WebSocket)**:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebRTC P2P Example</title>
+</head>
+<body>
+  <video id="localVideo" autoplay></video>
+  <video id="remoteVideo" autoplay></video>
+  <script>
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const ws = new WebSocket('ws://localhost:8080');
+    let localStream;
+    let peerConnection;
+
+    ws.onmessage = async (message) => {
+      const data = JSON.parse(message.data);
+
+      if (data.offer) {
+        await peerConnection.setRemoteDescription(data.offer);
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        ws.send(JSON.stringify({ answer }));
+      } else if (data.answer) {
+        await peerConnection.setRemoteDescription(data.answer);
+      } else if (data.candidate) {
+        await peerConnection.addIceCandidate(data.candidate);
+      }
+    };
+
+    async function start() {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      localVideo.srcObject = localStream;
+
+      peerConnection = new RTCPeerConnection();
+      peerConnection.addStream(localStream);
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          ws.send(JSON.stringify({ candidate: event.candidate }));
+        }
+      };
+
+      peerConnection.onaddstream = (event) => {
+        remoteVideo.srcObject = event.stream;
+      };
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      ws.send(JSON.stringify({ offer }));
+    }
+
+    start();
+  </script>
+</body>
+</html>
+```
+
+**HTTP/2와 웹 소켓의 차이점**
+
+**HTTP/2**
+
+- **프로토콜 타입**: 전송 계층 프로토콜.
+- **연결 방식**: 단방향 통신. 클라이언트가 요청을 보내고 서버가 응답을 반환.
+- **주요 기능**:
+- **멀티플렉싱**: 단일 연결에서 다수의 요청 및 응답을 동시에 처리.
+- **헤더 압축**: 헤더 정보를 압축하여 전송 효율성 증대.
+- **서버 푸시**: 서버가 클라이언트의 요청 없이도 리소스를 푸시할 수 있음.
+- **사용 사례**: 웹 페이지 로딩 최적화, API 요청 등.
+
+**웹 소켓**
+
+- **프로토콜 타입**: 응용 계층 프로토콜.
+- **연결 방식**: 양방향 통신. 연결 후 클라이언트와 서버 간에 자유롭게 메시지 주고받기 가능.
+- **주요 기능**:
+- **지속적 연결**: 한번 연결되면 양방향으로 데이터 전송 가능.
+- **낮은 오버헤드**: 초기 핸드셰이크 이후 작은 데이터 프레임 전송.
+- **사용 사례**: 실시간 채팅, 게임, 실시간 데이터 스트리밍.
+
+---
+
+```js
+const WebSocket = require('ws');
+const server = new WebSocket.Server({ port: 8080 });
+
+server.on('connection', ws => {
+  ws.on('message', message => {
+    console.log(`Received: ${message}`);
+    // 모든 클라이언트에게 메시지 브로드캐스트
+    server.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  });
+
+  ws.send('Welcome to the chat!');
+});
+
+console.log('WebSocket server is running on ws://localhost:8080');
+```
+
+```js
+import React, { useState, useEffect, useRef } from 'react';
+
+function App() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const ws = useRef(null);
+
+  useEffect(() => {
+    ws.current = new WebSocket('ws://localhost:8080');
+
+    ws.current.onopen = () => {
+      console.log('Connected to the WebSocket server');
+    };
+
+    ws.current.onmessage = event => {
+      const newMessage = event.data;
+      setMessages(prevMessages => [...prevMessages, newMessage]);
+    };
+
+    ws.current.onclose = () => {
+      console.log('Disconnected from the WebSocket server');
+    };
+
+    return () => {
+      ws.current.close();
+    };
+  }, []);
+
+  const sendMessage = () => {
+    if (input) {
+      ws.current.send(input);
+      setInput('');
+    }
+  };
+
+  return (
+    <div>
+      <h1>WebSocket Chat</h1>
+      <div>
+        {messages.map((message, index) => (
+          <div key={index}>{message}</div>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        placeholder="Type a message..."
+      />
+      <button onClick={sendMessage}>Send</button>
+    </div>
+  );
+}
+
+export default App;
+```
+
+1. **서버 코드**:
+
+- Node.js와 WebSocket을 사용하여 웹 소켓 서버를 설정합니다.
+- 클라이언트가 연결되면 **connection** 이벤트가 발생하고, 메시지를 수신하면 **message** 이벤트가 발생합니다.
+- 수신된 메시지를 모든 연결된 클라이언트에게 브로드캐스트합니다.
+
+1. **클라이언트 코드**:
+
+- React를 사용하여 간단한 채팅 인터페이스를 생성합니다.
+- **useRef**를 사용하여 웹 소켓 인스턴스를 생성하고, **useEffect**를 사용하여 컴포넌트가 마운트될 때 웹 소켓 연결을 설정합니다.
+- 메시지를 수신하면 **onmessage** 이벤트 핸들러가 호출되어 메시지를 상태에 추가합니다.
+- 사용자가 메시지를 입력하고 전송 버튼을 누르면 **sendMessage** 함수가 호출되어 입력된 메시지를 웹 소켓을 통해 서버로 전송합니다.

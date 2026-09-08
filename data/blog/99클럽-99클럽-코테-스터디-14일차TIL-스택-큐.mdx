@@ -1,0 +1,96 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 14일차TIL + 스택 / 큐'
+date: '2025-02-06'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 식당 메뉴 https://www.acmicpc.net/problem/26043'
+---
+
+# [99클럽] 99클럽 코테 스터디 14일차TIL + 스택 / 큐
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223749588204)에 2025년 2월 6일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 식당 메뉴 [https://www.acmicpc.net/problem/26043](https://www.acmicpc.net/problem/26043)
+
+미들러 오목[https://www.acmicpc.net/problem/2615](https://www.acmicpc.net/problem/2615)
+
+챌린저 골목길 [https://www.acmicpc.net/problem/1738](https://www.acmicpc.net/problem/1738)
+
+```js
+const readline = require('readline');
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+let n;
+let queue = [];
+let likeMenu = new Map();
+let eatenA = [];
+let eatenB = [];
+let notEaten = new Set();
+
+rl.on('line', (line) => {
+    if (n === undefined) {
+        n = parseInt(line);
+    } else {
+        let parts = line.split(' ');
+        let type = parseInt(parts[0]);
+        
+        if (type === 1) {
+            // 학생 도착
+            let student = parseInt(parts[1]);
+            let menu = parseInt(parts[2]);
+            queue.push(student);
+            likeMenu.set(student, menu);
+        } else if (type === 2) {
+            // 식사 제공
+            let menu = parseInt(parts[1]);
+            if (queue.length > 0) {
+                let student = queue.shift();
+                let preferredMenu = likeMenu.get(student);
+                
+                if (preferredMenu === menu) {
+                    eatenA.push(student);
+                } else {
+                    eatenB.push(student);
+                }
+                likeMenu.delete(student);
+            }
+        }
+    }
+}).on('close', () => {
+    // 남아 있는 학생이 식사 못한 경우
+    queue.forEach(student => notEaten.add(student));
+    
+    // 출력 정렬
+    eatenA.sort((a, b) => a - b);
+    eatenB.sort((a, b) => a - b);
+    let notEatenArr = Array.from(notEaten).sort((a, b) => a - b);
+    
+    console.log(eatenA.length > 0 ? eatenA.join(' ') : 'None');
+    console.log(eatenB.length > 0 ? eatenB.join(' ') : 'None');
+    console.log(notEatenArr.length > 0 ? notEatenArr.join(' ') : 'None');
+    
+    process.exit(0);
+});
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223749588204/01.png)

@@ -1,0 +1,71 @@
+---
+title: '99클럽 코테 스터디 27일차 TIL + 오늘의 학습 키워드: 완전 탐색'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: 'const rl = readline.createInterface({     input: process.stdin,     output: process.output, });'
+---
+
+# 99클럽 코테 스터디 27일차 TIL + 오늘의 학습 키워드: 완전 탐색
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787178342)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 공부한 내용 본인의 언어로 정리하기
+
+```js
+const readline = require("readline");
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.output,
+});
+
+let count = 0;
+rl.on("line", (line) => {
+    if (!count) {
+        count = Number(line);
+    } else {
+        main(line);
+        rl.close();
+    }
+}).on("close", () => {
+    process.exit();
+});
+
+const main = (line) => {
+    const numbers = line.split(" ").map(Number).reverse();
+
+    const DP = [];
+
+    for (let i = 0; i < numbers.length; i++) {
+        DP[i] = 1;
+        for (let j = 0; j < i; j++) {
+            if (DP[j] + 1 > DP[i] && numbers[j] < numbers[i]) {
+                DP[i] = DP[j] + 1;
+            }
+        }
+    }
+
+    console.log(Math.max(...DP));
+};
+```
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+• 비기너: https://www.acmicpc.net/problem/11557 (30분)
+
+• 미들러: https://www.acmicpc.net/problem/11722 (1시간 15분)
+
+• 챌린저: https://www.acmicpc.net/problem/1446 (1시간)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787178342/01.png)

@@ -1,0 +1,58 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 12일차 + 해시'
+date: '2025-04-15'
+tags: [코딩테스트]
+draft: false
+summary: 'const rl = readline.createInterface({   input: process.stdin,   output: process.stdout });'
+---
+
+# [99클럽] 99클럽 코테 스터디 12일차 + 해시
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223834418513)에 2025년 4월 15일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+const readline = require('readline');
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+let input = [];
+
+rl.on('line', (line) => {
+  input.push(line);
+}).on('close', () => {
+  const [N, gameType] = input[0].split(' ');
+  const required = {
+    Y: 2,
+    F: 3,
+    O: 4
+  }[gameType];
+
+  const players = new Set(input.slice(1)); // 중복 제거
+  players.add('Ims'); // 임스 포함
+
+  const total = players.size;
+  const maxGames = Math.floor(total / required);
+  console.log(maxGames);
+});
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223834418513/01.png)

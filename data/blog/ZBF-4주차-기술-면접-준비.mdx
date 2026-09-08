@@ -1,0 +1,77 @@
+---
+title: '[ZBF] 4주차 기술 면접 준비'
+date: '2024-06-07'
+tags: [기술노트, 면접]
+draft: false
+summary: '1. 콜백함수 / 콜백 지옥 2. var, let, const에 대해 말해주세요. 3. var은 왜 사용하지 않는 방법으로 채택 4. 호이스팅 5. 클로저 6. 스코프 7. 스코프 체인 8. promise와 async , await 차이 9. 렉세컬 환경 / 렉시컬 스코프'
+---
+
+# [ZBF] 4주차 기술 면접 준비
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223471612442)에 2024년 6월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+1. 콜백함수 / 콜백 지옥
+2. var, let, const에 대해 말해주세요.
+3. var은 왜 사용하지 않는 방법으로 채택
+4. 호이스팅
+5. 클로저
+6. 스코프
+7. 스코프 체인
+8. promise와 async , await 차이
+9. 렉세컬 환경 / 렉시컬 스코프
+
+---
+
+```js
+// 1. Promise 생성
+function fetchData() {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const success = true; // 이 값을 false로 바꿔보세요.
+      if (success) {
+        resolve("데이터 가져오기 성공!");
+      } else {
+        reject("데이터 가져오기 실패!");
+      }
+    }, 2000);
+  });
+}
+
+// 2. Promise 사용
+fetchData()
+  .then((message) => {
+    console.log(message); // 데이터 가져오기 성공!
+  })
+  .catch((error) => {
+    console.error(error); // 데이터 가져오기 실패!
+  });
+```
+
+```js
+// 1. Promise 생성 (이전 예제와 동일)
+function fetchData() {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const success = true; // 이 값을 false로 바꿔보세요.
+      if (success) {
+        resolve("데이터 가져오기 성공!");
+      } else {
+        reject("데이터 가져오기 실패!");
+      }
+    }, 2000);
+  });
+}
+
+// 2. Async/Await 사용
+async function getData() {
+  try {
+    const message = await fetchData();
+    console.log(message); // 데이터 가져오기 성공!
+  } catch (error) {
+    console.error(error); // 데이터 가져오기 실패!
+  }
+}
+
+// 함수 호출
+getData();
+```

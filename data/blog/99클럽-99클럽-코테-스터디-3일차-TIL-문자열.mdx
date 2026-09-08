@@ -1,0 +1,59 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 3일차 TIL + 문자열'
+date: '2025-01-15'
+tags: [코딩테스트]
+draft: false
+summary: 'let caseCount = Number(input[0]); let result = '''';'
+---
+
+# [99클럽] 99클럽 코테 스터디 3일차 TIL + 문자열
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223726440567)에 2025년 1월 15일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+let fs = require('fs');
+let input = fs.readFileSync('/dev/stdin').toString().split('\n');
+
+let caseCount = Number(input[0]);
+let result = '';
+
+for (let i = 1; i <= caseCount; i++) {
+  let count = Number(input[i].split(' ')[0]);  // 각 케이스 당 문자 반복 횟수 (R)
+  let cases = input[i].split(' ')[1];  // 케이스 문자열 분리
+  
+  for (let j = 0; j < cases.length; j++) {
+    for (let k = 0; k < count; k++) {
+      result += cases[j];
+    }
+  }
+  result += '\n';
+}
+
+console.log(result);
+```
+
+[**https://www.acmicpc.net/problem/2675**](https://www.acmicpc.net/problem/2675)
+
+**비기너 문자열 반** [**https://www.acmicpc.net/problem/2675**](https://www.acmicpc.net/problem/2675)
+
+**미들러 선분 위의 점** [**https://www.acmicpc.net/problem/11663**](https://www.acmicpc.net/problem/11663)
+
+**챌린저 네트워크 복구** [**https://www.acmicpc.net/problem/2211**](https://www.acmicpc.net/problem/2211)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223726440567/01.png)

@@ -1,0 +1,207 @@
+---
+title: '[ZBF] 페이지 이동에 관련된 정리 사항'
+date: '2024-06-01'
+tags: [기술노트, 네트워크]
+draft: false
+summary: 'HTML의 <a> 태그를 사용하여 페이지 이동을 할 수 있습니다. 이 방법은 간단하며 가장 많이 사용됩니다.'
+---
+
+# [ZBF] 페이지 이동에 관련된 정리 사항
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223465778200)에 2024년 6월 1일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+**1. HTML 링크를 이용한 페이지 이동**
+
+HTML의 **\<a>** 태그를 사용하여 페이지 이동을 할 수 있습니다. 이 방법은 간단하며 가장 많이 사용됩니다.
+
+```js
+<a href="target_page.html">Go to Target Page</a>
+```
+
+**2. JavaScript를 이용한 페이지 이동**
+
+JavaScript를 사용하여 페이지를 이동하는 방법도 많이 사용됩니다.
+
+**2.1** **window.location** **객체 사용**
+
+**window.location** 객체의 **href** 속성을 설정하여 페이지를 이동합니다.
+
+```js
+window.location.href = 'target_page.html';
+```
+
+**2.2** **window.location** **객체의 다른 메소드 사용**
+
+**window.location.assign()**과 **window.location.replace()** 메소드를 사용할 수도 있습니다.
+
+```js
+window.location.assign('target_page.html'); // 기록이 남음
+window.location.replace('target_page.html'); // 기록이 남지 않음
+```
+
+**3. HTML 폼을 이용한 페이지 이동**
+
+폼을 전송하여 페이지를 이동할 수 있습니다. 주로 데이터 제출 시 사용됩니다.
+
+```js
+<form action="target_page.html" method="get">
+  <input type="submit" value="Go to Target Page">
+</form>
+```
+
+**4. 서버 사이드 리다이렉션**
+
+서버 사이드 스크립트를 사용하여 페이지를 이동할 수 있습니다. 예를 들어, PHP에서는 **header()** 함수를 사용합니다.
+
+```js
+<?php
+header('Location: target_page.html');
+exit();
+?>
+```
+
+**5. Single Page Application (SPA)에서의 페이지 이동**
+
+SPA에서는 JavaScript 프레임워크나 라이브러리를 사용하여 클라이언트 측에서 페이지 이동을 관리합니다. React, Vue.js, Angular 등이 대표적입니다.
+
+**5.1 React Router 사용 예시**
+
+React에서 **react-router-dom**을 사용하여 페이지를 이동할 수 있습니다
+
+```js
+import { BrowserRouter as Router, Route, Link, Switch } from 'react-router-dom';
+
+function App() {
+  return (
+    <Router>
+      <div>
+        <Link to="/target">Go to Target Page</Link>
+        <Switch>
+          <Route path="/target">
+            <TargetPage />
+          </Route>
+        </Switch>
+      </div>
+    </Router>
+  );
+}
+```
+
+**useNavigate를 이용한 페이지 이동 (React Router v6)**
+
+React Router v6에서는 **useNavigate** 훅을 사용하여 페이지를 이동할 수 있습니다. 예를 들어, 버튼 클릭 시 다른 페이지로 이동하는 기능을 구현할 수 있습니다.
+
+```js
+import { useNavigate } from 'react-router-dom';
+
+function HomePage() {
+  const navigate = useNavigate();
+
+  const goToTargetPage = () => {
+    navigate('/target'); // '/target' 페이지로 이동
+  };
+
+  return (
+    <div>
+      <h1>Home Page</h1>
+      <button onClick={goToTargetPage}>Go to Target Page</button>
+    </div>
+  );
+}
+
+export default HomePage;
+```
+
+**useHistory를 이용한 페이지 이동 (React Router v5)**
+
+React Router v5에서는 **useHistory** 훅을 사용하여 페이지를 이동할 수 있습니다. v6에서 **useNavigate**로 대체되었지만, 여전히 많은 프로젝트에서 v5를 사용하고 있을 수 있습니다.
+
+```js
+import { useHistory } from 'react-router-dom';
+
+function HomePage() {
+  const history = useHistory();
+
+  const goToTargetPage = () => {
+    history.push('/target'); // '/target' 페이지로 이동
+  };
+
+  return (
+    <div>
+      <h1>Home Page</h1>
+      <button onClick={goToTargetPage}>Go to Target Page</button>
+    </div>
+  );
+}
+
+export default HomePage;
+```
+
+**useRouter** **훅 사용 예제 (Next.js)**
+
+Next.js에서는 **useRouter** 훅을 사용하여 라우팅을 관리할 수 있습니다.
+
+```js
+import { useRouter } from 'next/router';
+
+function HomePage() {
+  const router = useRouter();
+
+  const goToTargetPage = () => {
+    router.push('/target'); // '/target' 페이지로 이동
+  };
+
+  return (
+    <div>
+      <h1>Home Page</h1>
+      <button onClick={goToTargetPage}>Go to Target Page</button>
+    </div>
+  );
+}
+
+export default HomePage;
+```
+
+---
+
+**1. useNavigate (React Router v6)**
+
+**특징:**
+
+- **React Router v6에서 도입된 훅입니다.**
+- **더 간결하고 사용하기 쉽게 개선되었습니다.**
+- **기존의 useHistory 훅을 대체합니다**
+
+**주요 장점:**
+
+- **간단한 API로 사용이 직관적입니다.**
+- **더 나은 타입 지원을 제공합니다.**
+- **상태 및 검색 매개변수를 더 쉽게 설정할 수 있습니다.**
+
+**2. useHistory (React Router v5)**
+
+**특징:**
+
+- **React Router v5에서 사용되는 훅입니다.**
+- **React Router v6의 useNavigate로 대체되었습니다.**
+- **페이지 이동, 뒤로가기, 앞으로가기 등의 브라우저 내비게이션을 관리할 수 있습니다.**
+
+**3. useRouter (Next.js)**
+
+**특징:**
+
+- **Next.js에서 제공하는 훅입니다.**
+- **서버 사이드 렌더링과 클라이언트 사이드 내비게이션을 모두 지원합니다.**
+- **Next.js의 파일 기반 라우팅 시스템과 함께 사용됩니다.**
+
+- **useNavigate: React Router v6에서 사용되며, 간단하고 직관적인 API를 제공합니다. 최신 React 애플리케이션에 추천됩니다.**
+- **useHistory: React Router v5에서 사용되며,** **useNavigate에 비해 약간 더 복잡합니다. 기존 프로젝트에서 주로 사용됩니다.**
+- **useRouter: Next.js에서 사용되며, 파일 기반 라우팅 시스템과 함께 사용됩니다. 서버 사이드 렌더링을 지원합니다.**
+
+---
+
+**어떤 것을 사용할지 결정하는 기준**
+
+1. **프로젝트의 프레임워크: Next.js를 사용하는 프로젝트에서는** **useRouter를, React Router를 사용하는 프로젝트에서는** **useNavigate를 사용하는 것이 좋습니다.**
+2. **렌더링 방식: SSR을 사용하는 경우에는 Next.js의** **useRouter가 필요할 수 있지만, 클라이언트 사이드 라우팅만 필요하다면 React Router의** **useNavigate가 더 적합할 수 있습니다.**
+3. **팀의 표준 및 일관성: 팀에서 사용하는 기술 스택과 일관성 있는 코드베이스를 유지하는 것도 중요합니다. 팀의 다른 개발자와 상의하여 결정하는 것이 좋습니다.**

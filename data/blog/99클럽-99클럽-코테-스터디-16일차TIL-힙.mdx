@@ -1,0 +1,121 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 16일차TIL + 힙'
+date: '2025-02-10'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 더 맵게 https://school.programmers.co.kr/learn/courses/30/lessons/42626'
+---
+
+# [99클럽] 99클럽 코테 스터디 16일차TIL + 힙
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223755213235)에 2025년 2월 10일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 더 맵게 [https://school.programmers.co.kr/learn/courses/30/lessons/42626](https://school.programmers.co.kr/learn/courses/30/lessons/42626)
+
+미들러 고양이는 많을수록 좋다 [https://www.acmicpc.net/problem/27961](https://www.acmicpc.net/problem/27961)
+
+챌린저 Maximal Rectangle [https://leetcode.com/problems/maximal-rectangle/description/](https://leetcode.com/problems/maximal-rectangle/description/)
+
+보너스 문제 정리
+
+[https://www.acmicpc.net/problem/19638](https://www.acmicpc.net/problem/19638)
+
+[https://school.programmers.co.kr/learn/courses/30/lessons/42839](https://school.programmers.co.kr/learn/courses/30/lessons/42839)
+
+[https://school.programmers.co.kr/learn/courses/30/lessons/60059](https://school.programmers.co.kr/learn/courses/30/lessons/60059)
+
+```js
+// 해당 문제는 Heap 구조를 활용해야 함
+class MinHeap {
+  constructor() {
+    this.heap = [];
+  }
+
+  size() {
+    return this.heap.length;
+  }
+      
+    // 값을 넣되, 오름차 순 정렬함
+  push(value) {
+    this.heap.push(value);
+    let currentIndex = this.heap.length - 1;
+
+    while (
+      currentIndex > 0 &&
+      this.heap[currentIndex] < this.heap[Math.floor((currentIndex - 1) / 2)]
+    ) {
+      const temp = this.heap[currentIndex];
+      this.heap[currentIndex] = this.heap[Math.floor((currentIndex - 1) / 2)];
+      this.heap[Math.floor((currentIndex - 1) / 2)] = temp;
+      currentIndex = Math.floor((currentIndex - 1) / 2);
+    }
+  }
+
+    // 값을 빼되, 오름차 순 정렬 함
+  pop() {
+    if (this.heap.length === 0) return null;
+    if (this.heap.length === 1) return this.heap.pop();
+
+    const minValue = this.heap[0];
+    this.heap[0] = this.heap.pop();
+    let currentIndex = 0;
+
+    while (currentIndex * 2 + 1 < this.heap.length) {
+      let minChildIndex = currentIndex * 2 + 2 < this.heap.length && this.heap[currentIndex * 2 + 2] < this.heap[currentIndex * 2 + 1] ? currentIndex * 2 + 2 : currentIndex * 2 + 1;
+
+      if (this.heap[currentIndex] < this.heap[minChildIndex]) {
+        break;
+      }
+
+      const temp = this.heap[currentIndex];
+      this.heap[currentIndex] = this.heap[minChildIndex];
+      this.heap[minChildIndex] = temp;
+      currentIndex = minChildIndex;
+    }
+
+    return minValue;
+  }
+
+  peek() {
+    return this.heap[0];
+  }
+}
+
+function solution(scoville, K) {
+  const minHeap = new MinHeap();
+
+  for (const sco of scoville) {
+    minHeap.push(sco);
+  }
+
+  let mixedCount = 0;
+
+  while (minHeap.size() >= 2 && minHeap.peek() < K) {
+    const first = minHeap.pop();
+    const second = minHeap.pop();
+    const mixedScov = first + second * 2;
+    minHeap.push(mixedScov);
+    mixedCount++;
+  }
+
+  return minHeap.peek() >= K ? mixedCount : -1;
+}
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223755213235/01.png)

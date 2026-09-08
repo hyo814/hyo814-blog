@@ -1,0 +1,59 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 17일차TIL + 힙'
+date: '2025-02-11'
+tags: [코딩테스트]
+draft: false
+summary: '비기너 Relative Ranks https://leetcode.com/problems/relative-ranks/description/'
+---
+
+# [99클럽] 99클럽 코테 스터디 17일차TIL + 힙
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223756750188)에 2025년 2월 11일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+비기너 Relative Ranks [https://leetcode.com/problems/relative-ranks/description/](https://leetcode.com/problems/relative-ranks/description/)
+
+미들러 ATM [https://www.acmicpc.net/problem/11399](https://www.acmicpc.net/problem/11399)
+
+챌린저 불량 사용자 [https://school.programmers.co.kr/learn/courses/30/lessons/64064](https://school.programmers.co.kr/learn/courses/30/lessons/64064)
+
+```js
+function findRelativeRanks(score) {
+    // 점수를 내림차순으로 정렬한 복사본을 생성
+    let sortedScores = [...score].sort((a, b) => b - a);
+    
+    // 점수를 기반으로 순위 매핑을 생성
+    let rankMap = new Map();
+    for (let i = 0; i < sortedScores.length; i++) {
+        if (i === 0) {
+            rankMap.set(sortedScores[i], "Gold Medal");
+        } else if (i === 1) {
+            rankMap.set(sortedScores[i], "Silver Medal");
+        } else if (i === 2) {
+            rankMap.set(sortedScores[i], "Bronze Medal");
+        } else {
+            rankMap.set(sortedScores[i], (i + 1).toString());
+        }
+    }
+
+    // 원래 점수 배열을 순회하면서 순위 배열을 생성
+    return score.map(s => rankMap.get(s));
+}
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223756750188/01.png)

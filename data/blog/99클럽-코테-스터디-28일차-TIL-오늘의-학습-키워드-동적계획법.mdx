@@ -1,0 +1,57 @@
+---
+title: '99클럽 코테 스터디 28일차 TIL + 오늘의 학습 키워드: 동적계획법'
+date: '2025-03-07'
+tags: [코딩테스트]
+draft: false
+summary: 'const test_num = Number(input.shift()); const test_case = input.shift().split(" ").map(Number);'
+---
+
+# 99클럽 코테 스터디 28일차 TIL + 오늘의 학습 키워드: 동적계획법
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223787173654)에 2025년 3월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 공부한 내용 본인의 언어로 정리하기
+
+```js
+const fs = require("fs");
+const filePath = process.platform === "linux" ? "/dev/stdin" : "../ex.txt";
+const input = fs.readFileSync(filePath).toString().trim().split("\n");
+
+const test_num = Number(input.shift());
+const test_case = input.shift().split(" ").map(Number);
+
+const dp = new Array(test_num);
+dp[0] = 1;
+
+for (let i = 1; i < test_num; i++) {
+  let max = 0;
+  for (let j = 0; j <= i; j++) {
+    if (test_case[j] < test_case[i]) {
+      max = Math.max(max, dp[j]);
+    }
+  }
+  dp[i] = max + 1;
+}
+
+console.log(Math.max(...dp));
+```
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+• 비기너: https://leetcode.com/problems/relative-ranks/description/ (30분)
+
+• 미들러: https://www.acmicpc.net/problem/11055 (1시간 15분)
+
+• 챌린저: https://school.programmers.co.kr/learn/courses/30/lessons/150368 (1시간 30분)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223787173654/01.png)

@@ -1,0 +1,71 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 11일차TIL + 스택 / 큐'
+date: '2025-02-03'
+tags: [코딩테스트]
+draft: false
+summary: 'for(let i = 1; i <= testNum; i++) {     const [cmd, num] = input[i].trim().split(/s/g);     if (cmd === ''push'') cmdObj.push(parseInt(num));     else answer.pus…'
+---
+
+# [99클럽] 99클럽 코테 스터디 11일차TIL + 스택 / 큐
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223745852460)에 2025년 2월 3일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+[**https://www.acmicpc.net/problem/10828**](https://www.acmicpc.net/problem/10828)
+
+```js
+function solution() {
+  const input =require('fs').readFileSync('/dev/stdin').toString().split(/\n/g);
+  const testNum = input[0];
+  const stack = [];
+  const answer = [];
+  const cmdObj = {
+    push: x => {
+      stack.push(x);
+    },
+    pop: () => {
+      return stack.length === 0 ? -1 : stack.pop()
+    },
+    size: () => {
+      return stack.length;
+    },
+    empty: () => {
+      return stack.length === 0 ? 1 : 0
+    },
+    top: () => {
+      return stack.length === 0 ? -1 : stack[stack.length - 1]
+    }
+  }
+
+  for(let i = 1; i <= testNum; i++) {
+    const [cmd, num] = input[i].trim().split(/\s/g);
+    if (cmd === 'push') cmdObj.push(parseInt(num));
+    else answer.push(cmdObj[cmd]());
+  }
+  console.log(answer.join("\n"));
+
+solution();
+```
+
+**비기너 스택** [**https://www.acmicpc.net/problem/10828**](https://www.acmicpc.net/problem/10828)
+
+**미들러 체스판 다시 칠하기** [**https://www.acmicpc.net/problem/1018**](https://www.acmicpc.net/problem/1018)
+
+**챌린저 N-Queen** [**https://www.acmicpc.net/problem/9663**](https://www.acmicpc.net/problem/9663)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223745852460/01.png)

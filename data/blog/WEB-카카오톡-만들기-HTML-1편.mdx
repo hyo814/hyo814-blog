@@ -1,0 +1,565 @@
+---
+title: '[WEB] 카카오톡 만들기< HTML 1편>'
+date: '2020-03-03'
+tags: [교육]
+draft: false
+summary: '(부제: 카카오톡 클론 코딩, 코코아 톡)'
+---
+
+# [WEB] 카카오톡 만들기\< HTML 1편>
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/221836020076)에 2020년 3월 3일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+(부제: 카카오톡 클론 코딩, 코코아 톡)
+
+일정:
+
+2/25~ 3/7 순서 대로 인강 듣고 샘플링 후 하고 싶은 목록 추가!!
+
+1.chat
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <title>Chat | Kakao Clone </title>
+</head>
+
+<body>
+    <div class="status-bar">
+        <div class="status-bar__columon">
+            <span class="status-bar__clock">10:26</span>
+        </div>
+        <div class="status-bar__columon">
+            <i class="fas fa-clock"></i>
+            <i class="fas fa-volume-mute"></i>
+            <i class="fas fa-wifi"></i>
+            <span class="status-bar__battery-level">100%</span>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    <header class="header">
+        <div class="header__header-column">
+            <a href="index.html" class="header__backbutton-btn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+
+            <h1 class="header__title"> Living Proof `s Father :) </h1>
+        </div>
+        <div class="header__header-column">
+            <span class="header__icon">
+                <i class="fas fa-search"></i>
+            </span>
+            <div class="header__icon">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </header>
+    <main class="chat">
+        <ul class="chat__messages">
+            <span class="chat__timestamp">Tuesday, October 1, 2019 </span>
+            <li class="incomming-message message">
+                <img src="images/avatar2.png" width="45" height="45" class="g-avtar-message" alt="avatar2">
+                <div class="messsage__content">
+                    <span class="message__author">LEE SEUNG HYUB</span>
+                    <div class="message__bubble">
+                        Congrats I love you :) !
+                        <span class="messgage__timestamp"></span>
+                    </div>
+                </div>
+
+            <li class="incomming-message message">
+                <span class="messgage__timestamp"></span>
+                <div class="messsage__content">
+                    <div class="message__bubble">
+                        Thank you see you soon :) !
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </main>
+    <div class="chat__write">
+        <div class="chat__write-column">
+            <i class="far fa-plus-square"></i>
+        </div>
+        <div class="chat__write-column">
+            <input type="text" placeholder="Send message" class="chat__write-input" />
+        </div>
+        <div class="chat__write-column">
+            <span class="chat__write-icon">
+                <i class="far fa-smile-wink"></i>
+            </span>
+            <span class="chat__write-icon">
+                <i class="fas fa-microphone"></i>
+            </span>
+        </div>
+    </div>
+</body>
+
+</html>
+```
+
+2.friends
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <title>Friends | Kakao Clone </title>
+</head>
+
+<body>
+    <div class="status-bar">
+        <div class="status-bar__columon">
+            <span class="status-bar__clock">10:26</span>
+        </div>
+        <div class="status-bar__columon">
+            <i class="fas fa-clock"></i>
+            <i class="fas fa-volume-mute"></i>
+            <i class="fas fa-wifi"></i>
+            <span class="status-bar__battery-level">100%</span>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    <header class="header">
+        <div class="header__header-column">
+            <h1 class="header__title">Friends</h1>
+        </div>
+        <div class="header__header-column">
+            <span class="header__icon">
+                <i class="fas fa-search"></i>
+            </span>
+            <span class="header__icon">
+                <a href="settings.html">
+                    <i class="fas fa-cog"></i>
+                </a>
+            </span>
+        </div>
+    </header>
+    <main class="friends">
+        <header class="friends__header">
+            <div class="friends__friend friend">
+                <div class="friend__colmun">
+                    <img src="images/avatar1.jpg" width="60" height="60" alt="avatar1" class="g-avatar">
+                    <div class="friend__content">
+                        <span class="friend__name">
+                            YOO HWE SEUNG
+                        </span>
+                        <span class="friend__status">
+                            I`m Happy :>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="friends__plus">
+            <h3 class="friend__title">Plus Friend</h3>
+            <div class="friends__friend friend">
+                <div class="friend__column"></div>
+                <img src="images/plus.png" width="45" height="45" alt="plus" class="g-avatar">
+                <div class="friend__content">
+                    <h5 span class="friend__name">
+                        Plus Friend</h5>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <h4 class="friend__title">Friends :> </h4>
+        <ul class="friend__title-list">
+            <li class="friends__friend friend friend--lg">
+                <div class="friend__colmun">
+                    <img src="images/avatar2.png" width="45" height="45" alt="avatar" class="g-avatar">
+                    <div class="friend__content">
+                        <span class="friend__name"> LEE SEUNG HYUB </span>
+                        <span class="friend__status">
+                            Hello World !
+                        </span>
+                    </div>
+                </div>
+                <div class="friend__columun">
+                    <div class="friend__now-listening">
+                        <span>
+                            N.flying-Living Proof ♫
+                        </span>
+                        <i class="fas fa-play"></i>
+                    </div>
+                </div>
+            </li>
+
+            <li class="friends__friend friend friend--lg">
+                <div class="friend__colmun">
+                    <img src="images/avatar3.png" width="45" height="45" alt="avatar" class="g-avatar">
+                    <div class="friend__content">
+                        <span class="friend__name"> CHA HUN </span>
+                        <span class="friend__status">
+                            Meow!
+                        </span>
+                    </div>
+                </div>
+            </li>
+
+            <li class="friends__friend friend friend--lg">
+                <div class="friend__colmun">
+                    <img src="images/avatar4.png" width="45" height="45" alt="avatar" class="g-avatar">
+                    <div class="friend__content">
+                        <span class="friend__name"> SEO DONG SEONG </span>
+                        <span class="friend__status">
+                            I`m Running :) !
+                        </span>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </main>
+    <nav class="nav">
+        <ul class="nav__list">
+            <li class="nav__list-item"><a href="freinds.html" class="nav__list-link">
+                    <i class="fas fa-user"></i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="index.html" class="nav__list-link">
+                    <i class="far fa-comment">
+                    </i>
+                </a>
+            </li>
+ 
+```
+
+3.find
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <title>Find | Kakao Clone </title>
+</head>
+
+<body>
+    <div class="status-bar">
+        <div class="status-bar__columon">
+            <span class="status-bar__clock">10:26</span>
+        </div>
+        <div class="status-bar__columon">
+            <i class="fas fa-clock"></i>
+            <i class="fas fa-volume-mute"></i>
+            <i class="fas fa-wifi"></i>
+            <span class="status-bar__battery-level">100%</span>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    <header class="header">
+        <div class="header__header-column">
+            <h1 class="header__title">Find</h1>
+        </div>
+        <div class="header__header-column">
+            <span class="header__icon">
+                <i class="fas fa-search"></i>
+            </span>
+            <span class="header__icon">
+                <a href="settings.html">
+                    <i class="fas fa-cog"></i>
+                </a>
+            </span>
+        </div>
+    </header>
+    <main class="find">
+        <header class="find__header">
+            <ul class="find__header-list">
+                <li class="find__header-btn header-btn">
+                    <span class="header-btn__icon">
+                        <i class="fas fa-user-plus fa-2x"></i>
+                    </span>
+                    <span class="header-btn__title">
+                        Add Contacts
+                    </span>
+                </li>
+                <li class="find__header-btn header-btn">
+                    <span class="header-btn__icon">
+                        <i class="fas fa-passport fa-2x"></i>
+                    </span>
+                    <span class="header-btn__title">
+                        Add By ID
+                    </span>
+                </li>
+                <li class="find__header-btn header-btn">
+                    <span class="header-btn__icon">
+                        <i class="far fa-envelope fa-2x"></i>
+                    </span>
+                    <span class="header-btn__title">
+                        Invite
+                    </span>
+                </li>
+            </ul>
+        </header>
+        <ul class="find__recommended">
+            <h5 class="find__title">
+                Recommended Friends
+            </h5>
+            <li class="find__friend friend friend--lg">
+                <div class="friend__colmun">
+                    <img src="images/avatar5.png" width="45" height="45" alt="avatar5" class="g-avatar">
+                    <div class="friend__content">
+                        <span class="friend__name"> KIM JAE HYUN </span>
+                    </div>
+                </div>
+                <div class="friend__columun">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+            </li>
+        </ul>
+    </main>
+    <nav class="nav">
+        <ul class="nav__list">
+            <li class="nav__list-item"><a href="freinds.html" class="nav__list-link">
+                    <i class="far fa-user"></i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="index.html" class="nav__list-link">
+                    <i class="far fa-comment">
+                    </i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="find.html" class="nav__list-link">
+                    <i class="fas fa-search">
+                    </i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="more.html" class="nav__list-link">
+                    <i class="fas fa-ellipsis-h">
+                    </i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</body>
+
+</html>
+```
+
+4.setting
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <title>Settings | Kakao Clone </title>
+</head>
+
+<body>
+    <div class="status-bar">
+        <div class="status-bar__columon">
+            <span class="status-bar__clock">10:26</span>
+        </div>
+        <div class="status-bar__columon">
+            <i class="fas fa-clock"></i>
+            <i class="fas volume-mute"></i>
+            <i class="fas fa-wifi"></i>
+            <span class="status-bar__battery-level">100%</span>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    <header class="header">
+        <div class="header__header-column">
+            <a href="more.html" class="header__backbutton-btn">
+                <i class="fas fa-arrow-left fa-2x"></i>
+            </a>
+
+            <h1 class="header__title">Settings</h1>
+        </div>
+        <div class="header__header-column">
+            <span class="header__icon">
+                <i class="fas fa-search"></i>
+            </span>
+        </div>
+    </header>
+    <main class="settings">
+        <section class="settings__sections">
+            <ul class="settings__list">
+
+                <li class="settings__setting">
+                    <span class="settings__icon">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <span class="settings__title">Privacy</span>
+                </li>
+
+                <li class="settings__setting">
+                    <span class="settings__icon">
+                        <i class="far fa-bell"></i>
+                    </span>
+                    <span class="settings__title">Notifications</span>
+                </li>
+
+                <li class="settings__setting">
+                    <span class="settings__icon">
+                        <i class="far fa-user"></i>
+                    </span>
+                    <span class="settings__title">Friends</span>
+                </li>
+            </ul>
+        </section>
+    </main>
+
+</body>
+
+</html>
+```
+
+5.more
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <title>More | Kakao Clone </title>
+</head>
+
+<body>
+    <div class="status-bar">
+        <div class="status-bar__columon">
+            <span class="status-bar__clock">10:26</span>
+        </div>
+        <div class="status-bar__columon">
+            <i class="fas fa-clock"></i>
+            <i class="fas fa-volume-mute"></i>
+            <i class="fas fa-wifi"></i>
+            <span class="status-bar__battery-level">100%</span>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    <header class="header">
+        <div class="header__header-column">
+            <h1 class="header__title">More</h1>
+        </div>
+        <div class="header__header-column">
+            <span class="header__icon">
+                <i class="fas fa-search"></i>
+            </span>
+            <span class="header__icon">
+                <i class="fas fa-qrcode"></i>
+            </span>
+            <span class="header__icon">
+                <a href="settings.html">
+                    <i class="fas fa-cog"></i>
+                </a>
+            </span>
+        </div>
+    </header>
+    <main class="more">
+        <header class="more__header">
+            <div class="friends__friend friend--lg">
+                <div class="friend__colmun">
+                    <img src="images/avatar1.jpg" width="60" height="60" alt="avatar" class="g-avatar">
+                    <div class="friend__content">
+                        <span class="friend__name">
+                            YOO HWE SEUNG
+                        </span>
+                        <span class="friend__status">
+                            Nflying@naver.com
+                        </span>
+                    </div>
+                    <div class="friend__colmun">
+                        <i class="far fa-comment-alt fa-2x"></i>
+
+                    </div>
+                </div>
+                <ul class="more__btn-list">
+                    <li class="more__btn">
+                        <span class="more__btn-icon">
+                            <i class="far fa-smile fa-2x"></i>
+                        </span>
+                        <span class="more__btn-title">
+                            Emoticons
+                        </span>
+                    </li>
+                    <li class="more__btn">
+                        <span class="more__btn-icon">
+                            <i class="fas fa-brush fa-2x"></i>
+                        </span>
+                        <span class="more__btn-title">
+                            Themes
+                        </span>
+                    </li>
+                    <li class="more__btn">
+                        <span class="more__btn-icon">
+                            <i class="fab fa-kickstarter-k fa-2x"></i>
+                        </span>
+                        <span class="more__btn-title">
+                            Account
+                        </span>
+                    </li>
+                </ul>
+        </header>
+        <section class="more__suggestions">
+            <h5 class="more__title">Suggestions</h5>
+            <ul class="more__suggestiopns-list">
+                <li class="more__suggestion suggestion">
+                    <span class="suggesiton__icon">
+                        <i class="fas fa-quote-right fa-2x"></i>
+                    </span>
+                    <span class="suggestion__title">Kakao Story</span>
+                </li>
+                <li class="more__suggestion suggestion">
+                    <span class="suggesiton__icon">
+                        <i class="fas fa-beer fa-2x"></i>
+                    </span>
+                    <span class="suggestion__title">Kakao Friend</span>
+                </li>
+                <li class="more__suggestion suggestion">
+                    <span class="suggesiton__icon">
+                        <i class="fas fa-gamepad fa-2x"></i>
+                    </span>
+                    <span class="suggestion__title">Freinds Gem</span>
+                </li>
+            </ul>
+        </section>
+    </main>
+    <nav class="nav">
+        <ul class="nav__list">
+            <li class="nav__list-item"><a href="freinds.html" class="nav__list-link">
+                    <i class="far fa-user"></i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="index.html" class="nav__list-link">
+                    <i class="far fa-comment">
+                    </i>
+                </a>
+            </li>
+            <li class="nav__list-item"><a href="find.html" class="nav__list-link">
+                    <i class="fas fa-search">
+ 
+```
+
+[https://github.com/hyo814/kakao-solution](https://github.com/hyo814/kakao-solution)
+
+- [GitHub - hyo814/kakao-solution: kakao clone play](https://github.com/hyo814/kakao-solution) — kakao clone play. Contribute to hyo814/kakao-solution development by creating an account on GitHub.

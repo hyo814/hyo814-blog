@@ -1,0 +1,172 @@
+---
+title: '[ZBF] Jenkins와 Mustard를 통한 웹 서비스 배포 시스템 구축 환경'
+date: '2024-06-03'
+tags: [기술노트, 인프라]
+draft: false
+summary: 'Jenkins와 Mustard를 이용한 웹 서비스 배포 시스템 구축은 지속적 통합(CI, Continuous Integration)과 지속적 배포(CD, Continuous Deployment)를 통해 효율적이고 자동화된 배포 프로세스를 구현하는 것입니다.'
+---
+
+# [ZBF] Jenkins와 Mustard를 통한 웹 서비스 배포 시스템 구축 환경
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223467530509)에 2024년 6월 3일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+[https://steady-coding.tistory.com/491#google_vignette](https://steady-coding.tistory.com/491#google_vignette)
+
+- [[CI / CD] 당신은 정말 지속적인 통합(CI)을 하고 있는가?](https://steady-coding.tistory.com/491#google_vignette) — 안녕하세요? 제이온입니다. 과거 힐링페이퍼 면접 이후 이규원 CTO 님께서 제가 가지고 있던 CI의 오해를 바로 잡기를 권유하시며, 한 가지 포스팅을 추천해 주셨습니다. 이번 시간에는 그 포스팅을 제가 번역한 내용을 작성하고, 스스로 느낀 점과 함께 우아한테크코스 다라쓰 팀에는 어떻게 적용하고 있는지 설명드리겠습니다. (번역은 오역이 있을 수 있으니 원본 포스팅도 꼭 정독하시길 바랍니다.) 번역 내용 서론 ThoughtWorks 기술 레이더는 최근 기술 팀 안티 패턴인 "CI 극장"을 피할 것을 권고했습니다. CI 극장은 실제로 실...
+
+Jenkins와 Mustard를 이용한 웹 서비스 배포 시스템 구축은 지속적 통합(CI, Continuous Integration)과 지속적 배포(CD, Continuous Deployment)를 통해 효율적이고 자동화된 배포 프로세스를 구현하는 것입니다.
+
+**1. 준비 작업**
+
+- **서버 준비: Jenkins와 Mustard를 설치할 서버를 준비합니다. Jenkins는 CI/CD 툴이고, Mustard는 배포 자동화 도구입니다.**
+- **소스 코드 관리 시스템(SCM) 설정: GitHub, GitLab, Bitbucket 등의 소스 코드 저장소를 설정합니다.**
+- **Jenkins 설치 및 설정: Jenkins를 설치하고 기본 플러그인을 설정합니다. Git 플러그인과 같은 SCM 플러그인도 설치합니다.**
+- **Mustard 설치 및 설정: Mustard를 설치하고, Jenkins와의 연동을 설정합니다.**
+
+**서버 준비**
+
+- Jenkins와 Mustard를 설치할 서버를 준비합니다. Linux 서버를 사용하는 것이 일반적입니다.
+
+**소스 코드 관리 시스템(SCM) 설정**
+
+- GitHub, GitLab, Bitbucket 등의 소스 코드 저장소를 설정합니다.
+- 저장소에 프로젝트 소스 코드를 업로드합니다.
+
+**Jenkins 설치 및 설정**
+
+- Jenkins를 서버에 설치합니다. [Jenkins 공식 사이트](https://www.jenkins.io/)에서 설치 방법을 참조합니다.
+- 기본 플러그인을 설치합니다. Git 플러그인과 같은 SCM 플러그인도 설치합니다.
+
+- **프로젝트 생성**: Jenkins에서 새로운 프로젝트를 생성합니다.
+- **SCM 설정**: 프로젝트의 소스 코드를 가져오기 위해 SCM을 설정합니다. Git 저장소 URL과 인증 정보를 입력합니다.
+- **빌드 트리거 설정**: 소스 코드 변경 시 자동으로 빌드가 트리거되도록 설정합니다. 웹훅(Webhook) 또는 폴링(Polling)을 사용할 수 있습니다.
+- **빌드 스크립트 작성**: 빌드 및 테스트 작업을 수행할 스크립트를 작성합니다. 예를 들어, Maven, Gradle, npm 등의 빌드 도구를 사용할 수 있습니다.
+
+```js
+pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/your-repo/your-project.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'npm install'
+                sh 'npm run build'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'npm test'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'curl -X POST http://your-mustard-server/deploy -d "project=your-project&env=production"'
+            }
+        }
+    }
+}
+```
+
+**Mustard 설치 및 설정**
+
+- Mustard를 서버에 설치합니다. Mustard는 배포 자동화 도구로, Jenkins와의 연동이 가능합니다.
+
+- **배포 파이프라인 정의**: Mustard에서 배포 파이프라인을 정의합니다. 이 파이프라인은 빌드된 아티팩트를 가져와서 서버에 배포하는 과정을 포함합니다.
+- **배포 환경 설정**: 각 환경(개발, 스테이징, 프로덕션)에 대한 설정을 정의합니다. 서버 주소, 인증 정보 등을 설정합니다.
+- **Jenkins 연동**: Jenkins 빌드 결과를 Mustard로 전달하여 배포가 자동으로 이루어지도록 설정합니다.
+
+**2. Jenkins 설정**
+
+**프로젝트 생성**
+
+- Jenkins 대시보드에서 "새로운 아이템(New Item)"을 클릭하여 새로운 프로젝트를 생성합니다.
+- 프로젝트 유형을 선택하고, 이름을 입력한 후 "확인(OK)"을 클릭합니다.
+
+**SCM 설정**
+
+- 프로젝트 설정 페이지에서 "소스 코드 관리(Source Code Management)" 섹션을 찾습니다.
+- Git을 선택하고, 저장소 URL과 인증 정보를 입력합니다.
+
+**빌드 트리거 설정**
+
+- "빌드 트리거(Build Triggers)" 섹션에서 "폴링 스케줄링(Poll SCM)"을 선택하거나, GitHub 웹훅(Webhook)을 설정합니다.
+- 웹훅 설정 시 GitHub에서 Jenkins 웹훅 URL을 입력합니다.
+
+**빌드 스크립트 작성**
+
+- "빌드(Build)" 섹션에서 빌드 스크립트를 작성합니다. 예를 들어, Node.js 프로젝트의 경우 아래와 같이 작성할 수 있습니다.
+
+t&env=production"' \} \} \} \}
+
+**3. Mustard 설정**
+
+**배포 파이프라인 정의**
+
+- Mustard에서 배포 파이프라인을 정의합니다. YAML 파일로 작성하며, 배포 프로세스를 상세히 기술합니다.
+
+**배포 환경 설정**
+
+- 각 환경(개발, 스테이징, 프로덕션)에 대한 설정을 정의합니다. 서버 주소, 인증 정보 등을 설정합니다.
+
+**Jenkins 연동**
+
+- Jenkins 빌드 결과를 Mustard로 전달하여 배포가 자동으로 이루어지도록 설정합니다. Jenkins에서 Mustard API를 호출하여 배포를 트리거합니다.
+
+**Mustard 배포 설정 예제**
+
+```js
+pipelines:
+  your-project:
+    stages:
+      - name: Deploy to Production
+        jobs:
+          - name: Deploy
+            type: deploy
+            environment: production
+            server: your-production-server
+            script: |
+              cd /var/www/your-project
+              git pull origin main
+              npm install --production
+              pm2 restart your-app
+```
+
+**4. 자동화된 배포 프로세스**
+
+**코드 변경 및 푸시**
+
+- 개발자가 소스 코드를 변경하고 Git 저장소에 푸시합니다.
+
+**빌드 및 테스트**
+
+- Jenkins가 소스 코드를 가져와서 빌드하고 테스트를 수행합니다.
+
+**빌드 아티팩트 생성**
+
+- 빌드가 성공하면 아티팩트를 생성하고, Mustard로 전달합니다.
+
+**자동 배포**
+
+- Mustard가 전달받은 아티팩트를 지정된 서버에 자동으로 배포합니다.
+
+**모니터링 및 피드백**
+
+- 배포 후 모니터링 도구를 사용하여 서비스 상태를 확인하고, 문제가 발생하면 알림을 받습니다.
+
+- **코드 변경 및 푸시**: 개발자가 소스 코드를 변경하고 Git 저장소에 푸시합니다.
+- **빌드 및 테스트**: Jenkins가 소스 코드를 가져와서 빌드하고 테스트를 수행합니다.
+- **빌드 아티팩트 생성**: 빌드가 성공하면 아티팩트를 생성하고, Mustard로 전달합니다.
+- **자동 배포**: Mustard가 전달받은 아티팩트를 지정된 서버에 자동으로 배포합니다.
+- **모니터링 및 피드백**: 배포 후 모니터링 도구를 사용하여 서비스 상태를 확인하고, 문제가 발생하면 알림을 받습니다.
+
+---
+
+저는 첫 번째 회사에서 GitHub Flow를 사용해 CI/CD를 운영했습니다. GitHub Flow는 브랜치 전략으로, 기능 개발을 브랜치에서 진행하고, Pull Request를 통해 코드 리뷰와 기능성 검사를 거쳐 메인 브랜치에 병합합니다. 이를 통해 코드의 품질을 유지하고, 배포 전에 모든 기능이 정상적으로 작동하는지 확인했습니다.
+
+두 번째 회사에서는 Jenkins와 Mustard를 사용해 CI/CD 파이프라인을 구축했습니다. Jenkins는 오픈 소스 자동화 서버로, 다양한 플러그인을 통해 빌드, 테스트, 배포를 자동화할 수 있습니다. Mustard는 Jenkins의 Job DSL을 이용해 CI/CD 파이프라인을 코드로 관리할 수 있도록 도와주는 도구입니다. 이를 통해 파이프라인의 일관성을 유지하고, 새로운 프로젝트에 쉽게 CI/CD를 적용할 수 있었습니다.
+
+배포는 매주 월~목 오전에 진행했으며, PR에 대해 기능성 검사를 철저히 수행했습니다. Jenkins를 통해 자동화된 테스트를 실행하고, 테스트가 통과된 PR만 병합했습니다. Mustard를 이용해 CI/CD 템플릿을 관리함으로써 모든 프로젝트에서 동일한 배포 프로세스를 유지할 수 있었습니다.

@@ -1,0 +1,71 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 8일차 TIL + 해시'
+date: '2025-01-22'
+tags: [코딩테스트]
+draft: false
+summary: '// readline 모듈을 사용하여 입력 처리 const readline = require("readline");'
+---
+
+# [99클럽] 99클럽 코테 스터디 8일차 TIL + 해시
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223733961441)에 2025년 1월 22일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+[https://www.acmicpc.net/problem/32978](https://www.acmicpc.net/problem/32978)
+
+```js
+// Node.js를 이용하여 문제 해결
+
+// readline 모듈을 사용하여 입력 처리
+const readline = require("readline");
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+const input = [];
+
+rl.on("line", (line) => {
+  input.push(line.trim());
+}).on("close", () => {
+  // 입력 데이터 처리
+  const N = parseInt(input[0]); // 재료의 개수
+  const allIngredients = input[1].split(" "); // 모든 재료 목록
+  const usedIngredients = input[2].split(" "); // 사용된 재료 목록
+
+  // 재료 목록을 Set으로 변환
+  const usedSet = new Set(usedIngredients);
+
+  // 누락된 재료 찾기
+  const missingIngredient = allIngredients.find((ingredient) => !usedSet.has(ingredient));
+
+  // 결과 출력
+  console.log(missingIngredient);
+
+  process.exit();
+});
+```
+
+비기너 아 맞다 마늘 [https://www.acmicpc.net/problem/32978](https://www.acmicpc.net/problem/32978)
+
+미들러 단지번호붙이기 [https://www.acmicpc.net/problem/2667](https://www.acmicpc.net/problem/2667)
+
+챌린저 양과 늑대 [https://school.programmers.co.kr/learn/courses/30/lessons/92343](https://school.programmers.co.kr/learn/courses/30/lessons/92343)
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223733961441/01.png)

@@ -1,0 +1,54 @@
+---
+title: '[99클럽] 99클럽 코테 스터디 15일차TIL + 스택 / 큐'
+date: '2025-02-07'
+tags: [코딩테스트]
+draft: false
+summary: 'const solution = (s) => {   const arr = [''()'', ''[]''];   return s.map(el => {       let i=0;       while(i<arr.length){	         if(el.indexOf(arr[i]) !== -1){	…'
+---
+
+# [99클럽] 99클럽 코테 스터디 15일차TIL + 스택 / 큐
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223750993530)에 2025년 2월 7일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+- 오늘의 학습 키워드
+
+- 공부한 내용 본인의 언어로 정리하기
+
+- 오늘의 회고
+
+- 어떤 문제가 있었고, 나는 어떤 시도를 했는지
+
+- 어떻게 해결했는지
+
+- 무엇을 새롭게 알았는지
+
+- 내일 학습할 것은 무엇인지
+
+```js
+const fs = require('fs')
+const input = fs.readFileSync('/dev/stdin').toString().trim().split('\n')
+                .map(el => el.replace(/[a-zA-Z0-9. ]/gi, ''))
+input.pop()
+
+const solution = (s) => {
+  const arr = ['()', '[]'];
+  return s.map(el => {
+      let i=0;
+      while(i<arr.length){	
+        if(el.indexOf(arr[i]) !== -1){	
+          el = el.split(arr[i]).join("");	
+          i=0;	
+        }else{
+          i++;	
+        }
+      }
+      return el === "" ? 'yes' : 'no';	   
+  }).join('\n')
+}
+
+console.log(solution(input))
+```
+
+필수 해시태그: #99클럽 #코딩테스트준비 #개발자취업 #항해99 #TIL
+
+![image](/static/images/naver/223750993530/01.png)

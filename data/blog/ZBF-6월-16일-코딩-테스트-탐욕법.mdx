@@ -1,0 +1,148 @@
+---
+title: '[ZBF] 6월 16일 코딩 테스트: 탐욕법'
+date: '2024-06-16'
+tags: [코딩테스트]
+draft: false
+summary: '탐욕법(Greedy Algorithm)은 매 순간 가장 최적이라고 생각되는 선택을 하는 알고리즘입니다. 최적해를 보장하지는 않지만, 많은 경우 근사해를 빠르게 구할 수 있습니다.'
+---
+
+# [ZBF] 6월 16일 코딩 테스트: 탐욕법
+
+> 이 글은 [네이버 블로그](https://blog.naver.com/ggamjige8888/223480910399)에 2024년 6월 16일에 올렸던 것을 그대로 옮겨온 것입니다.
+
+탐욕법(Greedy Algorithm)은 매 순간 가장 최적이라고 생각되는 선택을 하는 알고리즘입니다. 최적해를 보장하지는 않지만, 많은 경우 근사해를 빠르게 구할 수 있습니다.
+
+**탐욕법 (Greedy Algorithm)란?**
+
+탐욕법은 매 단계에서 가장 최적이라고 생각되는 선택을 함으로써 문제를 해결하는 알고리즘입니다. 각 단계에서의 선택이 최종 해답을 보장하지는 않지만, 많은 문제에서 효과적인 방법입니다.
+
+**탐욕법의 특징**
+
+1. **단순함**: 구현이 간단하고 직관적입니다.
+2. **빠른 실행 시간**: 각 단계에서 최적의 선택을 하므로 빠르게 근사해를 구할 수 있습니다.
+3. **지역 최적화**: 매 순간의 선택이 전체적으로도 최적이라는 보장은 없지만, 많은 문제에서 유효합니다.
+
+**탐욕법의 예**
+
+**예제 1: 거스름돈 문제**
+
+가장 적은 동전의 수로 거스름돈을 주는 문제입니다.
+
+```js
+// 거스름돈 문제 예제
+function minCoins(coins, amount) {
+    let count = 0;
+    for (let i = 0; i < coins.length; i++) {
+        while (amount >= coins[i]) {
+            amount -= coins[i];
+            count++;
+        }
+    }
+    return count;
+}
+
+let coins = [25, 10, 5, 1];
+let amount = 63;
+console.log(minCoins(coins, amount)); // 6 (25*2 + 10*1 + 1*3)
+```
+
+**예제 2: 활동 선택 문제**
+
+여러 활동이 주어졌을 때, 가장 많은 활동을 선택하는 문제입니다.
+
+```js
+// 활동 선택 문제 예제
+function selectActivities(activities) {
+    activities.sort((a, b) => a.end - b.end);
+    let selected = [];
+    let lastEndTime = 0;
+
+    for (let i = 0; i < activities.length; i++) {
+        if (activities[i].start >= lastEndTime) {
+            selected.push(activities[i]);
+            lastEndTime = activities[i].end;
+        }
+    }
+
+    return selected;
+}
+
+let activities = [
+    { start: 1, end: 4 },
+    { start: 3, end: 5 },
+    { start: 0, end: 6 },
+    { start: 5, end: 7 },
+    { start: 3, end: 9 },
+    { start: 5, end: 9 },
+    { start: 6, end: 10 },
+    { start: 8, end: 11 },
+    { start: 8, end: 12 },
+    { start: 2, end: 14 },
+    { start: 12, end: 16 }
+];
+
+console.log(selectActivities(activities)); 
+// [{ start: 1, end: 4 }, { start: 5, end: 7 }, { start: 8, end: 11 }, { start: 12, end: 16 }]
+```
+
+**예제 3: 배낭 문제 (Fractional Knapsack Problem)**
+
+물건을 쪼갤 수 있을 때, 최대 가치를 얻도록 배낭에 물건을 담는 문제입니다.
+
+```js
+// 배낭 문제 예제
+function fractionalKnapsack(items, capacity) {
+    items.sort((a, b) => (b.value / b.weight) - (a.value / a.weight));
+    let totalValue = 0;
+
+    for (let i = 0; i < items.length; i++) {
+        if (capacity - items[i].weight >= 0) {
+            capacity -= items[i].weight;
+            totalValue += items[i].value;
+        } else {
+            totalValue += items[i].value * (capacity / items[i].weight);
+            break;
+        }
+    }
+
+    return totalValue;
+}
+
+let items = [
+    { value: 60, weight: 10 },
+    { value: 100, weight: 20 },
+    { value: 120, weight: 30 }
+];
+
+let capacity = 50;
+console.log(fractionalKnapsack(items, capacity)); // 240
+```
+
+**탐욕법의 시간 복잡도**
+
+탐욕법의 시간 복잡도는 문제에 따라 다르지만, 일반적으로 O(n log n)에서 O(n) 사이입니다. 이는 탐욕법이 매 단계에서 최적의 선택을 하기 위해 정렬 등의 연산을 수행하기 때문입니다.
+
+**탐욕법의 장단점**
+
+**장점**
+
+- **간단하고 직관적**: 구현이 쉽고 이해하기 쉽습니다.
+- **빠른 실행 시간**: 각 단계에서 최적의 선택을 하므로 빠르게 근사해를 구할 수 있습니다.
+- **실용성**: 많은 실생활 문제에서 유용하게 사용할 수 있습니다.
+
+**단점**
+
+- **최적해 보장 어려움**: 항상 최적해를 보장하지 않습니다.
+- **문제 특수성**: 특정 문제에만 유용하며, 모든 문제에 적용할 수 없습니다.
+
+**탐욕법의 활용**
+
+탐욕법은 다음과 같은 상황에서 유용합니다.
+
+- 문제의 특성상 매 순간 최적의 선택이 전체 최적해로 이어질 때
+- 최적해가 필요하지 않고 근사해도 충분할 때
+- 빠른 해결이 필요할 때
+
+[https://school.programmers.co.kr/learn/courses/30/parts/12244](https://school.programmers.co.kr/learn/courses/30/parts/12244)
+
+- [프로그래머스 스쿨 - 온라인 IT 특화 교육 전문 플랫폼](https://school.programmers.co.kr/learn/courses/30/parts/12244) — 프로그래머스 스쿨은 IT 분야 교육 전반의 과정을 제공하는 온라인 교육 플랫폼입니다. 프로그래밍, 데이터, 인공지능 등의 학습부터 코딩 테스트, 과제 테스트 연습까지, 프로그래머스 스쿨과 함께 성장해 보세요!
