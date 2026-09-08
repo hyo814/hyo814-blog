@@ -37,7 +37,7 @@ const projectsData: Project[] = [
   {
     title: '여행을 함께, TripTune',
     kind: '사이드 프로젝트',
-    period: '2024.05 — 현재',
+    period: '2024.06 — 현재',
     stack: 'Next.js · TypeScript · React Query · STOMP',
     description: `2인 팀으로 함께 여행 계획을 세우는 웹 서비스로, 프런트엔드 전체를 맡아 MVP를 6개월 만에 출시했고 지금도 운영 중입니다.`,
     imgSrc: '/static/images/triptune/image12.png',

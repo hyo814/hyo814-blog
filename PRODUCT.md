@@ -43,7 +43,7 @@ web
 - Next.js 15 App Router + Contentlayer2 + Tailwind. `tailwind-nextjs-starter-blog` v2.2.0 기반이며 테마는 기본값 그대로다(교체 대상).
 - 글 419편(2026-09 기준, 네이버 이관 201편 포함). 슬러그가 한글이며 파일명이 곧 URL이다. **기존 URL은 깨뜨릴 수 없다.**
 - 다크모드는 `next-themes` 기반 `ThemeSwitch`로 이미 동작 중.
-- 태그 페이지, 검색, RSS, sitemap이 빌드 시 생성된다(231 페이지).
+- 태그 페이지, 검색, RSS, sitemap이 빌드 시 생성된다(2026-09 빌드 기준 672 페이지).
 - `components/Header.tsx`가 존재하지 않는 `@/data/logo.svg`를 import 중이다. 미사용이라 트리셰이킹으로 빌드는 통과하지만, 렌더링하는 순간 깨진다.
 
 ## Brand Commitments

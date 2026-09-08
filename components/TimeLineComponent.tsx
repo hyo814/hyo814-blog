@@ -135,8 +135,15 @@ const TimeLineComponent = () => {
       tags: ['사이드프로젝트', '협업'],
     },
     {
+      company: 'F-Lab Dev Club',
+      startDate: '2024-01-17',
+      endDate: '진행 중',
+      description: '개발자 커뮤니티 활동. 기술 면접 준비 자료를 정리하며 교류했습니다.',
+      tags: ['스터디', '커피챗'],
+    },
+    {
       company: 'TripTune',
-      startDate: '2024-05-01',
+      startDate: '2024-06-01',
       endDate: '진행 중',
       description:
         '협업형 여행 계획 플랫폼. 2인 팀에서 프런트엔드 전체를 맡아 MVP를 출시했고, 현재도 운영 중입니다.',
