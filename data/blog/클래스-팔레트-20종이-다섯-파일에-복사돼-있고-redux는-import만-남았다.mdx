@@ -1,0 +1,131 @@
+---
+title: 클래스 팔레트 20종이 다섯 파일에 복사돼 있고 Redux는 import만 남았다 — 경력기술서의 "Redux"를 코드로 다시 확인하기
+date: '2022-07-24'
+tags: [기술노트, 설계]
+draft: false
+summary: '경력기술서에 기술 스택으로 Redux를 적어 두었는데, 보관해 둔 스냅샷을 열어 보니 스토어는 주석 처리돼 있고 useSelector는 import만 남아 있었습니다. 판정 클래스 스무 종의 이름과 색 팔레트는 App.js와 리듀서 파일 넷에 그대로 복사돼 있었고, 실제 선택 상태는 localStorage가 들고 있었어요. 한 시점의 코드로 확인되는 것과 안 되는 것을 갈라 적습니다.'
+---
+
+# 클래스 팔레트 20종이 다섯 파일에 복사돼 있고 Redux는 import만 남았다
+
+> 이 글은 2026년 9월에 당시 코드를 다시 보며 정리한 것입니다. 저장소는 퇴사 전에 스냅샷으로 보관한 것이라 커밋 이력이 없고, 경력기술서와 당시 쓴 지원서·이력서에 적은 담당 범위와 코드를 대조해 썼습니다. 날짜는 코드에 남은 시기 단서 기준입니다.
+
+[경력기술서](/blog/2021년도~2022년도의-산업-ai-솔루션)의 공항 보안 검색 판독 시스템 항목에 기술 스택을 "JavaScript, React, Redux, Bootstrap, WebSocket"이라고 적었습니다. 이 글을 쓰려고 스냅샷을 열었을 때 제일 먼저 확인하고 싶었던 게 그 Redux였어요. `package.json`에는 `redux`·`react-redux`·`redux-persist`가 다 있습니다. 그런데 앱을 감싸는 자리는 이렇게 돼 있었습니다.
+
+```js
+// import {createStore} from "redux";
+// import {Provider} from "react-redux";
+// import rootReducer from "./modules";
+// …
+// const store = createStore(rootReducer)
+// const persist = persistStore(store)
+
+ReactDOM.render(
+    <React.StrictMode>
+        <App/>
+    </React.StrictMode>,
+    document.getElementById('root')
+);
+```
+
+`Provider`가 없습니다. `useSelector`를 import한 파일이 셋 있는데 호출은 0건이에요. 이 스냅샷의 앱은 Redux 없이 돌아갑니다.
+
+## 리듀서는 있다, 다만 안 붙어 있다
+
+`src/modules/`에는 리듀서 넷과 `combineReducers`, `redux-persist` 설정까지 갖춰져 있습니다.
+
+```js
+const persistConfig = {
+    key: "root",
+    storage,
+    whitelist: ["subHeaderConfig", "settingPostConfig", "statisticsConfig"]
+}
+
+export const rootReducer = combineReducers({ subHeaderConfig, settingPostConfig, statisticsConfig })
+```
+
+리듀서 하나를 열어 보면 상태 전환 `case`가 주석 처리돼 있고, 그 위에 이유가 한 줄 있습니다.
+
+```js
+        //일단 물품리스트를 기억하기 위헤서는 이렇게.. 주석처리를 해야..
+        // case airportServerTarget:
+        //     return { target: airportTarget }
+```
+
+물품 리스트를 유지하려면 주석 처리를 해야 했다는 것, 즉 사용자가 체크한 클래스 목록을 새로고침 뒤에도 유지하려다 리듀서 쪽에서 막혔고, 그 자리를 다른 방법으로 대신했다는 뜻으로 읽힙니다. 그 다른 방법이 `localStorage`입니다.
+
+```js
+        localStorage.setItem('statusTarget', JSON.stringify([{
+            code: "All",
+            check: true,
+            name: "전체"
+        }, ...AIRPORT]))
+        localStorage.setItem('searchTarget', JSON.stringify([{
+            code: "All",
+            check: true,
+            name: "전체"
+        }, ...AIRPORT]))
+```
+
+통계 화면과 검색 화면이 각각 어떤 클래스를 켜 두었는지를 `localStorage`에 JSON으로 통째로 넣습니다. `redux-persist`가 하려던 일을 손으로 한 셈이에요. 2022년 중반에 쓴 지원서에 "통계 작업 시에 데이터 값을 기억할 수 있도록 설계"라는 항목이 있는데, 이 `statusTarget`이 그 설계의 결과로 읽힙니다. 그러니까 체크 목록을 새로고침 뒤에도 남기는 일은 제 담당이었고, 그걸 리듀서가 아니라 `localStorage`로 푼 것도 그 안의 일이에요. 다만 Redux를 붙였다가 뗀 건지, 붙이려다 만 건지는 이 한 시점의 코드로는 알 수 없습니다. 주석 처리된 코드가 남아 있으니 붙어 있던 적이 있을 가능성이 크지만, 그렇다고 단정하지는 않겠습니다.
+
+## 팔레트가 다섯 파일에 있다
+
+판정 클래스는 코드 한 글자에 이름과 색이 붙은 객체입니다.
+
+```js
+const AIRPORT = [
+    {code: "A", check: true, name: "총기류", color: "#e32218"},
+    {code: "B", check: true, name: "칼류", color: "#838a48"},
+    {code: "C", check: true, name: "가위류", color: "#036e3d"},
+    // … T까지 20종
+```
+
+이 배열이 `App.js`에만 넷 있습니다. 납품처별로 `AIRPORT`·`AIRPORT_ENHANCED`·`ENTERPRISE`·`INTEGRATION`. 서버가 내려 주는 `target` 값으로 이 중 하나를 골라 `localStorage`에 심어요.
+
+왜 납품처 단위로 갈랐는지는 지원서에 적혀 있습니다. 2022년 5월 이후 납품이 여러 곳으로 늘면서 "너무나 다양한 요구사항 탓에 기본 제품의 틀이 많이 망가져 있어서 확장성은 고려하기 힘들 것으로 판단이 되어, CONFIG 값에 맞추어 설계하던 행동들을 우선 TARGET을 대상으로 구분을 하였다"고 썼어요. 설정 항목 하나하나(`config`)에 분기를 거는 대신 납품처(`target`)를 먼저 가르고 그 아래에 클래스 표를 한 벌씩 두기로 한 것이고, `App.js`의 배열 넷이 그 결정의 모양입니다. **TARGET으로 가른 것은 제가 한 일이고, 그 결과로 같은 표가 납품처 수만큼 복사됐습니다.**
+
+그런데 리듀서 파일 넷(`configReducer`·`settingPostConfig`·`statisticsConfig`·`subHeaderConfig`)에도 같은 배열이 또 있습니다. `"총기류"`로 찾으면 다섯 파일이 나오고, 첫 색 `#e32218`은 `App.js`에서만 여섯 번 나옵니다. 리듀서 안의 것은 리듀서가 안 붙어 있으니 어디서도 읽히지 않아요. **같은 표가 다섯 벌인데 살아 있는 건 한 벌**입니다. 리듀서 쪽 사본까지 제가 만든 것인지는 프런트 셋이 같이 만진 코드라 가르지 못합니다.
+
+색 자체는 화면에서 다르게 옵니다. 메인 화면의 판독 박스 색은 이 배열이 아니라 서버 `get_settings` 응답에서 코드로 조회합니다.
+
+```js
+    const setIconBackgroundColor = (icon) => {
+        for (let i = 0; i < settingColor.length; i++) {
+            if (settingColor[i].code === icon) {
+                return settingColor[i].color
+            }
+        }
+    }
+```
+
+그러니까 색의 정본은 서버 설정이고, 프런트의 팔레트 다섯 벌은 "체크 목록의 초기값"으로만 쓰입니다. 경력기술서 2.3절에 "옵션을 설정으로 뺐다"고 적은 건 이 서버 설정 쪽 이야기이고, 프런트 안의 복사본 다섯 벌은 그 문장에 안 들어 있습니다.
+
+## 경력기술서와 어긋나는 한 줄
+
+정리하면 경력기술서의 "Redux"는 이 스냅샷 기준으로는 **설치돼 있고 리듀서 파일도 있지만 앱에 연결돼 있지 않은 상태**입니다. 재직 중에 쓴 지원서의 기술 스택 줄은 "React, HTML, CSS, JS"였고 Redux가 없었어요. 퇴사 뒤에 쓴 경력기술서에는 들어 있는데, 무엇을 근거로 넣었는지는 남아 있지 않습니다. 기술 스택 줄에 넣을 만큼 썼는지를 코드로 다시 보면, 이 시점에는 아니었습니다. 경력기술서 본문은 그대로 두고 이 글에서 정정합니다.
+
+## 검증
+
+- 날짜 근거: 스냅샷 커밋 2022-07-24 두 개, 코드 안 날짜 문자열 `2021-12-23`·`2022-04-01`. 지원서는 TARGET 구분을 2022년 5월 이후로 적고 있습니다. 리듀서가 언제 주석 처리됐는지는 알 수 없습니다.
+- 경력기술서·지원서·이력서와 대조:
+
+| 경력기술서 | 코드 | 지원서·이력서 | 판정 |
+|---|---|---|---|
+| 기술 스택 Redux | `package.json`에 있음, `Provider`·`createStore` 주석, `useSelector` 호출 0건 | 지원서 스택 줄에 Redux 없음 | 이 시점에는 미사용 |
+| 2.3 옵션을 설정으로 | 박스 색·임계값·표시 여부는 서버 `get_settings`에서 조회 | 지원서 "설정의 thres 값을 직접 작성", 이력서 담당 "설정" | 일치 |
+| 2.3 카메라 위치·2D/3D 설정 | 해당 코드 없음 | 언급 없음 | 이 저장소에서 확인 안 됨 |
+| (언급 없음) | 팔레트 배열이 `App.js` 4벌 | 지원서 "CONFIG 대신 TARGET으로 구분" | 본인 작업, 경력기술서에만 없음 |
+| (언급 없음) | 리듀서 파일 4개에 같은 팔레트 | 언급 없음 | 누구 것인지 불명 |
+| (언급 없음) | `statusTarget`·`searchTarget`을 `localStorage`에 | 지원서 "통계 작업 시 데이터 값을 기억할 수 있도록 설계" | 본인 작업 |
+
+- 이 글을 쓰며 센 것: `"총기류"` 5개 파일, `useSelector` import 3·호출 0, `App.js` 팔레트 배열 4개.
+
+## 남은 것 · 한계
+
+- **한 시점의 스냅샷입니다.** Redux가 붙어 있던 기간이 있었는지, 누가 뗐는지 알 수 없습니다. 경력기술서의 스택 표기가 어느 시점에는 맞았을 가능성을 부정하지는 못합니다. 다만 제가 보관한 마지막 상태에서는 아니었습니다.
+- **팔레트 다섯 벌 중 넷은 죽은 코드인데 지우지 않았습니다.** TARGET으로 가른 건 제 결정이었으니 그 결과로 생긴 사본을 정리할 사람도 저였는데, 스냅샷 시점까지 그대로였습니다. 리듀서 쪽 사본은 프런트 셋 중 누구 것인지 모릅니다.
+- **리듀서에서 막힌 이유가 주석 한 줄뿐입니다.** `redux-persist`의 `whitelist`까지 써 놓고 왜 체크 목록 유지가 안 됐는지, 그때 무엇을 시도했는지 남아 있지 않습니다.
+- 같은 종류의 문제를 나중에 두 번 더 만났습니다. 색 이름이 여러 곳에 흩어져 있을 때 어디가 정본인지를 [팔레트에 없는 색은 조용히 안 칠해진다](/blog/팔레트에-없는-색은-조용히-안-칠해진다)에서, 같은 낱말이 96개 파일에 복사돼 있을 때 어디까지 바꿀지를 [용어 하나를 96개 파일 667곳에서 바꿨다](/blog/용어-하나를-96개-파일-667곳에서-바꿨다)에서 다뤘습니다. 2022년의 저는 다섯 벌이 있다는 것 자체를 세어 보지 않았습니다.
+
+관련 글: [산업 AI 솔루션 기업 프런트엔드 2021–2022](/blog/2021년도~2022년도의-산업-ai-솔루션) · [팔레트에 없는 색은 조용히 안 칠해진다](/blog/팔레트에-없는-색은-조용히-안-칠해진다) · [용어 하나를 96개 파일 667곳에서 바꿨다](/blog/용어-하나를-96개-파일-667곳에서-바꿨다) · [일정에 담은 장소를 컴포넌트 state에서 스토어로 옮겼다](/blog/일정에-담은-장소를-컴포넌트-state에서-스토어로-옮겼다) · [메인 화면의 판독 박스는 서버 설정 셋이 그린다](/blog/메인-화면의-판독-박스는-서버-설정-셋이-그린다) · [카테고리 하나에 폴더 하나 — 복붙 열한 벌](/blog/카테고리-하나에-폴더-하나-복붙-열한-벌) · [번역 키를 한국어 원문으로 썼다](/blog/번역-키를-한국어-원문으로-썼다)
