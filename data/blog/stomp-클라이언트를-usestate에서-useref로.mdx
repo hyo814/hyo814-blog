@@ -1,0 +1,114 @@
+---
+title: STOMP 클라이언트를 useState에서 useRef로 — 정리 함수가 구독 객체를 못 보고 있었다
+date: '2024-11-24'
+tags: [기술노트, 네트워크]
+draft: false
+summary: '채팅의 STOMP 연결과 구독 객체를 useState에 담고 있었습니다. effect의 정리 함수가 그 state를 읽어 unsubscribe하게 짜 놨는데, 정리 함수는 effect가 만들어질 때의 값을 잡고 있어서 늘 null이었어요. 다음 날 새벽 클라이언트를 useRef로 옮기고 클라이언트·구독 state 셋을 지웠습니다. 파일이 212줄에서 111줄이 됐는데, 그중 54줄은 리팩토링 커밋이 화면 JSX를 통째로 주석 하나로 바꿔 버린 탓이었습니다.'
+---
+
+# STOMP 클라이언트를 useState에서 useRef로
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+2024년 11월 셋째 주는 TripTune 채팅에 매달린 주였습니다. 21일 커밋 제목이 "wss는 왜 안될까?" 1탄부터 4탄, "STOMP의 4계절"이에요. 그 이야기는 [wss 연결 실패 글](/blog/websocket-connection-to-wss-failed오류의-원인과-해결-방법)과 [두 번째 메시지부터 동기화가 깨지던 문제](/blog/웹소켓과-stomp를-이용한-채팅-구현-중-메시지-동기화-문제-해결)에 있습니다. 이 글은 그 사이에 낀 하루, 23일 밤과 24일 새벽 이야기입니다. 주제는 하나예요. **연결 객체를 어디에 둘 것인가.**
+
+## 23일 밤 — state를 하나 더 늘렸다
+
+`0f8f756` "채팅 구독 방법 설계"(23:36)의 `Chatting.tsx`는 이렇게 시작합니다.
+
+```tsx
+const [client, setClient] = useState<Client | null>(null);
+const [chatSubscription, setChatSubscription] = useState<StompSubscription | null>(null);
+const [errorSubscription, setErrorSubscription] = useState<StompSubscription | null>(null);
+```
+
+STOMP 클라이언트와 구독 두 개가 전부 state입니다. 그 전 커밋에는 `subscription` 하나였는데, 이날 서버 에러 큐 `/user/queue/errors`를 구독하면서 둘로 나눴어요. 연결하는 effect의 끝은 이랬습니다.
+
+```tsx
+    stompClient.activate();
+    setClient(stompClient);
+
+    return () => {
+      if (chatSubscription) chatSubscription.unsubscribe();
+      if (errorSubscription) errorSubscription.unsubscribe();
+      if (stompClient.connected) stompClient.deactivate();
+    };
+  }, [scheduleId, brokerUrl, token, pathname]);
+```
+
+정리 함수가 `chatSubscription`을 읽어서 unsubscribe합니다. 그런데 이 정리 함수는 effect가 실행되던 순간의 클로저예요. 그 순간 `chatSubscription`은 `null`입니다. `onConnect` 콜백이 나중에 `setChatSubscription(chatSub)`을 불러도, 이미 만들어진 정리 함수가 보는 값은 바뀌지 않습니다. 그러니까 `if (chatSubscription)`은 늘 거짓이고, **unsubscribe는 한 번도 불린 적이 없습니다.** 마지막 줄의 `stompClient.deactivate()`가 연결째 끊어 주니까 화면에서는 티가 안 났어요.
+
+React를 몇 년 썼는데도 이 자리에서는 state를 "값을 넣어 두는 상자"로 쓰고 있었습니다. 렌더와 무관하게 붙잡고 있어야 하는 객체는 state가 아니라 ref에 두는 건데, 채팅은 처음이라 "연결됐는지"를 화면이 알아야 한다고 생각했던 것 같습니다. 그래서 전부 state로 간 걸로 보여요.
+
+이 커밋에는 호스트 화이트리스트(localhost·netlify만 연결)도 있었는데, 배포 도메인이 바뀌면 채팅이 조용히 안 되는 코드였고 여기서 읽는 `client`도 state라 같은 문제를 안고 있었습니다.
+
+## 24일 새벽 — ref로 옮기고 state 셋을 지웠다
+
+한 시간 뒤 `6bd7f28` "채팅 구독 방법 설계 -> 리팩토링"(00:37)입니다. +30/−131.
+
+```tsx
++  const clientRef = useRef<Client | null>(null);
+-  const [client, setClient] = useState<Client | null>(null);
+-  const [chatSubscription, setChatSubscription] = useState<StompSubscription | null>(null);
+-  const [errorSubscription, setErrorSubscription] = useState<StompSubscription | null>(null);
+```
+
+```tsx
+    stompClient.activate();
+-    setClient(stompClient);
++    clientRef.current = stompClient;
+
+    return () => {
+-      if (chatSubscription) chatSubscription.unsubscribe();
+-      if (errorSubscription) errorSubscription.unsubscribe();
+-      if (stompClient.connected) stompClient.deactivate();
++      if (clientRef.current) {
++        clientRef.current.deactivate();
++        clientRef.current = null;
++      }
+    };
+-  }, [scheduleId, brokerUrl, token, pathname]);
++  }, [scheduleId, brokerUrl, token]);
+```
+
+바뀐 게 넷입니다. 클라이언트를 ref에 두고, 구독 객체는 아예 보관하지 않고(연결을 끊으면 구독도 끝나니까), 정리 함수는 ref를 읽고, 의존성에서 `pathname`을 뺐어요. `pathname`은 화이트리스트 검사에만 쓰였는데 그 검사를 지웠으니 같이 나간 겁니다. 에러 큐 구독도 이때 지웠습니다. 전날 밤에 넣고 다음 날 새벽에 뺀 거예요. 왜 뺐는지는 커밋에 없습니다.
+
+`handleSendMessage`도 ref를 읽게 바뀌면서 `stompClient.connected` 검사가 붙었습니다. 전에는 `client`가 있으면 바로 `publish`했는데, 연결이 끊긴 클라이언트에 publish하면 라이브러리가 던지는 걸 try/catch로 삼키고 있었어요.
+
+초기 메시지 로드도 한 줄이 됐습니다. 전에는 1페이지를 받아 `totalPages`를 알아낸 뒤 마지막 페이지를 한 번 더 받는 두 번 요청이었는데, 첫 응답을 `reverse()`해서 쓰는 걸로 바꿨어요. 이건 서버가 주는 순서에 대한 전제인데, 그 전제를 어디서 확인했는지는 커밋에 없습니다.
+
+## 리팩토링 커밋이 화면을 지웠다
+
+−131 중 54줄은 다른 이유였습니다. 이 커밋의 JSX 부분 diff입니다.
+
+```tsx
+   return (
+     <div className={styles.chatContainer}>
+-      <div className={styles.header}>
+-        <h1 className={styles.chatTitle}>그룹 채팅</h1>
+-      </div>
+-      <div className={styles.messageContainer}>
+-        {messages.map((msg) => (
+      ... 48줄 더 ...
++      {/* Remaining JSX */}
+     </div>
+   );
+```
+
+채팅 화면 전체가 주석 한 줄이 된 채 커밋됐습니다. 파일이 212줄에서 111줄이 된 건 그래서예요. 연결 로직에 집중하느라 JSX를 접어 두고 작업하다가 그대로 올린 것으로 보이는데, 정확한 경위는 없습니다. 12시간 뒤 `5e97530` "리팩토링 : 누락 처리"(13:02)에서 58줄을 되살렸고 파일은 166줄이 됐습니다. 그 커밋에서 `clientRef.current instanceof Client` 가드도 붙었어요.
+
+## 검증
+
+- 검증 기록은 없습니다. 이 무렵 커밋 제목이 "테스트 지원 1차~5차", "wss 테스트"인데 전부 화면에서 눌러 본 기록이고 테스트 파일은 0개였습니다.
+- 정리 함수의 `chatSubscription`이 늘 null이었다는 건 코드를 읽어서 안 것이고, 당시에 로그로 확인하지는 않았습니다.
+- JSX가 빠진 채 커밋된 건 12시간 뒤 복원 커밋이 있으니 그 사이에 알아챈 겁니다. 첫 배포가 나흘 뒤(11월 28일)라 사용자에게 나간 적은 없습니다.
+
+## 남은 것 · 한계
+
+- **ref로 옮긴 건 맞았고, 이후 이 파일의 연결 코드는 그 구조를 유지했습니다.** 12월 6일과 9일의 일정 화면 리팩토링에서도 `clientRef`는 그대로예요.
+- **구독 객체를 안 들고 있기로 한 건 반은 맞습니다.** `deactivate()`가 구독을 정리해 주지만, 한 연결에서 구독을 바꿔 끼워야 하는 상황이 오면 다시 들고 있어야 합니다. 그 상황은 안 왔습니다.
+- **에러 큐 구독을 왜 뺐는지 모릅니다.** 서버 쪽 에러를 화면이 받을 길이 이날 사라졌고, 되살린 기록이 없습니다.
+- **화이트리스트를 지운 건 좋았는데, 그 자리에 뭘 두지 않았습니다.** 어느 환경에서든 `brokerUrl`만 있으면 연결을 시도해요. 잘못된 URL이면 `reconnectDelay: 5000`으로 5초마다 재시도합니다.
+- 화면 JSX가 빠진 커밋이 올라간 건 커밋 전에 diff를 안 봤다는 뜻입니다. 이 시기 커밋 메시지가 어땠는지는 1년 뒤 [Git 커밋 메시지 잘 쓰는 법](/blog/git-커밋-메시지-작성법)에서 저장소 2년치를 놓고 따져 봤습니다.
+
+관련 글: [WebSocket connection to wss failed](/blog/websocket-connection-to-wss-failed오류의-원인과-해결-방법) · [STOMP 채팅에서 두 번째 메시지부터 동기화가 깨지던 문제](/blog/웹소켓과-stomp를-이용한-채팅-구현-중-메시지-동기화-문제-해결) · [Git 커밋 메시지 잘 쓰는 법](/blog/git-커밋-메시지-작성법) · [useCallback 17개를 지운 "최적화" 커밋](/blog/usecallback-17개를-지운-최적화-커밋) · [배포 첫날 커밋 열 개](/blog/배포-첫날-커밋-열-개)

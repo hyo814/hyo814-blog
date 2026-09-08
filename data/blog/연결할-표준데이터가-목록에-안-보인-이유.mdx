@@ -1,0 +1,110 @@
+---
+title: 연결할 표준데이터가 목록에 안 보인 이유 — 관계에서 거꾸로 뽑던 후보를 전체 조회로
+date: '2025-12-22'
+tags: [기술노트, Django]
+draft: false
+summary: 'OID 관리 화면에서 표준데이터를 연결하려는데 후보 목록에 없는 것이 있었습니다. 후보를 OID-표준데이터 관계 테이블에서 거꾸로 뽑고 있어서, 아직 어디에도 연결되지 않은 표준데이터는 나올 수 없었어요. 동료가 닦아 둔 REST 기반 위에 처음으로 엔드포인트 하나를 팠고, 같은 날 오후 설정 객체를 통째로 덮어써서 주소를 잃어버린 것도 고쳤습니다.'
+---
+
+# 연결할 표준데이터가 목록에 안 보인 이유
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+OID 관리 화면에는 "연결된 표준데이터" 구획이 있습니다. 노드를 고르고 편집을 누르면 왼쪽에 후보 목록, 오른쪽에 선택된 목록이 나오는 이중 선택기예요. 여기서 방금 만든 표준데이터를 연결하려는데 후보에 없었습니다. 검색해도 안 나와요.
+
+## 후보를 관계 테이블에서 거꾸로 뽑고 있었다
+
+후보 목록을 채우는 함수의 주석이 이유를 그대로 말하고 있었습니다.
+
+```js
+    // 현재 제공되는 Dataset 전체 리스트 API가 없어서
+    // OID-Dataset 관계 목록을 통해 Dataset 정보를 역으로 수집한다.
+    const res = await $.ajax({
+      url: "/std-data/rest-api/oid-dataset/",
+```
+
+`oid-dataset`은 OID와 표준데이터를 잇는 관계 테이블입니다. 거기서 `dataset` 필드를 모아 중복을 걸러내면 표준데이터 목록처럼 보이긴 해요. 하지만 그 목록에 들어가려면 **이미 어떤 OID에든 한 번은 연결돼 있어야** 합니다. 처음 연결하려는 표준데이터는 정의상 나올 수 없었어요.
+
+이 주석을 쓴 것도 저였습니다. 며칠 전 연결 구획을 만들면서 "전체 목록 API가 없다"고 적고 우회했는데, 그 우회가 어떤 데이터를 못 보여 주는지는 그때 생각하지 않았습니다.
+
+## 처음 만든 엔드포인트
+
+없으면 만들면 됩니다. 이때까지 REST 쪽은 동료가 맡아서 뷰셋 기반 클래스, 역할 기반 권한, 라우터 등록까지 다 갖춰 놓은 상태였어요. 저는 그 위에 표준데이터 하나를 얹었습니다.
+
+```python
+class DatasetViewSet(LoggingModelViewSet):
+    queryset = Dataset.objects.select_related('owner_organization', 'creator').all()
+    serializer_class = DatasetSerializer
+    permission_classes = [RestApiRolePermission]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # 상태 필터링
+        state = self.request.query_params.get('state', None)
+        if state is not None:
+            queryset = queryset.filter(state=state)
+```
+
+뷰셋 57줄, 시리얼라이저 25줄, 라우터 두 줄. 화면 쪽은 주소를 바꾸고 역추출 코드를 지우는 것으로 끝났습니다.
+
+```js
+-    const seen = new Set();
+     const datasets = [];
+     const list = Array.isArray(res) ? res : res.results || [];
+     list.forEach((item) => {
+-      const id = item.dataset;
+-      const title = item.dataset_title || item.dataset_name || "";
+-      if (id && !seen.has(id)) {
+-        seen.add(id);
++      const id = item.id;
++      const title = item.title || item.name || "";
++      if (id) {
+```
+
+`state`·`private`·`owner_organization` 필터 셋을 뷰셋에 넣었는데, 화면은 그중 하나도 쓰지 않았습니다. 후보 목록은 전체를 그대로 받아요. "있으면 좋겠다"로 만든 필터였고, 쓰는 쪽을 같이 만들지 않았습니다.
+
+이 커밋의 메시지는 "상황 / 해결 / 효과"를 이모지 번호로 나눠 쓴 긴 글입니다. 그 시절 제 커밋 메시지가 그랬어요. 지금 보면 diff를 그대로 옮겨 적은 부분이 절반입니다.
+
+## 같은 날 오후, 설정을 통째로 덮어써서 주소를 잃었다
+
+그날 16:30에 화면 스크립트에 박혀 있던 API 주소들을 템플릿의 `window.config.api`로 옮겼습니다. 공용 OID 매크로가 이 객체를 만들어요. 그런데 관리자 목록·상세 템플릿은 자기 몫의 설정을 이렇게 쓰고 있었습니다.
+
+```js
+      window.config = {
+        initialTreeData: `{{ (data.core if data.core else []) | safe }}`,
+        targetUrl: "{{ 'std-data:oid-list' | url }}",
+        baseUrl: "{{ 'web-admin:std-data:oid_list' | url }}",
+        detailUrl: "{{ 'web-admin:std-data:oid_detail' | url(args=[0]) }}",
+        isAdmin: true
+      };
+```
+
+`=`로 대입하니 공용 매크로가 넣어 둔 `api`가 사라집니다. 스크립트는 `window.config.api.oid.list`를 읽는데 `api`가 없으니 거기서 멈춰요. 9분 뒤 병합으로 바꿨습니다(`14e690f5`).
+
+```js
+      window.config = Object.assign(window.config || {}, {
+        initialTreeData: `{{ (data.core if data.core else []) | safe }}`,
+        ...
+        isAdmin: true,
+        api: Object.assign({}, (window.config && window.config.api) || {}, {
+          oid: {
+            list: "{{ 'std-data:oid-list' | url }}",
+```
+
+전역 객체 하나를 템플릿 두 곳이 나눠 채우는 구조라, 어느 쪽이 먼저 실행되든 상대 것을 지우지 않아야 했습니다. `Object.assign`으로 얕게 합치고, `api`는 한 겹 더 합쳤어요.
+
+## 검증
+
+- 아무 OID에도 연결되지 않은 표준데이터를 하나 만들고, 관리 화면 후보 목록에 나오는지 확인했습니다. 고치기 전에는 안 나왔어요.
+- 관리자 목록·상세 두 화면에서 트리와 연결 구획이 다시 그려지는지 확인했습니다. 덮어쓰기 상태에서 `api`가 없어 스크립트가 멈춘다는 건 코드로 확인한 것이고, 당시 콘솔을 본 기록은 없습니다.
+- 서버 테스트는 쓰지 않았습니다. 브라우저에서 `/std-data/rest-api/dataset/`을 열어 JSON이 오는지 봤어요.
+
+## 남은 것 · 한계
+
+- **필터 셋을 만들고 하나도 안 썼습니다.** 후보에 등록 상태가 아닌 표준데이터도 섞여 나옵니다. `?state=ACT` 한 줄이면 됐는데 그때는 붙이지 않았어요.
+- 페이지네이션을 안 봤습니다. 응답이 `results`로 올 수도 있다고 방어는 했는데, 다음 쪽을 읽는 코드는 없어요. 표준데이터가 많아지면 후보가 잘립니다.
+- 전역 `window.config`를 여러 템플릿이 채우는 구조 자체는 그대로입니다. 병합으로 덮어쓰기는 막았지만, 같은 키를 두 곳이 다른 값으로 넣으면 나중 것이 이깁니다.
+- 이 엔드포인트가 다루는 `Dataset`은 뒤에 표준데이터 모델이 인스턴스 기반으로 바뀌면서 레거시가 됐습니다. 2026년 7월에 동료가 OID 연결을 인스턴스 쪽으로 옮기면서 이 후보 목록도 다른 API를 보게 됐어요.
+
+관련 글: [4단계 Creation Wizard UX 구현 회고](/blog/oid-creation-wizard-ux-구현-회고) · [OID 트리를 jsTree에서 조직도로 갈아탔다](/blog/oid-트리를-jstree에서-조직도로-갈아탔다) · [OID 하나에 표기법 넷](/blog/oid-하나에-표기법-넷) · [트리에서 뺀 신청 상태 표시를 일주일 뒤 되살렸다](/blog/트리에서-뺀-신청-상태-표시를-일주일-뒤-되살렸다)

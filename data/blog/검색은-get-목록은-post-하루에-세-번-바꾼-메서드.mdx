@@ -1,0 +1,131 @@
+---
+title: 검색은 GET, 목록은 POST — 하루에 세 번 바꾼 메서드
+date: '2024-09-01'
+tags: [기술노트, 네트워크]
+draft: false
+summary: '여행지 목록과 검색 API의 메서드를 하루에 세 번 바꿨습니다. 오후 6시에 둘 다 GET, 7시에 page를 쿼리로, 8시 반에 목록만 POST, 밤 11시 반에 검색은 GET으로 확정. 그런데 POST로 바꾸면서 좌표를 params라는 키로 한 번 감싸서 보냈고, 그걸 다음 날 점심에야 풀었어요. 엿새 뒤 검색도 POST가 됐습니다.'
+---
+
+# 검색은 GET, 목록은 POST
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+TripTune은 백엔드 한 명, 프런트 한 명이었습니다. API 계약을 문서로 먼저 굳히는 과정이 없었고, 서로 코드를 고치면서 맞춰 갔어요. 2024년 9월 1일 하루의 커밋이 그 방식을 그대로 보여 줍니다.
+
+여행지 목록은 현재 위치의 위도·경도를 보내 주변을 받는 API고, 검색은 키워드를 보내는 API였습니다. 이 둘의 메서드와 파라미터 위치가 하루에 세 번 바뀌었습니다.
+
+## 오후 6시 12분 — 둘 다 GET
+
+`f55d4de`("여행지 탐색 - 홈 / 검색"). 목록 API는 이렇게 생겼었습니다.
+
+```ts
+const response = await axiosInstance.get(
+  `/api/travels/list?page=${pageNum}`,
+  { params }
+);
+```
+
+`page`는 URL에 직접 붙이고, 위도·경도는 `params`로 넘겨 쿼리스트링에 붙습니다. 검색도 같은 모양이었어요. 이 시점의 `axiosInstance`는 그날 인터셉터를 모듈 최상단으로 옮긴 판이고, `baseURL: '/'`로 프록시를 타도록 돼 있었습니다.
+
+## 오후 7시 18분 — page도 params로
+
+`e77ae41`("get 방식 변경").
+
+```diff
+-    const response = await axiosInstance.get(
+-      `/api/travels/list?page=${pageNum}`,
++    const response = await axios.get(
++      `/api/travels/list`,
+       {
+-          params,
++        params: {
++          ...params,
++          page,
++        },
+       }
+```
+
+`page`를 URL에서 빼서 `params`에 합쳤습니다. 그리고 `axiosInstance` 대신 `axios`를 직접 씁니다. 한 시간 전에 만든 인스턴스를 한 시간 만에 안 쓰게 된 건데, 이유는 커밋에 없습니다. 검색 API도 같은 diff입니다.
+
+## 오후 8시 35분 — 목록은 POST
+
+`cc144a4`("기본은 post, 키워드는 get").
+
+```diff
+-    const response = await axios.get(
+-      `/api/travels/list`,
++    const pageNum = Number(page);
++
++    const response = await axiosInstance.post(
++      `/api/travels/list?page=${pageNum}`,
+       {
+-        params: {
+-          ...params,
+-          page,
+-        },
++        params,
+       }
+```
+
+목록이 POST가 됐습니다. 커밋 제목이 계약을 말해 줍니다. "기본은 post, 키워드는 get" — 좌표는 body로, 키워드는 쿼리로. `page`는 다시 URL로 돌아왔고, `axiosInstance`도 돌아왔습니다.
+
+그런데 이 diff에는 버그가 있습니다. `axios.post(url, data)`의 두 번째 인자는 body예요. GET일 때 `{ params }`였던 설정 객체를 그대로 두고 메서드만 바꿨으니, body가 `{ "params": { "longitude": ..., "latitude": ... } }`로 나갑니다. 서버가 기대한 건 `{ "longitude": ..., "latitude": ... }`였겠죠.
+
+## 밤 11시 28분 — 검색은 GET으로 확정
+
+`0b1a5fb`("get 과 post 변경 처리"). 검색 API를 `axios.get`에서 `axiosInstance.get`으로 되돌리고 `page`를 URL로 옮겼습니다. 메서드는 GET 그대로예요. 이 시점의 검색 파라미터 타입은 `{ type: string; keyword: string }`이었습니다.
+
+하루가 끝났을 때 계약은 이랬습니다.
+
+| API | 메서드 | page | 나머지 |
+|---|---|---|---|
+| 목록 | POST | URL 쿼리 | body (`params`로 감싸진 채) |
+| 검색 | GET | URL 쿼리 | 쿼리스트링 |
+
+## 다음 날 점심 — params 삭제
+
+9월 2일 13시 27분, `c112229`("params 삭제"). 2줄짜리 커밋입니다.
+
+```diff
+     const response = await axiosInstance.post(
+       `/api/travels/list?page=${pageNum}`,
+-      {
+         params,
+-      }
+     );
+```
+
+중괄호 두 개를 지워서 body가 좌표 객체 그 자체가 되게 했습니다. 전날 밤부터 목록이 안 왔거나, 서버 쪽에서 body 모양이 다르다고 알려 줬거나, 둘 중 하나일 텐데 커밋에는 "params 삭제"뿐입니다. 10분 뒤 커밋이 "access(5분) refresh(1주일) 토근 발급"이라 그날 오전에 백엔드와 같이 맞춘 것들 중 하나였을 가능성이 있습니다. 추측입니다.
+
+## 엿새 뒤 — 검색도 POST
+
+9월 7일 `06121bd`("여행지 탐색 개선 (검색 post, 위도 경도 추가)"). 검색에 위도·경도가 붙으면서 검색도 POST가 됐습니다.
+
+```diff
+-    const response = await axios.get(
+-      `/api/travels/search?page=${pageNum}`,
+-      { params },
+-    );
++    const response =
++      await axios.post(`/api/travels/search?page=${pageNum}`, params);
+```
+
+파라미터 타입은 `TravelListSearchParams extends Coordinates { keyword: string }`이 됐어요. "키워드는 GET"이라는 9월 1일의 계약은 엿새를 못 갔습니다. 검색에도 현재 위치가 필요해지자 좌표를 body로 보내는 목록 쪽 방식으로 통일된 겁니다. 이번에는 body에 `params`를 바로 넘겨서 감싸지는 문제가 없었습니다.
+
+현재 저장소에서도 목록과 검색 둘 다 POST에 `page`만 쿼리로 나갑니다. 2025년 1월 리팩토링(`369c848`) 때 파일이 `apis/Travel/travelApi.ts`로 옮겨졌지만 모양은 9월 7일 판과 같습니다.
+
+## 검증
+
+- 9월 1일 네 커밋(`f55d4de`·`e77ae41`·`cc144a4`·`0b1a5fb`)과 9월 2일 `c112229`의 시각은 `git log --format='%h %ci'`로 확인했습니다.
+- `cc144a4` 시점의 `travelListApi.ts`를 `git show`로 열어 `axiosInstance.post(url, { params })` 모양인 것을 확인했습니다. body가 `params` 키로 감싸진다는 판단은 이 코드와 axios의 시그니처에서 나온 것이고, 당시 네트워크 탭을 본 기록은 없습니다.
+- `06121bd`에서 검색 파라미터 타입이 `Coordinates`를 상속하게 된 것을 `types/travelType.ts`에서 확인했습니다.
+- 현재 상태는 `git grep 'travels/search' HEAD`와 `apis/Travel/travelApi.ts`로 확인했습니다.
+
+## 남은 것 · 한계
+
+- **왜 좌표를 body로 보내기로 했는지는 커밋에 없습니다.** 좌표는 검색 조건이지 자원을 만드는 게 아니라서 GET에 쿼리로 보내도 됐을 텐데, "기본은 post"라는 제목 한 줄이 남은 전부예요. 백엔드 쪽 사정이었을 수 있습니다.
+- **`params`로 감싸진 body를 내보낸 채 하룻밤이 지났습니다.** 그때 어떻게 발견했는지 기록이 없습니다.
+- 한 시간 만에 `axiosInstance`를 버렸다가 한 시간 뒤 다시 쓴 것도 이유를 모릅니다. 이 인스턴스는 9월 중순 fetch 전환 때 없어집니다.
+- 메서드를 고르는 기준을 글로 정리한 건 이보다 다섯 달 전 [로그아웃은 PATCH인가 DELETE인가](/blog/로그아웃-시-patch-방식과-delete-방식의-비교)에서였는데, 거기서 세운 기준을 이날 적용한 흔적은 없습니다. 기준을 아는 것과 계약을 맞추는 자리에서 그 기준을 꺼내는 건 다른 일이었습니다.
+
+관련 글: [로그아웃은 PATCH인가 DELETE인가](/blog/로그아웃-시-patch-방식과-delete-방식의-비교) · [fetch가 Next.js에서 선호되는 이유, 그리고 axios와의 차이점](/blog/fetch가-next.js에서-선호되는-이유-그리고-차이점) · [무한 스크롤에서는 왜 이슈가 생긴 걸까](/blog/무한-스크롤에서는-왜-이슈가-생긴-걸까) · [axios를 걷어냈다가 이틀 만에 되돌렸다가 다시 걷어냈다](/blog/axios를-걷어냈다가-이틀-만에-되돌렸다가-다시-걷어냈다)

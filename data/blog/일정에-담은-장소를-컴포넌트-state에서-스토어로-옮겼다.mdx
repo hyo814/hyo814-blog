@@ -1,0 +1,121 @@
+---
+title: 일정에 담은 장소를 컴포넌트 state에서 스토어로 옮겼다 — userId를 nickname으로 바꾸던 날
+date: '2024-11-20'
+tags: [기술노트, React]
+draft: false
+summary: '일정 만들기 화면에서 담은 장소 목록은 컴포넌트 안의 state였고, 서버 응답과 부모 props 두 곳에서 그 state를 덮어쓰고 있었습니다. 서버가 userId 대신 nickname을 주기로 한 날, 그 목록을 zustand 스토어로 옮겼어요. 상태의 주인을 하나로 만든 건 맞는데, 같은 커밋에서 드래그 항목 컴포넌트를 부모 함수 안으로 옮겼고 스토어 훅 이름을 이미 있는 것과 똑같이 지었습니다. 둘 다 지금까지 남아 있습니다.'
+---
+
+# 일정에 담은 장소를 컴포넌트 state에서 스토어로 옮겼다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+TripTune의 일정 만들기 화면은 왼쪽에서 여행지를 검색해 담고, 오른쪽에서 담은 순서를 드래그로 바꾸는 구조입니다. 2024년 10월 26일 `a60a49c`에서 이 화면을 크게 손보면서 `react-dnd`·`react-dnd-html5-backend`·`dayjs`·`react-intersection-observer`를 한꺼번에 넣었어요. 23개 파일, +1,985/−1,568짜리 커밋이었습니다.
+
+그로부터 한 달 남짓 뒤인 11월 20일, 서버 응답의 사용자 식별자가 `userId`에서 `nickname`으로 바뀌었습니다. 누가 먼저 정했는지는 커밋에 없어요. 그걸 반영하는 커밋 `3581ac3` "User id change nick name (#147)"이 이 글의 주인공인데, 제목과 달리 diff의 대부분은 **담은 장소 목록을 어디에 둘 것인가**를 바꾼 것이었습니다. 7개 파일, +150/−196.
+
+## 그 전까지 — 주인이 둘인 목록
+
+11월 20일 전의 `ScheduleRoute.tsx`는 담은 장소를 자기 state로 갖고 있었습니다.
+
+```tsx
+const ScheduleRoute = ({ places }: ScheduleRouteProps) => {
+  const [routePlaces, setRoutePlaces] = useState<Place[]>([]);
+  const travelRouteQuery = useScheduleTravelRoute(Number(scheduleId), 1, true);
+
+  useEffect(() => {
+    if (travelRouteQuery.isSuccess && travelRouteQuery.data?.pages) {
+      const apiPlaces = travelRouteQuery.data.pages.flatMap(/* ... */);
+      setRoutePlaces(apiPlaces);
+    }
+  }, [travelRouteQuery.isSuccess, travelRouteQuery.data]);
+
+  useEffect(() => {
+    if (places) {
+      setRoutePlaces((prevPlaces) => [
+        ...prevPlaces,
+        ...places.filter((place) => !prevPlaces.some((p) => p.placeId === place.placeId)),
+      ]);
+    }
+  }, [places]);
+```
+
+`routePlaces`를 서버 응답이 덮어쓰고, 부모가 내려준 `places`가 또 병합합니다. 두 effect의 순서는 응답 타이밍에 달려 있어요. 두 달 전 [무한 스크롤에서는 왜 이슈가 생긴 걸까](/blog/무한-스크롤에서는-왜-이슈가-생긴-걸까)에서 "상태의 주인이 둘이면 문제가 생긴다"고 써 놓고, 다른 화면에서 같은 모양을 또 만들고 있었습니다. 그 글을 쓸 때는 목록 페이지만 보고 있었고, 일정 화면은 다른 문제라고 생각했어요.
+
+## 스토어로 옮기다
+
+`3581ac3`에서 `src/store/scheduleStore.ts`를 새로 만들었습니다.
+
+```ts
+export const useTravelStore = create<TravelStore>((set) => ({
+  addedPlaces: [],
+  addPlace: (place) =>
+    set((state) => ({
+      addedPlaces: state.addedPlaces.some((p) => p.placeId === place.placeId)
+        ? state.addedPlaces
+        : [...state.addedPlaces, place],
+    })),
+  removePlace: (placeId) =>
+    set((state) => ({ addedPlaces: state.addedPlaces.filter((p) => p.placeId !== placeId) })),
+  movePlace: (dragIndex, hoverIndex) =>
+    set((state) => {
+      const updatedPlaces = [...state.addedPlaces];
+      const [movedPlace] = updatedPlaces.splice(dragIndex, 1);
+      updatedPlaces.splice(hoverIndex, 0, movedPlace);
+      return { addedPlaces: updatedPlaces };
+    }),
+}));
+```
+
+`ScheduleRoute`는 state와 effect 두 개를 잃고 props 세 개를 받는 컴포넌트가 됐습니다.
+
+```tsx
+interface ScheduleRouteProps {
+  places: Place[];
+  onMovePlace: (dragIndex: number, hoverIndex: number) => void;
+  onDeletePlace: (placeId: number) => void;
+}
+```
+
+`ScheduleMake`가 스토어에서 `addedPlaces`·`addPlace`·`removePlace`·`movePlace`를 꺼내 내려줍니다. 검색 결과에서 담기를 누르면 `addPlace`, 드래그하면 `movePlace`, 삭제 영역에 놓으면 `removePlace`. 목록의 주인이 스토어 하나가 됐어요. 중복 검사도 `addPlace` 안으로 들어가서 effect의 `filter`가 필요 없어졌습니다.
+
+zustand 스토어가 이 프로젝트에 처음 생긴 건 이날이 아닙니다. 9월 12일 `db3b905`에 검색 페이지의 `currentPage`·`searchTerm`·`isSearching`을 담은 `travelStore.ts`(19줄)가 이미 있었어요. 그러니까 이건 두 번째 스토어이고, "서버에서 온 목록을 화면이 편집한다"는 종류의 상태를 처음으로 컴포넌트 밖에 둔 날입니다.
+
+## 같은 커밋에서 생긴 두 가지
+
+첫째, 스토어 훅 이름입니다. 새 파일의 export가 `useTravelStore`인데, 두 달 전 `travelStore.ts`의 export도 `useTravelStore`예요. 파일이 달라서 import 경로로 구분되니 빌드는 됩니다. 이름을 고민하지 않고 옆 파일을 복사해 만든 흔적인데, **이 이름 충돌은 2026년 9월 현재 저장소에도 그대로 있습니다.** `scheduleStore.ts`의 `useTravelStore`와 `travelStore.ts`의 `useTravelStore`.
+
+둘째, `PlaceItem`의 위치입니다. 전에는 파일 상단에 따로 정의된 컴포넌트였는데, 이 커밋에서 `ScheduleRoute` 함수 안으로 들어갔습니다.
+
+```tsx
+const ScheduleRoute = ({ places, onMovePlace, onDeletePlace }: ScheduleRouteProps) => {
+  const PlaceItem = ({ place, index }: { place: Place; index: number }) => {
+    const ref = useRef<HTMLLIElement>(null);
+    const [, drop] = useDrop({ /* ... onMovePlace(dragIndex, hoverIndex) ... */ });
+```
+
+props로 받은 `onMovePlace`를 클로저로 잡으려고 안으로 넣은 것으로 보이는데, 컴포넌트를 렌더 함수 안에서 정의하면 렌더마다 새 컴포넌트 타입이 됩니다. React는 매번 언마운트하고 다시 마운트해요. 드래그 정렬은 hover마다 렌더가 일어나는 기능이라 제일 안 맞는 조합입니다. 그때는 동작하니까 넘어갔고, 이게 문제라는 걸 적은 건 20개월 뒤 [react-dnd 드래그 정렬](/blog/react-dnd-hover-정렬과-item-index-함정) 글에서였습니다. 그 글이 "현행 버그"로 지적한 것의 시작이 이 커밋이에요.
+
+`nickname` 쪽은 diff가 작았습니다. 타입에 `nickname: string`을 넣고 `userId`는 optional로 남겼고, 목록의 `key`를 `user.userId`에서 `user.nickname`으로 바꿨어요. 그리고 이런 줄이 하나 들어갔습니다.
+
+```tsx
+-          userId: user.userId || 0,
++          nickname: user.nickname || 0,
+```
+
+문자열 필드의 기본값이 `0`입니다. `userId || 0`을 이름만 바꾼 자리예요. 이 `map` 콜백의 `user`가 `any`라 `user.nickname || 0`도 `any`가 되어 타입 검사에 걸리지 않았습니다.
+
+## 검증
+
+- 검증 기록은 없습니다. 담기·드래그·삭제를 화면에서 눌러 본 것 이상의 확인은 커밋에 남아 있지 않아요.
+- 테스트는 없었습니다. 이 시점 저장소에 테스트 파일은 0개였습니다.
+- `useTravelStore` 이름 충돌과 `PlaceItem` 위치는 이 글을 쓰면서 diff를 다시 보고 안 것입니다. 당시에는 둘 다 인지하지 못했습니다.
+
+## 남은 것 · 한계
+
+- **스토어로 옮긴 판단은 맞았습니다.** 주인이 둘이던 상태가 하나가 됐고, 3주 뒤 `5d9c065`(12월 9일)에서 이 스토어가 112줄로 커지면서 일정 화면의 중심이 됐어요.
+- **같은 커밋에서 만든 문제 둘은 못 봤습니다.** 훅 이름 충돌은 지금도 있고, 컴포넌트 안의 컴포넌트는 2026년 7월에야 글로 지적했지 고치지는 않았습니다. `ScheduleMake` 안의 `ScheduleRouteWrapper`도 같은 모양이에요.
+- **`nickname || 0`은 그대로 커밋됐습니다.** 문자열에 숫자 기본값을 준 자리인데, 서버가 nickname을 늘 주니 실제로 `0`이 찍힌 적은 없을 겁니다. "터지지 않는 잘못된 코드"가 어떻게 남는지의 예로 적어 둡니다.
+- 스토어를 쓰기 시작하면서 서버 상태(react-query)와 화면 상태(zustand)의 경계를 어떻게 그을지는 정하지 않았습니다. 그 경계가 흔들려서 생긴 일이 [일정 데이터 동기화 문제 해결하기](/blog/일정-관리와-데이터-동기화-문제-해결하기)에 있고, 그 글의 해결책도 나중에 뒤집혔습니다.
+
+관련 글: [무한 스크롤에서는 왜 이슈가 생긴 걸까 — 상태의 주인이 둘일 때](/blog/무한-스크롤에서는-왜-이슈가-생긴-걸까) · [react-dnd 드래그 정렬 — item.index 한 줄을 빼먹으면 순서가 튄다](/blog/react-dnd-hover-정렬과-item-index-함정) · [일정 데이터 동기화 문제 해결하기](/blog/일정-관리와-데이터-동기화-문제-해결하기) · [useCallback 17개를 지운 "최적화" 커밋](/blog/usecallback-17개를-지운-최적화-커밋)

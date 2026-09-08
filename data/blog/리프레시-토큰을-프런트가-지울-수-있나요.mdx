@@ -1,0 +1,124 @@
+---
+title: 리프레시 토큰을 프런트가 지울 수 있나요 — 쿠키를 서버로 넘기던 열흘
+date: '2025-04-30'
+tags: [기술노트, 네트워크]
+draft: false
+summary: '로그인 응답의 리프레시 토큰을 프런트가 쿠키에 넣고 갱신 요청 body에 실어 보내던 구조를, 서버가 쿠키를 심고 프런트는 credentials만 붙이는 구조로 바꿨습니다. 열흘 동안 쿠키 이름이 두 번 바뀌고, 만료 시간이 사라졌다가 돌아오고, "프론트가 지울 수 있나요?"라는 TODO가 세 곳에 붙었다가 하루 뒤 지워졌어요. 토큰 보관 주체가 옮겨 간 기록입니다.'
+---
+
+# 리프레시 토큰을 프런트가 지울 수 있나요
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+2025년 4월 20일까지 TripTune의 로그인은 이랬습니다. 로그인 응답에 `accessToken`과 `refreshToken`이 같이 오고, 프런트가 둘 다 쿠키에 넣습니다. 액세스 토큰이 만료되면 프런트가 리프레시 토큰 쿠키를 읽어 갱신 요청의 **body**에 실어 보내요.
+
+```ts
+const saveTokens = (accessToken: string, refreshToken: string, nickname: string) => {
+  setEncryptedCookie('trip-tune_at', accessToken, 5 / (24 * 60));
+  setEncryptedCookie('trip-tune_rt', refreshToken, 7);
+  setEncryptedCookie('nickname', nickname, 7);
+};
+```
+
+액세스 토큰 5분, 리프레시 토큰 7일. 리프레시 토큰이 자바스크립트로 읽히는 쿠키에 있으니 XSS 한 번이면 7일짜리 토큰이 나갑니다. 그걸 고치려고 시작한 건 아니었어요. 앞뒤 커밋이 4월 18일 "간편 로그인 URL 변경", 20일 "간편 로그인을 위한 사전 작업"이라 소셜 로그인 작업과 같이 옮겨 간 것인데, 누가 어떤 이유로 정했는지는 커밋에 없습니다. 4월 20일부터 30일까지 커밋 여덟 개를 순서대로 옮깁니다.
+
+## 4월 20일 — body에서 빼고, credentials를 붙였다
+
+낮 2시 56분 `93bd8ab` "토큰 방식 변경". `loginApi`에서 `trip-tune_rt` 저장이 사라지고, `refreshApi`는 이렇게 됩니다.
+
+```ts
+-  const refreshToken = getDecryptedCookie('trip-tune_rt');
+-  if (!refreshToken) {
+-    throw new Error('리프레시 토큰이 없습니다. 다시 로그인 해주세요.');
+-  }
+-  const response = await post<{ data: { accessToken: string } }>(url, {
+-    refreshToken,
+-  });
++  const response = await post<{ data: { accessToken: string } }>(
++    '/api/members/refresh',
++    {},
++    { requiresAuth: false }
++  );
+```
+
+body가 비었습니다. 리프레시 토큰은 이제 서버가 심은 쿠키에 있고, 브라우저가 알아서 실어 보내야 해요. 그런데 이 커밋에는 `credentials: 'include'`가 `refreshApi`에 없습니다. 공통 요청 함수에 하드코딩된 `credentials: 'include'`가 있어서 실제로는 붙어 나갔을 텐데, 저녁 9시 27분 `88b8003`에서 `refreshApi` 호출에도 명시적으로 넣었습니다.
+
+```ts
++      {
++        credentials: 'include',
++        requiresAuth: false,
++      }
+```
+
+같은 저녁 커밋에서 `useAuth`는 "액세스 토큰 쿠키가 있으면 인증됨, 없으면 리프레시 시도"로 바뀌고 확인 주기가 60초에서 4분이 됐어요. 401 처리도 같이 손댔는데 그건 1년 뒤 [401 처리 일원화 글](/blog/로그인-풀림-버그-계보와-401-처리-일원화)로 넘깁니다.
+
+## 4월 27일 — 이름이 바뀌고 만료가 사라졌다
+
+일주일 뒤 소셜 로그인을 실제로 눌러 보는 커밋이 하루에 아홉 개 있습니다. "소셜 로그인 동작 확인 : 콘솔 추가"부터 "콘솔 4차 추가"까지. 그 과정에서 리프레시 토큰 쿠키 이름이 `trip-tune_rt`에서 서버가 쓰는 `refreshToken`으로 바뀌었고(`188361d`), 밤 10시 58분 `d912217`에서 쿠키 유틸의 만료 인자가 사라집니다.
+
+```ts
+-  const setEncryptedCookie = (name: string, value: string, days: number) => {
++  const setEncryptedCookie = (name: string, value: string) => {
+     Cookies.set(name, value, {
+-      expires: days,
+       secure: true,
+       sameSite: 'strict',
+     });
+   };
+```
+
+커밋 제목이 "만료 시간 제거"예요. `expires`가 없으면 세션 쿠키가 됩니다. 브라우저를 닫으면 액세스 토큰과 닉네임이 사라져요. 5분짜리 토큰을 세션으로 바꾼 건 의도였을 수도 있고, 만료 계산이 헷갈려서 뺀 것일 수도 있습니다. 커밋에 이유가 없습니다. 지금 코드에는 만료가 다시 있어요(액세스 1시간, 나머지 7일).
+
+그리고 이 유틸의 이름은 `setEncryptedCookie`인데 실제로는 `js-cookie`를 그대로 부를 뿐 암호화하지 않습니다. 그 이야기는 8월 쿠키 글에 있습니다.
+
+## 4월 28일 — TODO 세 개
+
+`6829f14` "리프레시 토큰 암호화 해제, 이해 안되는 코드 정리". 제목의 "암호화 해제"는 `getDecryptedCookie('refreshToken')`를 `Cookies.get('refreshToken')`으로 바꾼 것입니다. 원래 암호화가 없었으니 해제할 것도 없었고, 이름이 만든 착각을 걷어낸 커밋이에요.
+
+이 커밋이 남긴 게 하나 더 있습니다. 로그아웃, 회원 탈퇴, 공통 요청 함수의 `clearCookies` 세 곳에 같은 주석이 붙었어요.
+
+```ts
+     Cookies.remove('trip-tune_at');
+-    Cookies.remove('refreshToken');
+     Cookies.remove('nickname');
++
++    //TODO : 리프레시 토큰을 프론트가 지울 수 있나요?
++    Cookies.remove('refreshToken');
+```
+
+서버가 심은 쿠키를 프런트가 `Cookies.remove`로 지울 수 있는지 확신이 없었던 겁니다. `HttpOnly`면 자바스크립트로 못 읽고 못 지웁니다. 서버가 어떤 옵션으로 심는지는 백엔드 코드를 봐야 아는데, 그날은 안 보고 물음표를 달았어요.
+
+다음날 4월 29일 `5e53334` "잘못된 리프레시 토큰 쿠키 삭제 케이스 확인 중"에서 세 곳의 TODO와 `Cookies.remove('refreshToken')`을 전부 지웠습니다. 답은 "프런트는 안 지운다"였어요. 프런트에서 지우는 줄이 사라졌으니 로그아웃 API 쪽에서 정리하는 것으로 정해졌다고 읽히는데, 백엔드 코드는 보지 않았습니다. 같은 날 액세스 토큰 쿠키 이름도 `trip-tune_at`에서 `accessToken`으로 바뀌었어요(`5f8581d`).
+
+## 4월 30일 — 한글 닉네임
+
+`3efca09` "utf-8 이슈 추가 수정 중". 쿠키 값에 한글 닉네임이 들어가면서 깨지는 문제였고, 넣을 때 `encodeURIComponent`, 읽을 때 `decodeURIComponent`를 붙였습니다. 이건 지금 코드에도 그대로 있어요.
+
+## 열흘의 요약
+
+| 날짜 | 리프레시 토큰은 어디에 | 누가 보내나 | 누가 지우나 |
+|---|---|---|---|
+| 4/20 이전 | 프런트가 `trip-tune_rt` 쿠키에 저장 | 프런트가 읽어서 body에 | 프런트 |
+| 4/20 | 서버가 쿠키로 | 브라우저(`credentials: 'include'`) | 프런트(아직 `remove` 코드 있음) |
+| 4/28 | 서버가 `refreshToken` 쿠키로 | 브라우저 | 프런트? — TODO |
+| 4/29 | 같음 | 브라우저 | **서버** |
+
+토큰 보관 주체가 프런트에서 서버로 넘어간 게 이 열흘의 실제 변화입니다. 커밋 제목들("토큰 방식 변경", "쿠키 관리 다시 처리", "암호화 해제")은 그걸 한 번도 그렇게 부르지 않았어요.
+
+## 검증
+
+- 커밋 여덟 개의 시각과 diff는 `git log --format='%h %ci'`와 `git show`로 확인했습니다.
+- `refreshToken` 쿠키 이름이 처음 나타난 커밋은 `git log -S "'refreshToken'"`으로 4월 27일(`3a15fb9`)임을 확인했습니다.
+- TODO 주석의 추가(4/28)와 삭제(4/29)는 `git log -S '지울 수 있나요'`로 두 커밋만 잡히는 것을 확인했습니다.
+- 서버가 리프레시 토큰 쿠키를 `HttpOnly`로 심는지는 **이 저장소에서는 확인할 수 없습니다.** 백엔드 저장소를 보지 않았어요.
+- 실제로 로그인·로그아웃·소셜 로그인을 눌러 봤다는 건 "콘솔 추가" 커밋 네 개가 증거입니다. 자동화된 테스트는 없었습니다.
+
+## 남은 것 · 한계
+
+- **`credentials: 'include'`가 공통 함수에 하드코딩된 채 남았습니다.** 4월 20일 저녁에 `refreshApi`에 명시적으로 붙인 건 좋았는데, 공통 함수 쪽은 옵션을 받는 자리(`FetchOptions.credentials`)가 있으면서도 안 읽습니다. 1년 뒤 [401 처리 글](/blog/로그인-풀림-버그-계보와-401-처리-일원화)에서 "죽은 옵션"으로 지적한 바로 그 자리예요.
+- **세션 쿠키로 바꾼 4월 27일의 결정을 언제 되돌렸는지 이 글에서 추적하지 않았습니다.** 지금 코드에 만료가 있다는 것만 확인했어요.
+- **`setEncryptedCookie`라는 이름은 지금도 그대로입니다.** 암호화를 하지 않는데 이름이 그래요. 4월 28일에 이름이 만든 착각을 걷어내면서 이름은 안 바꿨습니다.
+- **소셜 로그인 확인은 콘솔 로그 커밋 네 개로 했습니다.** 확인이 끝난 뒤 그 `console.log`들을 지웠는지는 따로 보지 않았어요.
+- 프런트 4년차가 처음 맡은 인증 흐름이었고, 이 열흘의 커밋 제목이 흔들리는 건 그래서입니다. "누가 보관하고 누가 지우나"라는 질문을 첫날에 했으면 열흘이 이틀이었을 거예요. 그 질문을 나중에야 했다는 게 이 글에서 제일 중요한 부분입니다.
+
+관련 글: [로그인이 자꾸 풀리던 서비스 — 401 처리를 한곳으로 모으기까지](/blog/로그인-풀림-버그-계보와-401-처리-일원화) · [인증이 확정되기 전에 쏜 요청 — 북마크가 가끔 초기화되던 이유](/blog/인증-확정-전-요청과-갈린-react-query-캐시-키) · [로그아웃은 PATCH인가 DELETE인가 — 그리고 이 비교가 놓쳤던 것](/blog/로그아웃-시-patch-방식과-delete-방식의-비교) · [액세스 토큰을 7일 쿠키에 넣고 있었다](/blog/액세스-토큰을-7일-쿠키에-넣고-있었다) · [JWT exp를 프런트가 읽던 함수를 지웠다](/blog/jwt-exp를-프런트가-읽던-함수를-지웠다)

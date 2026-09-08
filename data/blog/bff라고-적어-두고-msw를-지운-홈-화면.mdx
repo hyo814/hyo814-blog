@@ -1,0 +1,115 @@
+---
+title: BFF라고 적어 두고 msw를 지운 홈 화면 — 커밋 제목에 있던 두 단어가 코드에는 없었다
+date: '2025-03-17'
+tags: [기술노트, React]
+draft: false
+summary: '홈 화면의 인기·추천 여행지를 실제 API로 붙이면서 커밋 제목에 "for BFF"와 "msw 제거"라고 썼습니다. 그런데 코드에는 BFF 계층이 없었고 msw는 설치된 적도 없었어요. 지운 건 컴포넌트 안에 박아 둔 배열이었고, 같은 날 API 경로 형식과 응답 모양이 바뀌었습니다. 나흘 사이의 커밋 셋을 차례대로 적었습니다.'
+---
+
+# BFF라고 적어 두고 msw를 지운 홈 화면
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+TripTune 홈 화면에는 인기 여행지와 추천 테마 여행지 슬라이더가 있습니다. 2025년 3월까지는 광화문·성산일출봉·에펠탑·타워브릿지 사진을 컴포넌트 안에 박아 두고 돌리는 화면이었어요. 백엔드가 여행지 API를 열면서 이걸 실제 데이터로 바꿨습니다. 커밋은 셋입니다.
+
+```
+03-13 14:26  홈화면 추가 구축 시작 : API 설계 (for BFF)   c6724a4
+03-17 17:53  메인 페이지 msw 제거                          b897f13
+03-17 22:36  버튼 바 이슈 수정 : swiper 충돌                ae5f33e
+```
+
+제목만 보면 BFF 계층을 설계하고 msw 목업을 걷어낸 것처럼 읽힙니다. 코드는 그렇지 않았어요.
+
+## 3월 13일 — 사진 배열을 데이터 배열로
+
+`c6724a4`는 `HomePageBestTravel.tsx`(162줄)를 지우고 `HomePagePopularTravel.tsx`(242줄)를 새로 만듭니다. 새 파일에도 배열이 있습니다.
+
+```ts
+const HomePagePopularTravel = () => {
+  const images: TravelItem[] = [
+    {
+      placeId: 162,
+      address: '서울특별시 중구 동호로31길 21',
+      detailAddress: '(충무로5가)',
+      placeName: '묵정어린이공원',
+      thumbnailUrl: null,
+    },
+    // ... 5건
+  ];
+  const [travelList, setTravelList] = useState<TravelItem[]>(images);
+```
+
+에펠탑 대신 실제 API 응답을 복사해 온 모양의 데이터입니다. 초기 상태로 쓰고, API가 실패하면 `setTravelList(images)`로 되돌아가요. 그러니까 이 시점의 "목업"은 라이브러리가 아니라 **컴포넌트 안의 상수**였습니다. 응답 모양은 `data.content` 배열로 잡아 두었고, 경로는 `/api/travels/popular/${city}`였습니다.
+
+"for BFF"는 커밋 제목에만 있습니다. 코드에 프런트 전용 서버 계층은 없고, 요청은 공통 `get`을 거쳐 리라이트로 백엔드에 바로 갑니다. 그때 왜 그 단어를 썼는지 커밋에는 설명이 없어요. "화면에 맞춘 API 모양을 먼저 정한다"는 뜻으로 썼던 것 같은데, BFF는 그런 뜻이 아닙니다.
+
+## 3월 17일 — 배열을 지우고, 경로와 응답이 바뀌었다
+
+`b897f13`, 제목은 "메인 페이지 msw 제거". 실제 diff는 이렇습니다.
+
+```ts
+-  const [travelList, setTravelList] = useState<TravelItem[]>(images);
++  const [travelList, setTravelList] = useState<TravelItem[]>([]);
+@@
+     } else {
+       console.error(response.message);
+-      setTravelList(images);
++      setTravelList([]);
+     }
+```
+
+배열 두 개(인기 5건·추천 5건)를 지우고 빈 배열로 시작합니다. msw는 이 시점에 `package.json`에 없었습니다. `git log -S '"msw"'`로 찾으면 msw가 처음 들어온 커밋은 두 달 뒤인 5월 31일이에요. 그러니까 "msw 제거"는 **없는 것을 지웠다고 쓴 제목**입니다. 상수 배열을 목업이라 불렀고, 목업이면 msw라고 생각했던 것 같습니다.
+
+같은 커밋에 더 중요한 변화가 두 개 있습니다.
+
+```ts
+-      `/api/travels/popular/${city}`,
++      `/api/travels/popular?city=${city}`,
+@@
+-      `/api/travels/${category}`,
++      `/api/travels/recommend?theme=${theme}`,
+```
+
+경로 파라미터가 쿼리 스트링으로 바뀌었고, 응답도 `data.content`에서 `data`로 한 단 얕아졌습니다.
+
+```ts
+ interface HomePopularTravelResponse {
+   success: boolean;
+-  data: {
+-    content: TravelItem[];
+-  };
++  data: TravelItem[];
+```
+
+13일에 "설계"했다고 적은 API 모양이 17일에 실제로 붙인 모양과 달랐던 거예요. 왜 달라졌는지는 커밋에 없습니다. 다른 목록 API가 페이지 응답이라 `content`로 감싸는 걸 보고 홈용도 그럴 거라 가정했다가, 고정 개수 응답은 배열 그대로였던 것으로 보이는데 이건 지금의 추정입니다. 커밋에 남은 건 바뀐 결과뿐이에요.
+
+그 밖에 `gyongsang`을 `gyeongsang`으로 고친 오타, 이름을 10자에서 자르는 `truncateText`, 빈 결과 상자 `.noData` 스타일이 같이 들어갔습니다.
+
+## 같은 날 밤 — 전역 CSS 한 줄이 다른 슬라이더를 밀었다
+
+`ae5f33e`는 파일 셋, 2줄 추가 4줄 삭제입니다.
+
+```css
+-
+-.swiper {
+-    overflow: visible!important;
+-}
+```
+
+`global.css`에 있던 이 규칙을 지우고, 홈 화면의 `Swiper` 두 개에만 `style={{ overflow: 'visible' }}`를 줬습니다. 커밋 제목은 "버튼 바 이슈 수정 : swiper 충돌"이에요. 전역으로 `.swiper`를 잡아 두니 다른 화면의 슬라이더까지 넘쳐서 버튼 줄과 겹쳤던 것으로 읽힙니다. 어느 화면이었는지는 커밋에 없습니다.
+
+## 검증
+
+- msw가 의존성에 들어온 시점은 `git log -S '"msw"' -- package.json`으로 확인했습니다. 2025-05-31이 처음입니다. 3월 13일 시점 저장소에 `mocks` 디렉터리도 없습니다.
+- "BFF"는 `c6724a4`의 커밋 제목에만 있고 `src/`와 `package.json`에는 없습니다.
+- 경로·응답 모양 변경은 `b897f13`의 `homeApi.ts`와 컴포넌트 diff에서 확인했습니다.
+- 화면은 손으로 확인했을 겁니다. 이 시기에 테스트는 없었어요.
+
+## 남은 것 · 한계
+
+- **커밋 제목이 코드보다 크게 말했습니다.** BFF도 msw도 없었어요. 1년 반 뒤 제가 이 커밋을 읽고 처음 한 일이 "msw가 언제 들어왔지"를 찾는 것이었으니, 제목이 틀리면 나중의 나부터 속습니다.
+- **API 실패 시 빈 배열로 떨어지고 끝입니다.** 13일 버전은 실패하면 상수 배열이라도 보여 줬는데, 17일 버전은 `console.error` 하고 "데이터가 없습니다"를 띄웁니다. 실패와 진짜 0건을 사용자가 구분할 수 없어요.
+- **응답 모양을 프런트가 먼저 정하고 나중에 맞춘 순서**는 [직짱건강에서 JSON 목업으로 설문을 먼저 만든 것](/blog/직짱-건강-직장인을-위한-올인원-헬스케어-서비스-개발)과 같은 방식입니다. 그때는 그게 팀을 병렬로 돌리는 방법이었고, 여기서는 나흘 뒤 모양이 달라서 다시 맞췄어요. 먼저 만드는 건 맞는데, 맞출 날이 온다는 걸 계산에 넣어야 합니다.
+- 전역 `.swiper` 규칙을 인라인 style로 옮긴 건 충돌은 없앴지만 같은 값을 두 컴포넌트에 복사한 것이기도 합니다. 슬라이더가 하나 더 생기면 세 번째 복사가 생겨요.
+
+관련 글: [직짱건강 — 백엔드를 기다리지 않고 설문 인터페이스를 먼저 완성한 방법](/blog/직짱-건강-직장인을-위한-올인원-헬스케어-서비스-개발) · [fetch가 Next.js에서 선호되는 이유, 그리고 axios와의 차이점](/blog/fetch가-next.js에서-선호되는-이유-그리고-차이점) · [검색은 GET, 목록은 POST](/blog/검색은-get-목록은-post-하루에-세-번-바꾼-메서드)

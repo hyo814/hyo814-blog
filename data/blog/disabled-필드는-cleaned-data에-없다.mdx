@@ -1,0 +1,103 @@
+---
+title: disabled 필드는 cleaned_data에 없다 — 라고 적었는데 Django 문서는 반대였다
+date: '2025-12-16'
+tags: [기술노트, Django]
+draft: false
+summary: 'OID 수정 화면에서 상위 항목을 못 바꾸게 parent 필드를 disabled로 뒀더니 저장할 때마다 "유효하지 않은 부모"가 났습니다. clean_parent에 instance에서 부모를 꺼내는 대체 경로를 넣어 막았고, 주석에 "disabled 필드는 cleaned_data에 포함되지 않는다"고 적었어요. 1년 뒤 문서를 다시 읽으니 Django의 disabled는 제출값을 무시하고 initial을 쓴다고 돼 있습니다. HTML의 disabled와 폼 필드의 disabled를 같은 것으로 알고 있던 때의 기록입니다.'
+---
+
+# disabled 필드는 cleaned_data에 없다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+OID는 트리입니다. 하나를 만들 때 상위를 고르고, 만든 뒤에는 상위를 못 바꾸게 하기로 했어요. 옮기면 하위 경로가 전부 달라지니까요. 수정 화면에서 `parent`를 잠그는 방법으로 뷰에서 이렇게 했습니다.
+
+```python
+context['form'] = ObjectIdentifierForm(instance=self.object)
+# parent 필드를 read-only로 설정 (disabled로 설정하여 수정 불가능하게 함)
+context["form"].fields["parent"].disabled = True
+```
+
+GET과 POST 양쪽에서요. 그랬더니 수정을 저장할 때마다 "유효하지 않은 부모 OID입니다"가 났습니다.
+
+## 12월 16일 — instance에서 부모를 꺼내는 대체 경로
+
+폼의 `clean_parent`는 부모가 '등록' 상태일 때만 자식을 붙일 수 있다는 규칙을 검사합니다. 그 첫 줄이 `self.cleaned_data.get('parent')`인데, 수정 모드에서 이게 비어 있었어요. 19시 33분 커밋(`4bd9d372`)으로 그 앞에 갈래를 하나 넣었습니다.
+
+```python
+def clean_parent(self):
+    """부모 OID 상태 검증 - 부모가 '등록' 상태인 경우에만 자식 추가 가능"""
+    parent = self.cleaned_data.get('parent')
+
+    # 수정 모드일 때 parent 필드가 disabled되어 cleaned_data에 없는 경우
+    # instance에서 parent를 가져와서 사용 (parent 변경 불가능하므로 검증 불필요)
+    if not parent and self.instance and self.instance.pk:
+        parent = self.instance.get_parent()
+        if parent:
+            # disabled 필드는 cleaned_data에 포함되지 않으므로 수동으로 추가
+            return parent
+
+    # 새 OID 생성 모드이거나 parent가 명시적으로 지정된 경우
+    if not parent:
+        raise ValidationError(_('유효하지 않은 부모 OID입니다.'))
+```
+
+수정 중인 인스턴스가 있으면 DB에 있는 부모를 그대로 돌려줍니다. 부모는 어차피 못 바꾸니 상태 검사를 건너뛰어도 된다고 봤어요. 저장이 됐고, 그날은 거기서 끝났습니다.
+
+커밋 메시지가 그 주석 한 줄 그대로입니다. "수정 모드일 때 parent 필드가 disabled되어 cleaned_data에 없는 경우". 제가 그때 이해한 원인이 그거였어요.
+
+## 문서는 반대로 말한다
+
+이 글을 쓰려고 Django 문서의 `Field.disabled`를 다시 읽었습니다.
+
+> Even if a user tampers with the field's value submitted to the server, it will be ignored in favor of the value from the form's initial data.
+
+제출값을 무시하고 **initial 값을 쓴다**입니다. 없애는 게 아니라 바꿔치기예요. 그리고 이 폼의 `__init__`은 수정 모드에서 initial을 넣고 있었습니다.
+
+```python
+# instance가 있는 경우 (수정 모드) parent 필드 초기값 설정
+if self.instance and self.instance.pk:
+    parent = self.instance.get_parent()
+    if parent:
+        self.fields['parent'].initial = parent.pk
+```
+
+문서대로라면 `cleaned_data['parent']`에는 initial에서 온 부모가 들어 있어야 합니다. 그런데 비어 있었어요. 왜 비어 있었는지를 지금 이력만으로는 재현하지 못했습니다. 그때 화면에서 본 것은 오류 메시지 하나였고, `cleaned_data`를 찍어 본 기록은 없습니다.
+
+확실한 건 두 가지입니다. 주석에 적은 원인은 문서와 어긋나고, 넣은 대체 경로는 원인이 무엇이든 동작한다는 것.
+
+## 두 층위를 같은 것으로 알고 있었다
+
+`disabled`가 둘입니다.
+
+| 층위 | 무슨 일이 일어나나 |
+|---|---|
+| HTML `<input disabled>` | 브라우저가 그 값을 **제출하지 않는다** |
+| Django `Field.disabled = True` | HTML에 `disabled`를 찍고, 서버는 제출값을 **무시하고 initial을 쓴다** |
+
+프런트에서는 첫째만 알면 됐습니다. 잠긴 칸은 안 넘어온다. 그 감각으로 Django 폼을 봤으니 "안 넘어오니 `cleaned_data`에 없다"고 쓴 거예요. Django 쪽은 그걸 전제로 설계돼 있어서, 안 넘어와도 initial로 채웁니다.
+
+이 오해는 그 뒤로도 제 손에서 이어졌습니다. 이튿날 동료가 `is_edit_mode`를 도입했고(`5c044a74`), 석 달 반 뒤인 2026년 3월 말 제가 그 폼을 정리하면서(`01db9eea`) 같은 자리에 이렇게 적었어요.
+
+```python
+# 등록 모드에서만 parent를 필수 필드로 설정
+# (수정 모드에서는 parent 필드가 disabled되어 값이 전송되지 않으므로 required=False 유지)
+```
+
+"값이 전송되지 않으므로". 여전히 첫째 층위의 설명입니다. 2026년 9월 현재 `std_data/forms.py`의 `clean_parent` docstring에도 같은 문장이 남아 있습니다.
+
+## 검증
+
+- OID 수정 화면에서 이름·설명만 바꿔 저장했을 때 "유효하지 않은 부모" 없이 저장되는 것을 손으로 확인했습니다.
+- 저장 뒤 부모가 바뀌지 않은 것을 트리에서 확인했습니다.
+- 등록 화면에서 부모를 안 고르면 여전히 오류가 나는 것을 확인했습니다. 대체 경로가 `self.instance.pk`를 조건으로 걸어 등록 모드를 건드리지 않았어요.
+- 테스트 코드는 없습니다. `cleaned_data['parent']`가 실제로 무엇이었는지도 그때 찍어 보지 않았습니다.
+
+## 남은 것 · 한계
+
+- **원인을 확정하지 못한 채 대체 경로로 덮었습니다.** 문서와 어긋나는 현상이었다면 그 자체가 단서였는데, 저장이 되자 멈췄어요. 원인이 남아 있으면 다른 폼에서 같은 모양으로 다시 납니다.
+- **주석이 틀린 설명을 1년째 전하고 있습니다.** 이 파일을 다음에 여는 사람은 "disabled면 `cleaned_data`에 없다"를 사실로 읽습니다.
+- **부모 상태 검사를 수정 모드에서 통째로 건너뜁니다.** 부모가 나중에 '폐기'로 바뀌어도 자식 수정은 그대로 됩니다. 그때는 문제라고 보지 않았고, 지금도 그 규칙이 맞는지는 별개 질문입니다.
+- 2026년 8월에 쓴 [disabled를 쓰면 "왜 안 되는지"를 말할 수 없다](/blog/disabled를-쓰면-왜-안-되는지를-말할-수-없다)는 HTML `disabled`가 마우스 이벤트까지 죽여서 툴팁이 안 뜨는 이야기입니다. 같은 낱말이지만 그 글은 브라우저 층위, 이 글은 폼 층위예요. 두 층위를 가르는 데 8개월이 걸렸습니다.
+
+관련 글: [disabled를 쓰면 "왜 안 되는지"를 말할 수 없다](/blog/disabled를-쓰면-왜-안-되는지를-말할-수-없다) · [django-treebeard MP_Node로 트리 구조 데이터 다루기](/blog/django-treebeard-mp-node) · [마이페이지를 뷰부터 URL까지 처음 짰다](/blog/마이페이지를-뷰부터-url까지-처음-짰다)

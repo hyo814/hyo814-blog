@@ -1,0 +1,120 @@
+---
+title: axios를 걷어냈다가 이틀 만에 되돌렸다가 다시 걷어냈다 — 문제는 라이브러리가 아니라 프록시였다
+date: '2024-09-14'
+tags: [기술노트, 네트워크]
+draft: false
+summary: '사이드 프로젝트에서 axios를 fetch로 바꿨다가 28시간 뒤 되돌리고, 30분 뒤 다시 fetch로 갔습니다. 그 사이 커밋 메시지는 "프록시 시도 중", "프록시 실험 일단 종료", "credentials 처리 방법 실험 시도"였어요. 되돌아보니 HTTP 클라이언트를 바꾼 게 아니라 Netlify 리다이렉트와 Next 리라이트 사이를 헤맨 이틀이었습니다. 왜 흔들렸는지를 커밋 순서대로 적습니다.'
+---
+
+# axios를 걷어냈다가 이틀 만에 되돌렸다가 다시 걷어냈다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+2024년 9월, 여행 일정 서비스 TripTune의 프런트를 혼자 맡고 있었습니다. React는 몇 년 써 왔지만 Next.js App Router로 처음부터 짜는 건 처음이었고, 백엔드는 팀원 한 명이 EC2에 올린 서버였어요. 프런트는 Netlify에 올라가 있었습니다.
+
+이 글에서 다루는 건 9월 12일 밤부터 14일 아침까지의 커밋 열세 개 중 흐름이 보이는 일곱 개입니다. 커밋 제목만 나열하면 이렇습니다.
+
+```
+09-12 22:44  Fetch query zustand (#80)        ← axios 삭제, fetch 래퍼 신설
+09-13 00:01  [24-09-12] proxy 시도 중
+09-13 01:44  [24-09-13] 프록시 실험 일단 종료
+09-13 10:21  [24-09-13] credentials 처리 방법 실험 시도
+09-14 03:06  Axios (#87)                      ← axios 복귀
+09-14 03:36  Fetch (#90)                      ← 30분 뒤 다시 fetch
+09-14 10:13  [2024-09-14] middleware
+```
+
+기존 글 [fetch가 Next.js에서 선호되는 이유](/blog/fetch가-next.js에서-선호되는-이유-그리고-차이점)에는 fetch를 고른 이유가 정리돼 있습니다. 그 글만 보면 한 번에 결정한 것처럼 읽히는데, 커밋은 그렇게 말하지 않아요.
+
+## 9월 12일 밤 — axios를 지웠다
+
+전날 커밋 `71ee117`까지는 `src/api/axiosInstance.ts`가 있었습니다. 인터셉터에서 토큰을 붙이고 401이면 갱신하는 123줄짜리 파일이에요. `db3b905`에서 이걸 지우고 `api.ts`(80줄)와 `authFetch.ts`(123줄)를 새로 썼습니다. 36개 파일이 바뀌었어요.
+
+```ts
+// src/api/api.ts (db3b905)
+const BASE_URL = 'http://13.209.177.247:8080/api';
+
+const fetchOptions: RequestInit = {
+  headers: { 'Content-Type': 'application/json' },
+  redirect: 'follow',
+  cache: 'no-cache',
+  credentials: 'same-origin',
+};
+```
+
+같은 커밋에서 `next.config.js`의 `rewrites()`도 지웠습니다. 그때까지는 `/:path*` 전부를 백엔드로 넘기는 규칙이 있었어요. 이걸 지우고 `BASE_URL`에 EC2 주소를 직접 박은 게 그날 밤의 판단이었습니다.
+
+문제는 그 주소가 `http://`라는 겁니다. Netlify는 `https://`로 서빙하니까, 브라우저는 페이지는 https인데 API는 http인 상황을 **mixed content**로 막습니다. 배포한 화면에서 막힌 것으로 보입니다. 다음 커밋의 주석 'Mixed content 에러 발생'이 유일한 기록이에요.
+
+## 9월 13일 새벽 — 프록시를 세 가지 방법으로 시도했다
+
+`2f42e68`의 diff에는 그 밤의 시도가 그대로 남아 있습니다.
+
+```diff
+-[[redirects]]                      # netlify.toml 삭제
+-from = "/api/*"
+-to = "http://13.209.177.247:8080/api/:splat"
+
++/api/* http://13.209.177.247:8080/:splat 200    # public/_redirects 로 이동
+
+-const BASE_URL = 'http://13.209.177.247:8080/api';
++const BASE_URL = `${process.env.NEXT_PUBLIC_GA4_BACKEND_PROXY}`
+
++  // Mixed content 에러 발생
++  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+```
+
+네 가지가 한 커밋에 들어 있습니다. Netlify 리다이렉트 파일 형식 변경, 환경 변수로 주소 빼기, CSP 메타 태그로 http를 https로 올려 보기, 그리고 "Mixed content 에러 발생"이라는 주석. 환경 변수 이름에 `GA4`가 붙어 있는 건 GA 설정하던 변수를 복사해서 이름만 바꾼 흔적일 텐데, 커밋에 이유는 없습니다.
+
+한 시간 반 뒤 `b62bd9a` "프록시 실험 일단 종료"에서 Next의 `rewrites()`로 돌아왔습니다. 이번엔 `/api/:path*`만 넘기는 규칙이고, API 호출 경로에서 `/api` 접두어를 뺐어요.
+
+```diff
++  async rewrites() {
++    return [{ source: '/api/:path*', destination: 'http://13.209.177.247:8080/api/:path*' }];
++  },
+```
+
+이 방식이면 브라우저는 같은 origin의 `/api/...`를 부르고, Next 서버가 http로 백엔드를 부릅니다. mixed content가 브라우저 밖으로 나가는 거예요. 지금 보면 처음부터 이걸 했어야 하는데, 그날은 Netlify 쪽 파일부터 건드렸습니다. 어느 층에서 프록시를 거는지가 머릿속에 정리돼 있지 않았던 겁니다.
+
+아침 `9f51acc`에서는 `credentials: 'same-origin'`을 주석 처리했습니다.
+
+```ts
+  // TODO : CORS 뜨는 원인 일 수도 있다고 함
+  // credentials: 'same-origin', // 'omit', 'same-origin', 'include'
+```
+
+"~라고 함"이라고 적은 건 어디서 들은 말을 확인 없이 옮긴 거예요. `same-origin`은 기본값이라 주석 처리해도 동작은 같습니다. 그러니까 이 커밋은 아무것도 바꾸지 않았습니다.
+
+## 9월 14일 새벽 — 되돌렸다가 30분 만에 다시
+
+`eeed5bf` "Axios (#87)"에서 axios를 다시 넣었습니다. 17개 파일, `authFetch.ts`와 `api.ts`를 지우고 `axiosInstance.ts`를 되살렸어요. 그 위에 남긴 주석이 이겁니다.
+
+```js
+  // todo : axios 에서는 rewrite를 쓰면 source 처리가 동적 페이지에서는 동작 하지 않음
+```
+
+30분 뒤 `f8bcf37` "Fetch (#90)"에서 그 커밋을 거의 그대로 뒤집었습니다. 19개 파일. 주석은 이렇게 바뀌었어요.
+
+```js
+  // todo : 이걸 써야할지 말지를 모르겠음
+  async rewrites() {
+```
+
+두 커밋의 diff를 나란히 놓고 보면 `rewrites()` 블록의 **위치**만 다릅니다. axios 커밋에서는 `compiler` 아래에, fetch 커밋에서는 `images` 아래에 있어요. 리라이트 규칙 자체는 같습니다. 그러니까 axios냐 fetch냐는 이 문제와 상관이 없었습니다. 그날 새벽에 그걸 몰랐던 게 아니라, 뭐가 문제인지 모르니 손에 잡히는 큰 변수부터 바꿔 본 거예요.
+
+그날 아침 `5bfd01a`에서 `middleware.ts`를 추가해 `/api`로 시작하지만 `/api/`가 없는 경로를 404로 보냈습니다. 리라이트가 잡아채는 범위를 좁히려는 시도였는데, 이것도 두 달 반 뒤 `0ec4bc6`(11월 28일, "리라이트 삭제 2차")에서 리라이트와 함께 통째로 지워집니다. 그날은 배포 첫날이었고, 그 이야기는 [wss 연결 실패 글](/blog/websocket-connection-to-wss-failed오류의-원인과-해결-방법)에 있습니다.
+
+## 검증
+
+- 남아 있는 검증 기록은 없습니다. 커밋 주석의 "Mixed content 에러 발생"으로 보아 배포한 화면의 콘솔 경고가 기준이었을 겁니다.
+- `same-origin` 주석 처리가 아무 효과가 없었다는 건 이 글을 쓰면서 확인한 겁니다. 당시에는 몰랐습니다.
+- axios 커밋과 fetch 커밋의 `rewrites()` 규칙이 같다는 것도 이번에 diff를 나란히 놓고 본 결과입니다.
+
+## 남은 것 · 한계
+
+- **왜 axios로 돌아갔는지가 커밋에 없습니다.** "동적 페이지에서 동작하지 않음"이라는 주석이 유일한 단서인데, 어느 페이지에서 무엇이 안 됐는지는 적지 않았어요. 30분 뒤 되돌린 이유도 없습니다.
+- **프록시 문제를 라이브러리 문제로 읽었습니다.** 에러 메시지가 나온 층(브라우저 보안 정책)과 손댄 층(HTTP 클라이언트)이 달랐어요. 지금이라면 네트워크 탭에서 요청 하나를 골라 어디서 막혔는지부터 봤을 텐데, 그때는 코드부터 바꿨습니다.
+- 백엔드 IP가 소스 코드와 설정 파일에 그대로 들어가 있습니다. 환경 변수로 빼는 시도는 이 이틀 사이에 한 번 있었고, 다시 하드코딩으로 돌아왔어요.
+- 이때 만든 `api.ts`의 fetch 래퍼는 이후 401 처리의 뼈대가 됐고, 그게 어떻게 한곳으로 모였는지는 [로그인이 자꾸 풀리던 서비스](/blog/로그인-풀림-버그-계보와-401-처리-일원화)에 있습니다. 그 글에서 보면 2024년 9월의 래퍼는 "실패했다"가 아니라 "여기서 시작했다"에 가깝습니다.
+
+관련 글: [fetch가 Next.js에서 선호되는 이유, 그리고 axios와의 차이점](/blog/fetch가-next.js에서-선호되는-이유-그리고-차이점) · [WebSocket connection to wss failed](/blog/websocket-connection-to-wss-failed오류의-원인과-해결-방법) · [로그인이 자꾸 풀리던 서비스 — 401 처리를 한곳으로 모으기까지](/blog/로그인-풀림-버그-계보와-401-처리-일원화) · [검색은 GET, 목록은 POST](/blog/검색은-get-목록은-post-하루에-세-번-바꾼-메서드) · [배포 첫날 커밋 열 개](/blog/배포-첫날-커밋-열-개)

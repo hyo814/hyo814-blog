@@ -1,0 +1,134 @@
+---
+title: Next.js 안에 react-router-dom이 두 달 있었다 — 한 번도 마운트되지 않은 훅
+date: '2024-09-07'
+tags: [기술노트, React]
+draft: false
+summary: 'App Router로 만든 프로젝트의 package.json에 react-router-dom이 두 달 동안 들어 있었습니다. 401을 받으면 useNavigate로 로그인 화면에 보내는 인터셉터 훅을 짰는데, 그 훅을 부르는 컴포넌트는 어디에도 마운트돼 있지 않았어요. 왜 넣었는지는 커밋에 남아 있지 않고, 지운 날의 커밋 제목은 라이트하우스였습니다.'
+---
+
+# Next.js 안에 react-router-dom이 두 달 있었다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+TripTune은 Next.js 14 App Router로 시작한 프로젝트입니다. 프런트는 저 혼자였고, App Router는 처음이었어요. 그 저장소의 `package.json`에 2024년 7월 8일부터 9월 7일까지 `react-router-dom`이 들어 있었습니다.
+
+Next.js에는 라우터가 이미 있습니다. `next/navigation`의 `useRouter`가 그것이에요. 그런데 다른 라우터 라이브러리를 깔아 두고 두 달을 보냈습니다.
+
+## 언제 들어왔고, 언제 쓰였나
+
+들어온 커밋은 `bcefe6d`(7월 8일, "로그아웃 / 아이디 찾기 / 비밀번호 찾기")입니다. 이 커밋의 `package.json` diff에 `react-router-dom`과 `crypto-js`가 같이 추가됐어요.
+
+```diff
++    "crypto-js": "^4.2.0",
+     "jest": "^29.7.0",
+     "js-cookie": "^3.0.5",
+     "next": "14.2.4",
+@@
++    "react-router-dom": "^6.24.1",
+```
+
+그런데 같은 커밋의 `src/` 안에는 `react-router`를 import하는 파일이 하나도 없습니다. 패키지만 먼저 깔린 거예요. 왜 깔았는지는 커밋 메시지에 남아 있지 않습니다.
+
+실제로 코드에 등장한 건 3주 뒤 `7349a53`(8월 1일, "로딩 추가 / accessToken 처리 변경")입니다. axios 인터셉터를 세우는 훅 `useAxiosConfig.ts`에서였어요.
+
+```ts
+import { useEffect, useRef } from 'react';
+import { useNavigate, NavigateFunction } from 'react-router-dom';
+import { AxiosInstance } from 'axios';
+import Cookies from 'js-cookie';
+
+const setAxiosInterceptors = (instance: AxiosInstance, navigate: NavigateFunction) => {
+  // ... 요청에 Bearer 토큰 붙이기
+  instance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      if (error.response && error.response.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          // refresh 요청, 새 토큰 저장, 원래 요청 재시도
+        } catch (refreshError) {
+          navigate('/login');
+          return Promise.reject(refreshError);
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+};
+
+const useAxiosConfig = (axiosInstance: AxiosInstance) => {
+  const navigate = useNavigate();
+  const interceptorsRegistered = useRef(false);
+
+  useEffect(() => {
+    if (!interceptorsRegistered.current) {
+      setAxiosInterceptors(axiosInstance, navigate);
+      interceptorsRegistered.current = true;
+    }
+  }, [axiosInstance, navigate]);
+};
+```
+
+의도는 읽힙니다. 토큰 갱신에 실패하면 로그인 화면으로 보내고 싶었고, 그러려면 훅 안에서 이동 함수를 얻어야 했어요. React에서 늘 하던 대로 `useNavigate`를 꺼냈습니다. 인터셉터가 렌더마다 중복 등록되는 걸 막으려고 `useRef`로 한 번만 걸도록 한 것도 보이고요.
+
+문제는 여기가 Next.js라는 겁니다. `useNavigate`는 `react-router`의 `<BrowserRouter>` 안에서만 동작합니다. 그 라우터를 앱 어디에도 세우지 않았으니, 이 훅이 실제로 불렸다면 즉시 예외가 났을 거예요.
+
+## 그런데 왜 터지지 않았나
+
+같은 커밋의 `axiosInstance.ts`를 보면 답이 나옵니다.
+
+```ts
+const axiosInstance = axios.create({
+  baseURL: 'http://13.209.177.247:8080/:path*',
+  timeout: 5000,
+});
+
+export const AxiosProvider = ({ children }: AxiosProviderProps) => {
+  useAxiosConfig(axiosInstance);
+  return {children};
+};
+
+export default axiosInstance;
+```
+
+`useAxiosConfig`를 부르는 곳은 `AxiosProvider` 하나뿐입니다. 그리고 `AxiosProvider`를 마운트하는 파일은 저장소 전체에 없습니다. `git grep AxiosProvider`를 그 커밋에서 돌리면 정의한 파일 한 곳만 나와요.
+
+그러니까 **훅은 한 번도 실행되지 않았습니다.** 인터셉터도 걸리지 않았고, 401을 받아도 로그인 화면으로 가지 않았고, `useNavigate`도 던질 기회가 없었습니다. `return {children}`도 JSX가 아니라 객체를 돌려주는 코드인데, 실행된 적이 없으니 그것도 문제가 되지 않았어요.
+
+7월 17일 판(`ccb81a7`)의 같은 파일에는 `navigate`가 없었습니다. `useEffect` 안에서 인터셉터를 걸고 갱신 실패는 `Promise.reject`만 했어요. 8월 1일에 "실패하면 로그인으로"를 붙이면서 라우터가 필요해졌고, 그때 손에 익은 것을 집었습니다.
+
+## 지운 날
+
+훅 파일은 9월 1일 `f55d4de`("여행지 탐색 - 홈 / 검색")에서 통째로 지워졌습니다. 인터셉터는 훅 밖으로 나와 `axiosInstance.ts` 모듈 최상단에 직접 걸리게 됐고, 갱신 실패 시의 이동은 없어졌어요. `console.error`만 남았습니다.
+
+```ts
+axiosInstance.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      console.error('401 Unauthorized - 토큰이 만료되었습니다.');
+      // refresh 시도, 실패하면 console.error('토큰 갱신 실패:', refreshError);
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+이동이 필요 없어지니 라우터도 필요 없어졌는데, 패키지는 엿새 더 남아 있다가 `06121bd`(9월 7일)에서 빠졌습니다. 그 커밋 제목은 "여행지 탐색 개선, 라이트 하우스 개선, seo 추가"예요. 라이트하우스 점수를 보다가 안 쓰는 의존성을 정리한 김에 같이 뺀 것으로 보이는데, 커밋 메시지에 그 말은 없습니다. `crypto-js`도 이때 같이 나갔습니다. 두 패키지 모두 들어온 날과 나간 날이 같습니다.
+
+## 검증
+
+- `git log -S'react-router-dom' -- package.json`으로 추가 커밋(`bcefe6d`)과 삭제 커밋(`06121bd`) 둘만 나오는 것을 확인했습니다.
+- `git log -S'useNavigate' -- src`로 코드에 등장한 커밋이 `7349a53`(추가)과 `f55d4de`(삭제) 둘뿐인 것을 확인했습니다.
+- `7349a53` 시점에서 `git grep AxiosProvider -- src`를 돌려 정의 파일 한 곳만 나오는 것을 확인했습니다. 마운트한 곳이 없다는 근거는 이것입니다.
+- 당시 실제로 실행해서 확인한 기록은 없습니다. 위 결론은 전부 저장소를 다시 읽어서 낸 것입니다.
+
+## 남은 것 · 한계
+
+- **왜 `react-router-dom`을 깔았는지는 모릅니다.** 커밋 메시지에도, 코드 주석에도 없습니다. 3주 동안 import 없이 있었으니 "일단 깔아 둔" 쪽에 가깝지만 그것도 추측입니다.
+- **인터셉터가 걸리지 않은 채 한 달을 보냈다는 걸 당시에 알았는지 모릅니다.** 401 처리가 없어도 화면이 뜨는 데는 지장이 없어서 눈에 안 띄었을 가능성이 큽니다.
+- 9월 1일 판은 갱신 실패를 `console.error`로만 남깁니다. 사용자는 로그인이 풀린 채 화면에 남아요. 이 문제가 여러 갈래로 갈라져 나타난 것을 2년 뒤에야 한곳으로 모았습니다. 그 결말은 [로그인이 자꾸 풀리던 서비스](/blog/로그인-풀림-버그-계보와-401-처리-일원화)에 있습니다.
+- 라우터 혼용은 이때뿐이었지만, App Router를 App Router답게 쓰지 못한 흔적은 다른 데도 남아 있었습니다. 루트 레이아웃의 `'use client'`가 그것이고, [그 글](/blog/루트-레이아웃에-use-client가-붙어-있었다)에서 다뤘습니다.
+
+관련 글: [로그인이 자꾸 풀리던 서비스 — 401 처리를 한곳으로 모으기까지](/blog/로그인-풀림-버그-계보와-401-처리-일원화) · [루트 레이아웃에 'use client'가 붙어 있었다](/blog/루트-레이아웃에-use-client가-붙어-있었다) · [fetch가 Next.js에서 선호되는 이유, 그리고 axios와의 차이점](/blog/fetch가-next.js에서-선호되는-이유-그리고-차이점) · [axios를 걷어냈다가 이틀 만에 되돌렸다가 다시 걷어냈다](/blog/axios를-걷어냈다가-이틀-만에-되돌렸다가-다시-걷어냈다) · [JWT exp를 프런트가 읽던 함수를 지웠다](/blog/jwt-exp를-프런트가-읽던-함수를-지웠다)

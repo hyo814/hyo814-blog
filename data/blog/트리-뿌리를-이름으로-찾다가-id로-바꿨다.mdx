@@ -1,0 +1,111 @@
+---
+title: 트리 뿌리를 이름으로 찾다가 id로 바꿨다 — 식별자를 처음 고른 날
+date: '2025-06-19'
+tags: [기술노트, Django]
+draft: false
+summary: '분류체계 그래프 화면이 뿌리 노드를 이름으로 찾고 있었습니다. 트리 JSON의 id는 enumerate 인덱스였고, 주소에는 이름이 실렸어요. 둘 다 pk로 바꿨는데, 함수 계약을 바꾸면서 호출하는 쪽 두 곳을 놓쳐 15분 동안 화면이 깨졌습니다. 그날은 "이름보다 pk"까지만 알았고, pk도 밀린다는 건 1년 뒤에 알았습니다.'
+---
+
+# 트리 뿌리를 이름으로 찾다가 id로 바꿨다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+분류체계 그래프 화면은 두 단계였습니다. 뿌리 개념(Concept) 목록을 jsTree로 보여 주고, 하나를 고르면 그 뿌리 아래 전체를 그래프로 그리는 상세로 넘어갑니다. 상세 주소는 `concept_graph/<str:module_name>/` 꼴이었어요.
+
+이 화면은 제가 처음 만든 게 아니라 있던 것을 이어받았습니다. 6월 19일 오후에 손을 댔는데, 트리 쪽을 만지다 보니 뿌리를 찾는 방식이 눈에 걸렸습니다.
+
+## 뿌리를 이름으로 찾고, 트리 id는 순번이었다
+
+서버가 트리에 넘기는 JSON은 이랬습니다.
+
+```python
+roots = Concept.get_root_nodes()
+
+for idx, node in enumerate(roots):
+    json_obj.append({ 'id': idx, 'text': node.name })
+```
+
+jsTree 노드의 `id`가 `enumerate` 인덱스, 그러니까 0, 1, 2였어요. 이 숫자는 트리 안에서만 뜻이 있고 DB의 어느 행과도 이어지지 않습니다. 그래서 템플릿은 노드를 고르면 `id`가 아니라 `text`, 즉 이름을 주소에 실었습니다.
+
+```js
+r.push(data.instance.get_node(data.selected[i]).text);
+// ...
+location.href = "/std-data/visualization/concept_graph/" + r + "/";
+```
+
+받는 쪽은 그 이름으로 뿌리를 찾았습니다.
+
+```python
+roots = Concept.get_root_nodes()
+if roots.filter(name=module).exists():
+    root = roots.filter(name=module).first()
+    json_dump = Concept.dump_bulk(root)
+```
+
+지금 보면 `.first()`가 눈에 들어옵니다. 같은 이름의 뿌리가 둘일 수 있다는 걸 코드가 이미 알고 있었던 거예요. 둘이면 앞의 것을 쓰고, 뒤의 것은 주소로 갈 방법이 없습니다.
+
+## 셋 중에서 pk를 골랐다
+
+그때 놓고 본 선택지는 이 정도였습니다.
+
+| 주소에 싣는 값 | 문제 |
+|---|---|
+| 이름 | 같은 이름이면 못 가름. 공백이나 특수문자가 주소에 그대로 실림 |
+| `enumerate` 순번 | 뿌리 순서가 바뀌면 같은 주소가 다른 뿌리를 가리킴 |
+| pk | 유일하고, ORM이 바로 찾음. 사람이 읽기엔 뜻이 없음 |
+
+pk로 갔습니다(`8ccc2936`, 17:12). 세 곳을 같이 바꿨어요. JSON의 `id`를 `node.id`로, 뷰의 `filter(name=module)`을 `filter(id=module)`로, 템플릿은 `.text` 대신 `.id`를 싣고 주소도 하드코딩 대신 `url` 필터로.
+
+```js
+r.push(data.instance.get_node(data.selected[i]).id);
+// ...
+location.href = "{{ 'std-data:visualization:concept_graph_list' | url }}" + "/" + r + "/";
+```
+
+Django 쪽으로는 이게 처음으로 "식별자를 무엇으로 할지"를 고른 자리였습니다. 프런트에서는 key로 무엇을 쓸지 고민한 적이 많은데, 그게 서버 쪽에서는 주소와 쿼리에 같이 걸려 있다는 걸 이때 몸으로 알았어요.
+
+## 15분 뒤, 놓친 호출자 둘
+
+`concept_json_dump(module)`은 이름을 받던 함수였는데 이제 id를 받습니다. 함수 계약이 바뀐 거예요. 그런데 이 함수를 부르는 곳이 그래프 화면만이 아니었습니다. 분류체계 상세 뷰가 공개·관리자 두 벌로 있었고, 둘 다 `scheme.name`을 넘기고 있었어요.
+
+```python
+-                {"data": {"core": json2str(concept_json_dump(scheme.name))}},
++                {"data": {"core": json2str(concept_json_dump(scheme.id))}},
+```
+
+이걸 고친 커밋(`d16be46f`)이 15분 뒤인 17:27입니다. 그 사이에는 상세 화면의 트리가 빈 채로 떴을 거예요. 어떻게 알아챘는지는 남아 있지 않습니다. 커밋 메시지도 "scheme.py change name to id" 한 줄이라 그 이상은 남아 있지 않습니다.
+
+## 그날 안 고친 것
+
+이름을 id로 바꾸면서 이름표는 그대로 뒀습니다. URL 패턴은 여전히 `<str:module_name>`이고, 뷰 안의 변수도 `module_name`이에요. 값은 숫자인데 이름은 이름입니다.
+
+```python
+module_name = self.kwargs.get("module_name")
+
+roots = Concept.get_root_nodes()
+if not roots.filter(id=module_name).exists():
+    raise Http404
+
+context = _make_context(
+    {"data": {"core": json2str(concept_json_dump(module_name))}},
+    [{"title": module_name}],
+    module_name,
+)
+```
+
+그리고 마지막 두 줄. 빵부스러기 제목과 화면 제목에 `module_name`을 그대로 넣고 있었으니, 이날부터 거기에는 이름 대신 pk 숫자가 찍혔습니다. diff에는 이걸 손댄 흔적이 없어요. 눈에 안 띄었거나, 띄었는데 미뤘거나, 둘 중 어느 쪽인지 기록이 없습니다.
+
+## 검증
+
+- 그래프 목록에서 뿌리를 골라 상세로 넘어가는 것, 분류체계 상세의 트리가 다시 뜨는 것을 손으로 확인했습니다.
+- 같은 이름의 뿌리를 둘 만들어서 각각 열리는지는 확인하지 않았습니다. `.first()`가 걸렸던 건 이 글을 쓰면서 diff를 다시 읽다 본 것이지, 그날 본 게 아닙니다.
+- 두 커밋의 시각(17:12, 17:27)과 변경 파일은 `git show`로 대조했습니다.
+
+## 남은 것 · 한계
+
+- **pk가 안정적이라고 믿었습니다.** 1년 뒤 [e2e 스펙 11개가 한꺼번에 빨개진](/blog/pk를-박아둔-e2e-스펙-11개가-한꺼번에-빨개졌다) 사건에서, 이 시스템의 pk는 엑셀 재적재 한 번에 밀린다는 걸 알았어요. 그때는 "이름보다 pk"까지만 봤고, "pk보다 오래 사는 것"은 시야에 없었습니다.
+- 반대로 [데이터 맵 글](/blog/데이터-맵에서-세-단계-들어간-자리를-주소에-남겼다)에서는 같은 이유로 pk를 기각하고 이름 경로를 주소에 실었습니다. 이 글의 결정과 정반대인데, 그 사이에 pk가 밀리는 걸 겪었기 때문입니다.
+- 함수 계약을 바꾸고 호출자를 grep으로 찾지 않았습니다. 15분이면 짧지만, 호출자가 두 벌이 아니라 열 벌이었으면 15분으로 안 끝났을 거예요.
+- `module_name`이라는 이름과 빵부스러기의 숫자는 그날 그대로 뒀습니다. 지금 이 함수들은 매니저(`concept_manager.py`)로 옮겨져 `scheme` 인자를 받는 꼴이 됐는데, 그 경위는 이 글 범위 밖입니다.
+
+관련 글: [jsTree 기본 사용법](/blog/Jstree-basic) · [pk를 박아둔 e2e 스펙 11개가 한꺼번에 빨개졌다](/blog/pk를-박아둔-e2e-스펙-11개가-한꺼번에-빨개졌다) · [데이터 맵에서 세 단계 들어간 자리를 주소에 남겼다](/blog/데이터-맵에서-세-단계-들어간-자리를-주소에-남겼다) · [처음 만든 트리를 열흘 만에 통째로 다시 짰다](/blog/처음-만든-트리를-열흘-만에-통째로-다시-짰다) · [저장 뒤 돌아올 자리를 주소에 남겼다](/blog/저장-뒤-돌아올-자리를-주소에-남겼다)

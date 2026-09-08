@@ -1,0 +1,137 @@
+---
+title: jquery-formset을 넣고 두 달 뒤 인덱스를 직접 다시 매겼다 — 삭제 체크박스를 켠 날과 20가지 시나리오
+date: '2025-07-09'
+tags: [기술노트, Django]
+draft: false
+summary: '워크플로 관리 화면의 인라인 폼셋 12쌍이 전부 can_delete=False였습니다. 5월에 jquery-formset 라이브러리를 넣으면서 삭제를 켰고, 두 달 뒤 항목을 지우고 다시 추가하면 저장이 어긋나서 폼 인덱스를 직접 다시 매기는 함수를 짰어요. 같은 날 저녁에 숨긴 행을 세지 않던 버그를 잡고 시나리오 20개를 커밋 메시지에 남겼습니다. 그 함수는 1년이 지난 지금도 그대로 돌고 있어요.'
+---
+
+# jquery-formset을 넣고 두 달 뒤 인덱스를 직접 다시 매겼다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+입사하고 한 달쯤 됐을 때 맡은 화면이 워크플로 관리였습니다. 프로세스 하나에 상태·전이·액션·활동이 줄줄이 매달리고, 각각이 Django 인라인 폼셋이에요. `workflow/forms.py`에 `inlineformset_factory` 호출이 등록용·수정용 쌍으로 12쌍 있었습니다.
+
+전부 `can_delete=False`였습니다. 추가는 되는데 지울 수가 없었어요. 프런트만 하다 온 입장에서 "삭제 버튼 하나 붙이면 되겠지" 하고 들어갔다가, 두 달에 걸쳐 세 번 손을 댔습니다.
+
+## 5월 9일 — 삭제 체크박스를 켜고 라이브러리를 넣었다
+
+오전 10시 5분에 `static/formset/jquery.formset.js` 308줄을 통째로 저장소에 넣었습니다(`d6b890a0`). 한 시간 뒤 `can_delete=False`를 24곳에서 걷어냈어요(`088cd296`).
+
+```python
+ ProcessStateFormSet = inlineformset_factory(Process, State, \
+-                                            form=StateForm, extra=5, can_delete=False)
++                                            form=StateForm, extra=5)
+```
+
+`can_delete`를 켜면 Django가 폼마다 `DELETE` 체크박스를 만듭니다. 그걸 화면에 그대로 보이게 두고 싶지는 않아서, 라이브러리가 만드는 추가·삭제 링크를 숨기고 우리 버튼이 대신 눌러 주는 구조로 했어요.
+
+```js
+$forms.formset({
+  prefix: prefix,
+  addText: "",
+  deleteText: "",
+  addCssClass: "js-formset-add",
+  deleteCssClass: "js-formset-delete",
+});
+
+$wrap.find(".add-formset-button").on("click", function() {
+  $wrap.find(".js-formset-add").click();
+});
+```
+
+커밋 제목이 "Keep both custom and default data formset handling to avoid JS delete/add issues"입니다. 라이브러리 기본 동작과 우리 버튼을 둘 다 살려 둔다는 뜻인데, 지금 읽으면 **어느 쪽이 인덱스를 책임지는지 정하지 않은 채 시작한 것**이었어요. 그때는 그게 문제가 될 줄 몰랐습니다.
+
+## 7월 9일 저녁 — 인덱스를 직접 다시 매겼다
+
+두 달 뒤 18시 45분 커밋(`5f4a8933`)입니다. 제목은 "reindex inline formsets on add and delete actions", 본문 셋째 줄이 "Ensure compliance with Django's formset structure"예요. 항목을 지우고 다시 추가한 뒤 저장하면 어긋났습니다. 무엇이 어떻게 어긋났는지는 커밋에 남아 있지 않고, 코드 주석에 한 줄 있습니다.
+
+```js
+// 폼 인덱스 자동 재정렬 -> db 인덱스 이슈 해결 방법
+function reindexFormset(prefix) {
+  const $formsetContainer = $(`.accordion-body[data-prefix='${prefix}']`);
+  const $totalForms = $(`input[name="${prefix}-TOTAL_FORMS"]`);
+  const $visibleForms = $formsetContainer.find(".form-row:visible");
+
+  $visibleForms.each(function(index) {
+    const $form = $(this);
+    $form.find("input, select, textarea").each(function() {
+      const $field = $(this);
+      const name = $field.attr("name");
+      if (name && name.includes(prefix + "-")) {
+        const newName = name.replace(new RegExp(prefix + "-(\\d+)-"), prefix + "-" + index + "-");
+        $field.attr("name", newName);
+      }
+      // id, label[for] 도 같은 방식
+    });
+  });
+
+  $totalForms.val($visibleForms.length);
+}
+```
+
+Django 폼셋은 `prefix-0-name`, `prefix-1-name`처럼 번호가 이어져야 하고 `TOTAL_FORMS`가 그 개수와 맞아야 합니다. 라이브러리가 붙이는 번호와 우리가 DOM에서 지우는 행이 서로를 모르니 번호에 구멍이 생겼고, 그걸 저장 직전에 0부터 다시 매기는 게 이 함수예요.
+
+삭제도 이때 두 갈래로 갈랐습니다. 라이브러리의 삭제 링크를 누르던 한 줄을 빼고, 기존 행과 새 행을 다르게 다뤄요.
+
+```js
+const deleteField = $formRow.find("input[id$='-DELETE']");
+
+if (deleteField.length) {
+  deleteField.val("on");
+  $formRow.hide();
+} else {
+  $formRow.remove();
+  reindexFormset(prefix);
+}
+```
+
+DB에 있던 행은 `DELETE`를 켜고 숨깁니다. Django가 지워야 하니까요. 방금 추가한 행은 서버가 모르는 행이니 DOM에서 떼고 번호를 다시 매깁니다. 이 구분을 5월에는 하지 않았습니다.
+
+## 같은 날 밤 — 숨긴 행을 세지 않고 있었다
+
+21시 1분에 한 번 더 커밋했습니다(`2c5d3312`). 제목은 "테스트 진행하기"인데 diff의 핵심은 세 줄이에요.
+
+```js
+-        const $visibleForms = $formsetContainer.find(".form-row:visible");
++        const $allForms = $formsetContainer.find(".form-row");
+...
+-        $totalForms.val($visibleForms.length);
++        $totalForms.val($allForms.length);
+```
+
+저녁 버전은 **보이는 행만** 셌습니다. 왜 바꿨는지 커밋에는 없는데, diff로는 이렇게 읽힙니다. 기존 행을 지우면 숨기기만 하잖아요. 숨긴 행이 `TOTAL_FORMS`에서 빠지면 Django는 그 번호까지만 읽고, `DELETE`가 켜진 행은 아예 안 봅니다. 지웠다고 생각한 게 그대로 남는 거예요.
+
+이 커밋의 메시지 본문에 시나리오 20개를 적어 뒀습니다. 그때 제가 손으로 돌린 목록이에요.
+
+```
+1. 기본 작성 후 저장  O
+2. 전체 삭제 후 저장 O
+5. 항목 추가 후 개별 삭제 후 저장 O
+9. 항목 추가 후 중간에 있는 텍스트 삭제시 정상 저장 O
+13. 단일 항목에서 개별 삭제: 항목이 1개만 있을 때 개별 삭제 O
+18. 기존 데이터 개별 삭제: DB에 저장된 기존 항목을 개별 삭제 (DELETE 필드 처리) O
+19. 신규 추가 항목 개별 삭제: 방금 추가한 항목을 바로 개별 삭제 (DOM 제거) O
+20. 혼합 상태에서 전체 삭제: 기존 데이터 + 신규 추가 항목이 섞인 상태에서 전체 삭제 O
+```
+
+15번 "빈 상태에서 전체 삭제"만 O 표시가 없습니다. 그 케이스 때문에 같은 커밋에서 "삭제할 항목이 없습니다" 안내를 넣었어요. 자동 테스트로 만들 생각은 그때 못 했습니다.
+
+## 지금도 그대로 돌고 있다
+
+일주일 뒤 이 스크립트는 템플릿에서 `static/js/formsetManager.js`로 분리됐고(`3d9ed29c`), 2026년 9월 현재도 `reindexFormset`이 같은 파일 10행에 그대로 있습니다. `workflow/forms.py`의 `inlineformset_factory` 25개 중 `can_delete=False`는 0개, `jquery.formset.js`는 5월 9일에 넣은 파일 그대로예요.
+
+## 검증
+
+- 7월 9일 밤 시나리오 20개를 손으로 돌렸습니다. 결과는 커밋 메시지에 O로 남겼고, 15번 하나는 표시가 없습니다.
+- 재인덱스 뒤 `name`·`id`·`label[for]` 셋이 같은 번호로 바뀌는 건 개발자 도구로 봤을 겁니다. 기록은 시나리오 20개뿐입니다.
+- 자동 테스트는 없습니다. 지금 저장소에도 이 함수를 검사하는 스펙은 없어요.
+
+## 남은 것 · 한계
+
+- **추가 뒤 `setTimeout(…, 100)`으로 재인덱스합니다.** 라이브러리가 행을 붙이는 타이밍을 몰라서 100ms를 기다리는 건데, 왜 100인지 근거가 없습니다. 오늘도 그대로예요.
+- **라이브러리와 직접 조작이 공존합니다.** 추가는 라이브러리, 삭제는 우리 코드. 5월 커밋 제목의 "both"가 지금까지 이어진 셈이에요. 라이브러리를 걷어내고 `empty_form`으로 직접 붙이는 쪽이 단순했을 텐데, 그때는 라이브러리를 이해하는 것보다 그 위에 덧대는 게 빨라 보였습니다.
+- **20개 시나리오가 코드로 남지 않았습니다.** 커밋 메시지에만 있어요. 이 함수를 건드리는 사람은 그 목록을 찾아 다시 손으로 돌려야 합니다.
+- 1년 뒤 신청서 화면은 폼셋을 안 씁니다. 작성분을 초안 JSON으로 두고 승인 때 서버가 만드는 쪽으로 갔어요. 폼셋 번호를 화면에서 맞추는 일 자체를 없앤 건데, 그 선택은 [승인될 때까지 아무것도 만들지 않기](/blog/승인될-때까지-아무것도-만들지-않기)에 있습니다.
+
+관련 글: [Django Formset과 Inline Formset 이해하기](/blog/django-inline-formset) · [승인될 때까지 아무것도 만들지 않기](/blog/승인될-때까지-아무것도-만들지-않기) · [파일 33개를 한 커밋에 넣었다](/blog/파일-33개를-한-커밋에-넣었다) · [마이페이지를 뷰부터 URL까지 처음 짰다](/blog/마이페이지를-뷰부터-url까지-처음-짰다)

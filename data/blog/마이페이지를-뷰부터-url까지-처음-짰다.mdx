@@ -1,0 +1,118 @@
+---
+title: 마이페이지를 뷰부터 URL까지 처음 짰다 — 사흘 동안 TemplateView에서 UpdateView까지
+date: '2025-10-01'
+tags: [기술노트, Django]
+draft: false
+summary: '입사 여섯 달 만에 템플릿이 아니라 뷰와 URL부터 짠 첫 화면이 마이페이지였습니다. 첫날은 GET만 받는 TemplateView에 값을 박아 넣었고, 이튿날 입력칸을 열었는데 뷰는 여전히 GET만 받았어요. 사흘째에 UpdateView와 PasswordChangeView로 갈아탔고, 손으로 넣은 비밀번호 눈 아이콘이 스크립트가 붙이는 것과 겹쳐 지웠습니다. 그 과정을 커밋 일곱 개로 돌아봅니다.'
+---
+
+# 마이페이지를 뷰부터 URL까지 처음 짰다
+
+> 이 글은 2026년 9월에 당시 커밋 이력을 다시 보며 정리한 것입니다. 날짜는 작업한 날 기준입니다.
+
+2025년 9월까지 제가 만진 건 대부분 템플릿과 JS였습니다. 뷰는 이미 있는 걸 고치는 정도였어요. 마이페이지는 달랐습니다. URL도 뷰도 없어서 처음부터 써야 했습니다. 프런트 경력 5년차, Django는 반년째인 사람이 뷰를 처음 설계한 사흘의 기록이에요.
+
+## 9월 29일 — GET만 받는 화면
+
+첫 커밋(`0b74b949`, 작업일은 저자 시각 기준이고 커밋 시각은 10월 2일 한 번에 올라갔습니다)은 뷰 9줄, URL 2줄, 템플릿 103줄입니다.
+
+```python
+class MypageView(TemplateView):
+    extra_context = {"section": {"nav": [{"title": _("마이페이지")}]}}
+    http_method_names = ["get"]
+    template_name = "common/user/mypage.html.j2"
+```
+
+템플릿은 `user.username`, `user.email` 같은 값을 `<input disabled>`에 직접 박았습니다. 값이 없으면 `default('정보 없음')`. 폼 클래스는 없었어요. 헤더의 사용자 이름 링크를 `common:index`에서 이 화면으로 돌렸습니다. 보기만 되는 화면이었고, 그걸로 시작했습니다.
+
+## 9월 30일 — 입력칸은 열었는데 뷰는 GET만 받았다
+
+이튿날 커밋 제목이 "마이페이지 (CRUD) 요청"입니다(`7d60fcbb`). 템플릿에서 `disabled`를 떼고 `default('정보 없음')`을 지웠고, 같은 폼 안에 현재 비밀번호·새 비밀번호·확인 세 칸을 넣었고, 버튼을 "메인 페이지로 이동"에서 `type="submit"` "정보 수정"으로 바꿨습니다.
+
+그런데 이 커밋은 템플릿 파일 하나만 바꿨습니다. 뷰는 여전히 `http_method_names = ["get"]`이었어요. 제출 버튼은 생겼는데 받는 쪽이 없었습니다. 한 시간 뒤 비밀번호 칸을 별도 템플릿으로 떼어냈고(`1552e6a7`), 그 뷰도 `TemplateView`에 GET만이었습니다.
+
+지금 보면 화면 먼저, 서버 나중이라는 순서가 그대로 드러납니다. 프런트에서 일하던 습관이었어요.
+
+## 10월 1일 — UpdateView와 PasswordChangeView
+
+사흘째 오전에 뷰를 다시 썼습니다(`58296c23`).
+
+```python
+class MyProfileView(LoginRequiredMixin, UpdateView):
+    template_name = "common/user/mypage.html.j2"
+    form_class = ProfileForm
+
+    def get_object(self):
+        return self.request.user
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.request.session["success"] = True
+        return response
+```
+
+`ProfileForm`은 `fields = ("name", "cellphone", "address")` 세 개짜리 `ModelForm`이에요. `get_object`가 로그인한 사용자를 돌려주니 URL에 pk가 필요 없습니다. 저장 성공을 세션 플래그로 넘기고 `get_context_data`에서 꺼내 지우는 방식은 회원가입 화면에 이미 있던 걸 그대로 따라 했습니다.
+
+오후에 비밀번호 쪽을 `PasswordChangeView`로 바꿨어요(`f3bc916d`).
+
+```python
+class MyPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    template_name = "common/user/change_password.html.j2"
+    success_url = reverse_lazy("common:user_change_password")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        update_session_auth_hash(self.request, form.user)
+        messages.success(self.request, _("비밀번호가 변경되었습니다."))
+        self.request.session["success"] = True
+        return response
+```
+
+이때 템플릿의 입력 이름을 `current_password`·`password1`·`password2`에서 Django 폼이 기대하는 `old_password`·`new_password1`·`new_password2`로 바꿨습니다. 전날 제가 지은 이름이 폼과 안 맞았던 거예요. `update_session_auth_hash`를 안 부르면 비밀번호를 바꾼 순간 로그아웃되는데, 이건 문서에서 보고 넣었습니다.
+
+같은 커밋에서 `<form>`에 `novalidate`를 달고, 비밀번호 칸 세 개 옆에 눈 아이콘 마크업을 손으로 붙였습니다.
+
+## 18분 뒤 — 눈 아이콘이 두 개였다
+
+15시 48분 커밋 제목이 "눈 가림막 현상 고치기"입니다(`4e2bf37d`). 손으로 붙인 눈 아이콘 `div` 세 개를 지우고, `novalidate`도 뗐어요.
+
+이 템플릿은 로드 때 `initPasswordInput()`을 부릅니다. 그 함수가 하는 일이 이겁니다.
+
+```js
+function initPasswordInput() {
+  for (const inputEl of document.getElementsByTagName("input")) {
+    if (inputEl.type === "password") {
+      const imgEl = document.createElement("img");
+      imgEl.src = "/static/img/icn_eye_hide_gray_16px.svg";
+      imgEl.addEventListener("click", () => {
+        inputEl.type = inputEl.type === "text" ? "password" : "text";
+        // ...
+      });
+      // ...
+      inputEl.parentElement.appendChild(divEl);
+    }
+  }
+}
+```
+
+`type="password"`인 입력마다 눈 아이콘을 스크립트가 붙입니다. 저는 그걸 모르고 마크업에 하나씩 더 넣었으니 칸마다 눈이 둘이었어요. 하나는 클릭해도 아무 일이 없고요. 공용 스크립트가 뭘 해 주는지 안 보고 화면부터 그린 결과입니다.
+
+`novalidate`를 왜 뺐는지는 커밋에 안 남아 있습니다. 눈 아이콘과 같은 커밋에 실려 있을 뿐이에요. 빼고 나면 `required`가 브라우저에서 바로 걸리니, 서버까지 가서 오류를 받는 것보다 그게 낫다고 봤을 거라고 짐작만 합니다.
+
+다음 날 두 폼에 `onsubmit="return confirm('정보를 수정하시겠습니까?')"`를 붙였고(`03108ae6`), 2026년 9월 현재 두 뷰와 이 `confirm`은 그대로입니다.
+
+## 검증
+
+- 이름·휴대전화·주소를 바꾸고 저장 → 다이얼로그 → 새로고침 뒤 값이 남는 것을 손으로 확인했습니다.
+- 비밀번호 변경 뒤 로그아웃되지 않는 것을 확인했습니다. `update_session_auth_hash`를 빼면 어떻게 되는지는 그때 직접 재현해 보지 않았어요.
+- 눈 아이콘이 칸마다 하나씩만 남는 것을 확인했습니다.
+- 테스트 코드는 없습니다.
+
+## 남은 것 · 한계
+
+- **성공 표시가 둘입니다.** `messages.success`로 넣은 메시지를 `<ul>`로 찍고, 세션 플래그로 다이얼로그도 띄워요. 회원가입 방식을 따라 하다 `messages`까지 얹은 건데 하나면 됐습니다.
+- **`onsubmit`의 `confirm()`은 브라우저 기본 대화상자입니다.** 화면의 다른 다이얼로그와 모양이 다릅니다.
+- **`novalidate`를 뺀 근거가 없습니다.** 1년 뒤 신청서 항목 모달에서는 반대로 `novalidate`를 넣고, 서버가 돌려준 오류로 탭을 옮겼어요. 그쪽은 숨은 탭 안의 `required`가 제출 자체를 막아서였습니다. 같은 속성을 두고 이유가 있는 선택과 이유가 안 남은 선택이 1년 간격으로 있습니다. [신청서 항목 모달에서 후보 조회 20회를 2회로 줄였다](/blog/신청서-항목-모달에서-후보-조회-20회를-2회로-줄였다)에 그 이유가 있어요.
+- 뷰를 처음 짜면서 `TemplateView` → `UpdateView`로 사흘이 걸렸습니다. 지금이면 `UpdateView`에서 시작했을 텐데, 그때는 어떤 제네릭 뷰가 있는지부터 찾아야 했습니다.
+
+관련 글: [Django CBV vs FBV — 클래스형 뷰와 함수형 뷰 비교](/blog/django-cbv-vs-fbv) · [신청서 항목 모달에서 후보 조회 20회를 2회로 줄였다](/blog/신청서-항목-모달에서-후보-조회-20회를-2회로-줄였다) · [jquery-formset을 넣고 두 달 뒤 인덱스를 직접 다시 매겼다](/blog/jquery-formset을-넣고-두-달-뒤-인덱스를-직접-다시-매겼다) · [disabled 필드는 cleaned_data에 없다](/blog/disabled-필드는-cleaned-data에-없다)
