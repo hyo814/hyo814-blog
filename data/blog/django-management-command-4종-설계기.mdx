@@ -53,7 +53,7 @@ django.setup()
 | `seed_editorial` | 초기 편집 콘텐츠 시드 | 배포 시 1회 (수동) |
 | `backfill_urls` | 과거 Post의 `source_url` 복구 | 1회성 데이터 보정 (수동) |
 
-실행 주기가 다르다는 점이 중요합니다. **반복 실행되는 명령(`crawl_news`, `send_newsletter`)**과 **일회성 명령(`seed_editorial`, `backfill_urls`)**을 같은 위치에 두지만, 안에 들어가는 방어 로직은 다릅니다.
+실행 주기가 다르다는 점이 중요합니다. **반복 실행되는 명령(`crawl_news`, `send_newsletter`)과** **일회성 명령(`seed_editorial`, `backfill_urls`)을** 같은 위치에 두지만, 안에 들어가는 방어 로직은 다릅니다.
 
 ---
 

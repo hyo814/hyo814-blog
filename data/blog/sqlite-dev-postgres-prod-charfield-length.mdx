@@ -53,7 +53,7 @@ class MetaClass(models.Model):
     definition_ko = models.TextField(null=True, blank=True, verbose_name="국문 정의")
 ```
 
-여기서 이미 이상한 점이 보입니다. **국문 정의(`definition_ko`)는 `TextField`인데 영문 정의(`definition`)만 `CharField(512)`**예요. 한쪽만 고친 흔적입니다. 아마 국문을 넣다가 길이 초과를 겪고 그때 그 필드만 바꿨을 거예요.
+여기서 이미 이상한 점이 보입니다. **국문 정의(`definition_ko`)는 `TextField`인데 영문 정의(`definition`)만 `CharField(512)`예요**. 한쪽만 고친 흔적입니다. 아마 국문을 넣다가 길이 초과를 겪고 그때 그 필드만 바꿨을 거예요.
 
 ### ② 실제 데이터 최댓값 재기
 
