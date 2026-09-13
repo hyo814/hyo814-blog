@@ -57,3 +57,6 @@ yarn-error.log*
 # typescript incremental build cache
 *.tsbuildinfo
 .omc
+
+# local design notes
+DESIGN.md
