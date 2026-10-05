@@ -8,7 +8,9 @@ import SearchButton from './SearchButton'
 
 const Header = () => {
   return (
-    <header className="sticky top-0 z-40 -mx-4 mb-4 border-b border-line bg-paper/85 px-4 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 -mx-4 mb-4 border-b border-line px-4">
+      {/* blur를 header에 직접 걸면 안쪽 fixed(모바일 메뉴)의 기준이 화면이 아니라 header가 된다 */}
+      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-paper/85 backdrop-blur-sm" />
       <div className="flex items-center justify-between py-5">
         <Link href="/" aria-label={siteMetadata.headerTitle} className="flex items-center">
           <Monogram size={30} compact className="shrink-0" />
