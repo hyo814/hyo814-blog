@@ -12,22 +12,22 @@ const MAX_DISPLAY = 5
  */
 const measurements = [
   {
-    label: '목업 시드 자동화',
-    before: '수작업 49건',
-    after: '엑셀 기반 478건',
-    href: '/blog/목업-데이터-엑셀-시드-49에서-478개-자동화',
+    label: '신청서 항목 모달',
+    before: '열 때마다 조회 20회',
+    after: '2회 · 펼칠 때만 조회',
+    href: '/blog/신청서-항목-모달에서-후보-조회-20회를-2회로-줄였다',
   },
   {
-    label: '메뉴 QA 스윕 자동화',
-    before: '손으로 136종 확인',
-    after: '1커맨드 · 문서오류 15건 적발',
-    href: '/blog/playwright-메뉴-136종-qa-스윕',
+    label: '화면마다 다르던 데이터 집계',
+    before: '홈 198건 · 목록 134건',
+    after: '기준 통일 · 쿼리 39→19',
+    href: '/blog/같은-표준데이터를-두-화면이-198건과-134건으로-세고-있었다',
   },
   {
-    label: '묵은 사이드 프로젝트 정리',
-    before: '2년 방치 · 경보 누적',
-    after: '하루 · 15,733줄 삭제',
-    href: '/blog/2년-묵은-사이드-프로젝트-되살리기',
+    label: '방치된 e2e 실패 정리',
+    before: '실패 25건 누적',
+    after: '274건 실패 0',
+    href: '/blog/빨갛게-남아-있던-e2e-25건-중-코드-회귀는-1건이었다',
   },
 ]
 
@@ -36,13 +36,13 @@ export default function Home({ posts }) {
     <>
       <section className="pb-10 pt-8 sm:pt-12">
         <h1 className="max-w-3xl font-display text-[2.1rem] font-bold leading-tight tracking-tight text-ink sm:text-5xl sm:leading-[1.15]">
-          먼저 움직여서
-          <br />
-          결과로 말합니다
+          개발자와 비개발자 사이를
+          <br />더 가까이
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
-          2021년부터 웹을 만들어 온 풀스택 개발자 임효진입니다. 프런트엔드 주력으로 시작해 지금은
-          필요한 데이터를 목업으로 먼저 세워 화면을 검증하고, Django API와 쿼리까지 이어 붙입니다.
+          모호한 요구사항은 사용자에게 더 적합하도록, 개발자에게는 사용자의 니즈를 파악하기 쉽도록
+          하는 역할이 프론트엔드 개발자의 역량이라 생각이 됩니다. 2021년 4월부터 웹 개발자로 개발을
+          하면서 다양한 시도를 하기 위해 블로그를 작성하게 되었습니다.
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2">
           <Link
@@ -51,25 +51,13 @@ export default function Home({ posts }) {
           >
             경력기술서 3편 읽기
           </Link>
-          <Link
-            href="/projects"
-            className="rounded border border-line px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-surface"
-          >
-            프로젝트
-          </Link>
-          <Link
-            href="/timeline"
-            className="px-2 py-2.5 text-sm font-medium text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
-          >
-            타임라인
-          </Link>
         </div>
       </section>
 
       {/* 점토색이 면을 소유한다. 수치는 전부 근거 글로 가는 문이다. */}
       <section aria-labelledby="measured-heading" className="-mx-4 bg-clayfield px-4 py-8 sm:px-8">
         <h2 id="measured-heading" className="font-sans text-xs font-semibold text-[#F7F3EC]/90">
-          측정 기록
+          해결한 문제
         </h2>
         <dl className="mt-5 grid gap-x-8 gap-y-6 sm:grid-cols-3">
           {measurements.map((m, i) => (
@@ -92,7 +80,7 @@ export default function Home({ posts }) {
                 href={m.href}
                 className="mt-2.5 inline-block text-sm text-[#F7F3EC] underline decoration-[#F7F3EC]/60 underline-offset-4 transition-colors hover:text-[#F7F3EC] hover:decoration-[#F7F3EC]"
               >
-                측정 과정 보기
+                어떻게 풀었나
               </Link>
             </div>
           ))}

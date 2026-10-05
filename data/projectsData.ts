@@ -11,7 +11,7 @@ interface Project {
 
 const projectsData: Project[] = [
   {
-    title: 'ITS 표준데이터 관리 시스템(SDMS)',
+    title: '표준데이터 관리 시스템(SDMS)',
     kind: '실무',
     period: '2025.04 — 현재',
     stack: 'Django · PostgreSQL · D3.js · jsTree · Playwright',

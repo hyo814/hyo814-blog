@@ -15,8 +15,7 @@ export default function Footer() {
             </span>
           </Link>
           <p className="mt-4 max-w-sm text-sm leading-6 text-muted">
-            2021년부터 웹을 만들어 온 풀스택 개발자입니다. 이 블로그의 성과 수치에는 측정 과정을
-            적은 글이 근거로 달려 있습니다.
+            2021년 4월부터 웹 개발자로 일하고 있습니다. 개발에 대한 회고를 합니다.
           </p>
           <div className="mt-5 flex space-x-4">
             <SocialIcon kind="mail" href={`mailto:${siteMetadata.email}`} size={5} />

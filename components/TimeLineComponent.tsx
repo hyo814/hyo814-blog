@@ -19,14 +19,14 @@ const TimeLineComponent = () => {
 
   const experienceData = [
     {
-      company: '맥딜리버리 콜센터',
+      company: '배달 주문 콜센터',
       startDate: '2016-01-01',
       endDate: '2016-07-31',
       description: '전화주문 접수 및 입력원으로 일하며 다양한 고객 문의를 처리. (개발자 전향 이전)',
       tags: ['개발 전 이력'],
     },
     {
-      company: '공간정보기술',
+      company: '공간정보 데이터 입력',
       startDate: '2018-09-01',
       endDate: '2018-12-31',
       description:
@@ -98,11 +98,11 @@ const TimeLineComponent = () => {
       tags: ['교육'],
     },
     {
-      company: '딥노이드 : 프론트엔드 개발',
+      company: '산업 AI 판독 시스템 : 프론트엔드 개발',
       startDate: '2021-04-12',
       endDate: '2022-08-05',
       description:
-        '의료·산업 AI 솔루션 기업. 관세청 불법 복제품 판독 시스템과 공항 보안 검색 판독 시스템의 프런트엔드를 담당했습니다.',
+        '관세청 불법 복제품 판독 시스템과 공항 보안 검색 판독 시스템의 프런트엔드를 담당했습니다.',
       tags: ['회사'],
     },
     {
@@ -120,11 +120,11 @@ const TimeLineComponent = () => {
       tags: ['교육'],
     },
     {
-      company: '스테이폴리오 : 프론트엔드 개발',
+      company: '숙박 큐레이션 플랫폼 : 프론트엔드 개발',
       startDate: '2022-08-08',
       endDate: '2024-03-01',
       description:
-        '숙박 큐레이션 플랫폼. 프런트엔드로 다국어(일본어) 지원, 무한 스크롤 성능 개선, 웹→앱 전환 UX 개편을 담당했습니다.',
+        '프런트엔드로 다국어(일본어) 지원, 무한 스크롤 성능 개선, 웹→앱 전환 UX 개편을 담당했습니다.',
       tags: ['회사'],
     },
     {
@@ -193,25 +193,19 @@ const TimeLineComponent = () => {
       tags: ['스터디', '커피챗'],
     },
     {
-      company: 'PyNews — Django 뉴스레터 사이드 프로젝트',
-      startDate: '2026-03-21',
-      endDate: '2026-05-14',
-      description: '백엔드(Python·Django)를 익히려고 만든 뉴스레터 서비스. Render에 배포.',
-      tags: ['사이드프로젝트'],
+      company: '갈무리부엌 — 원티드 AI Championship 2026 출품작',
+      startDate: '2026-09-13',
+      endDate: '2026-09-20',
+      description:
+        '냉장고 재고·레시피·장보기 웹 서비스. 코드는 Claude Code 에이전트가 쓰고, 무엇을 만들고 안 만들지 정하고 시안과 push를 승인했습니다.',
+      tags: ['사이드프로젝트', '공모전'],
     },
     {
-      company: 'escape-plus 리팩터',
-      startDate: '2026-04-05',
-      endDate: '2026-04-05',
-      description: '2020년 코멘토 부트캠프 방탈출 포트폴리오를 6년 뒤 Vite로 다시 손본 기록.',
-      tags: ['사이드프로젝트'],
-    },
-    {
-      company: '지슨(GitSN) : 웹 개발',
+      company: '현재 회사 : 웹 개발',
       startDate: '2025-04-07',
       endDate: '진행 중',
       description:
-        'ITS 표준데이터 관리 시스템(SDMS) 개발. 프런트엔드 주력으로 합류해, 필요한 데이터를 목업으로 먼저 세워 화면을 검증하고 Django API·쿼리까지 범위를 넓히는 중입니다.',
+        '표준데이터 관리 시스템(SDMS) 개발. 프런트엔드 주력으로 합류해, 필요한 데이터를 목업으로 먼저 세워 화면을 검증하고 Django API·쿼리까지 범위를 넓히는 중입니다.',
       tags: ['회사'],
     },
   ]

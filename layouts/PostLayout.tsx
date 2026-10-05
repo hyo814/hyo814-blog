@@ -61,7 +61,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
             <p className="text-sm text-ink">
               <span className="font-semibold">{authorDetails[0]?.name ?? siteMetadata.author}</span>
               {' · '}
-              <span className="text-muted">2021년부터 웹을 만들어 온 풀스택 개발자</span>
+              <span className="text-muted">2021년부터 일해 온 웹 개발자</span>
             </p>
             <p className="mt-1.5 text-sm text-muted">
               <Link href="/about" className="text-clay underline-offset-4 hover:underline">
