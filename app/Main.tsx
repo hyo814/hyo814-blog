@@ -6,31 +6,6 @@ import NewsletterForm from 'pliny/ui/NewsletterForm'
 
 const MAX_DISPLAY = 5
 
-/**
- * 홈의 지표 밴드. 세 수치 모두 단독 작업이고, 각각 측정 과정을 적은 글로 이어진다.
- * 근거 글이 없는 수치는 이 밴드에 올리지 않는다.
- */
-const measurements = [
-  {
-    label: '신청서 항목 모달',
-    before: '열 때마다 조회 20회',
-    after: '2회 · 펼칠 때만 조회',
-    href: '/blog/신청서-항목-모달에서-후보-조회-20회를-2회로-줄였다',
-  },
-  {
-    label: '화면마다 다르던 데이터 집계',
-    before: '홈 198건 · 목록 134건',
-    after: '기준 통일 · 쿼리 39→19',
-    href: '/blog/같은-표준데이터를-두-화면이-198건과-134건으로-세고-있었다',
-  },
-  {
-    label: '방치된 e2e 실패 정리',
-    before: '실패 25건 누적',
-    after: '274건 실패 0',
-    href: '/blog/빨갛게-남아-있던-e2e-25건-중-코드-회귀는-1건이었다',
-  },
-]
-
 export default function Home({ posts }) {
   return (
     <>
@@ -54,40 +29,7 @@ export default function Home({ posts }) {
         </div>
       </section>
 
-      {/* 점토색이 면을 소유한다. 수치는 전부 근거 글로 가는 문이다. */}
-      <section aria-labelledby="measured-heading" className="-mx-4 bg-clayfield px-4 py-8 sm:px-8">
-        <h2 id="measured-heading" className="font-sans text-xs font-semibold text-[#F7F3EC]/90">
-          해결한 문제
-        </h2>
-        <dl className="mt-5 grid gap-x-8 gap-y-6 sm:grid-cols-3">
-          {measurements.map((m, i) => (
-            <div
-              key={m.label}
-              className="animate-settle border-t border-[#F7F3EC]/35 pt-4"
-              style={{ animationDelay: `${i * 90}ms` }}
-            >
-              <dt className="text-sm text-[#F7F3EC]/95">{m.label}</dt>
-              <dd className="measure mt-2 flex flex-wrap items-baseline gap-x-2 font-display">
-                <span className="text-base text-[#F7F3EC]/90 line-through decoration-[#F7F3EC]/60">
-                  {m.before}
-                </span>
-                <span aria-hidden="true" className="text-sm text-[#F7F3EC]/90">
-                  →
-                </span>
-                <span className="text-lg font-bold text-[#F7F3EC] sm:text-xl">{m.after}</span>
-              </dd>
-              <Link
-                href={m.href}
-                className="mt-2.5 inline-block text-sm text-[#F7F3EC] underline decoration-[#F7F3EC]/60 underline-offset-4 transition-colors hover:text-[#F7F3EC] hover:decoration-[#F7F3EC]"
-              >
-                어떻게 풀었나
-              </Link>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className="pt-12">
+      <section className="border-t border-line pt-12">
         <div className="flex items-baseline justify-between">
           <h2 className="font-display text-2xl font-bold tracking-tight text-ink">최근 글</h2>
           <Link
