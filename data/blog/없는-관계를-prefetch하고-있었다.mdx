@@ -170,7 +170,7 @@ queryset = Dataset.objects.prefetch_related(
 # 실재하는 관계명인지 대조한다.
 import ast, os, sys, django
 sys.path.insert(0, os.getcwd())
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sdms.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project.settings")
 django.setup()
 from django.apps import apps
 
@@ -186,7 +186,7 @@ for m in apps.get_models():
 hits = bad = 0
 for root, dirs, files in os.walk("."):
     dirs[:] = [d for d in dirs if d not in
-               {".git", "node_modules", "sdms-venv", "migrations", "static", "media"}]
+               {".git", "node_modules", "venv", "migrations", "static", "media"}]
     for fn in files:
         if not fn.endswith(".py"):
             continue

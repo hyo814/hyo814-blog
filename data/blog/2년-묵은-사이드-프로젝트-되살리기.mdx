@@ -8,7 +8,7 @@ summary: 'yarn 프로젝트에 package-lock.json이 남아 있어 dependabot 보
 
 # 2년 묵은 사이드 프로젝트 되살리기
 
-[TripTune](/blog/웹%20기술로%20만드는%20협업형%20여행%20계획%20플랫폼%20TripTune%20개발)은 2024년 6월에 시작해서 MVP를 6개월 만에 냈습니다. 그 뒤로도 계속 만졌지만, **의존성과 테스트는 계속 미뤘어요.**
+[TripTune](/blog/웹%20기술로%20만드는%20협업형%20여행%20계획%20플랫폼%20TripTune%20개발)은 2024년 6월에 시작해서 MVP를 6개월 만에 냈습니다. 그 뒤로도 계속 만졌지만 **의존성과 테스트는 계속 미뤘어요.**
 
 GitHub 저장소를 열면 dependabot 보안 경보가 쌓여 있고, `yarn test`는 언제부터인지 모르게 안 돌고 있었습니다. 하루 잡고 한 번에 정리했습니다.
 
@@ -25,9 +25,9 @@ package-lock.json    ← npm
 yarn.lock            ← yarn
 ```
 
-이 프로젝트는 **yarn만 씁니다.** `package-lock.json`은 어느 시점에 `npm install`을 한 번 쳐서 생긴 것이고, 그 뒤로 아무도 안 쓰는데 커밋돼 있었어요.
+이 프로젝트는 **yarn만 씁니다.** `package-lock.json`은 어느 시점에 `npm install`을 한 번 쳐서 생긴 것이고 그 뒤로 아무도 안 쓰는데 커밋돼 있었어요.
 
-dependabot은 lockfile을 보고 취약점을 찾습니다. **두 개가 있으면 같은 취약점을 두 번 보고**하고, 게다가 **실제로 설치되지도 않는 트리**(npm 쪽)의 취약점까지 보고합니다.
+dependabot은 lockfile을 보고 취약점을 찾습니다. **두 개가 있으면 같은 취약점을 두 번 보고**하고 게다가 **실제로 설치되지도 않는 트리**(npm 쪽)의 취약점까지 보고합니다.
 
 ```
 package-lock.json | 13959 ------------------------------------
@@ -59,9 +59,9 @@ package-lock.json | 13959 ------------------------------------
 }
 ```
 
-**경로를 좁게 잡은 게 의도적입니다.** `"minimatch": "9.0.9"`라고 전역으로 박으면 `minimatch`를 쓰는 모든 패키지가 영향을 받아요. `**/eslint-config-next/**/minimatch`로 **문제가 있는 경로에만** 걸면, 나중에 `eslint-config-next`를 올렸을 때 이 줄이 무의미해질 뿐 다른 곳을 안 건드립니다.
+**경로를 좁게 잡은 게 의도적입니다.** `"minimatch": "9.0.9"`라고 전역으로 박으면 `minimatch`를 쓰는 모든 패키지가 영향을 받아요. `**/eslint-config-next/**/minimatch`로 **문제가 있는 경로에만** 걸면 나중에 `eslint-config-next`를 올렸을 때 이 줄이 무의미해질 뿐 다른 곳을 안 건드립니다.
 
-`minimatch` 항목이 두 줄인 것도 이유가 있습니다. `**/eslint-config-next/**/minimatch`는 **손자 이하**를 잡고, 직접 자식은 `**/eslint-config-next/minimatch`로 따로 잡아야 했어요. 글롭 하나로 둘 다 잡히지 않습니다.
+`minimatch` 항목이 두 줄인 것도 이유가 있습니다. `**/eslint-config-next/**/minimatch`는 **손자 이하**를 잡고 직접 자식은 `**/eslint-config-next/minimatch`로 따로 잡아야 했어요. 글롭 하나로 둘 다 잡히지 않습니다.
 
 > `resolutions`는 **부채를 명시적으로 적어두는 자리**입니다. 여기 줄이 늘어나면 "상위 패키지를 올려야 한다"는 신호예요. 지우기 쉽게 경로를 좁게 씁니다.
 
@@ -126,9 +126,9 @@ moduleNameMapper: {
 }
 ```
 
-`moduleNameMapper`는 **선언 순서대로** 매칭을 시도하고, **처음 걸린 것에서 멈춥니다.**
+`moduleNameMapper`는 **선언 순서대로** 매칭을 시도하고 **처음 걸린 것에서 멈춥니다.**
 
-컴포넌트가 `import styles from '@/styles/Layout.module.css'`를 하면 — `^@/(.*)$`가 **먼저 걸립니다.** 그래서 CSS 파일이 `identity-obj-proxy`가 아니라 **진짜 `.css` 파일로 해석**되고, `ts-jest`가 CSS를 파싱하다 죽어요.
+컴포넌트가 `import styles from '@/styles/Layout.module.css'`를 하면 — `^@/(.*)$`가 **먼저 걸립니다.** 그래서 CSS 파일이 `identity-obj-proxy`가 아니라 **진짜 `.css` 파일로 해석**되고 `ts-jest`가 CSS를 파싱하다 죽어요.
 
 ```js
 // 후 — CSS 규칙을 앨리어스보다 먼저
@@ -168,7 +168,7 @@ testEnvironment: 'jest-fixed-jsdom',
 testEnvironmentOptions: { customExportConditions: [''] },
 ```
 
-MSW v2는 `fetch`·`Request`·`Response`·`TextEncoder` 같은 **웹 표준 전역**을 씁니다. jsdom은 이 중 일부를 안 주거나 자체 구현으로 덮어써서, MSW가 가로채야 할 `fetch`를 못 잡아요.
+MSW v2는 `fetch`·`Request`·`Response`·`TextEncoder` 같은 **웹 표준 전역**을 씁니다. jsdom은 이 중 일부를 안 주거나 자체 구현으로 덮어써서 MSW가 가로채야 할 `fetch`를 못 잡아요.
 
 `jest-fixed-jsdom`은 jsdom에 **Node의 표준 전역을 되돌려주는** 환경입니다. `customExportConditions: ['']`는 패키지의 `exports` 필드에서 브라우저 전용 진입점 대신 기본 진입점을 고르라는 뜻이고요.
 
@@ -194,7 +194,7 @@ expect(screen.getByText('로그인')).toBeInTheDocument();
 "include": [..., "cypress/**/*.ts", "cypress/**/*.tsx"]
 ```
 
-`typeRoots`에 Cypress 타입 경로가 들어 있어서, **Cypress가 쓰는 `chai`의 전역 `expect` 타입이 프로젝트 전체에 로드**됩니다. 그러면 단위 테스트의 `expect`도 chai 것으로 해석되고, `@testing-library/jest-dom`이 확장한 매처(`toBeInTheDocument` 등)는 안 보여요.
+`typeRoots`에 Cypress 타입 경로가 들어 있어서 **Cypress가 쓰는 `chai`의 전역 `expect` 타입이 프로젝트 전체에 로드**됩니다. 그러면 단위 테스트의 `expect`도 chai 것으로 해석되고 `@testing-library/jest-dom`이 확장한 매처(`toBeInTheDocument` 등)는 안 보여요.
 
 **두 테스트 도구가 같은 전역 이름(`expect`)을 서로 다른 타입으로 선언**하는 상황입니다. 한 tsconfig 안에서는 공존할 수 없어요.
 
@@ -250,9 +250,9 @@ yarn.lock                     | 1012 +---
 22
 ```
 
-Netlify 빌드가 로컬과 다른 Node로 돌고 있었습니다. **Node 버전은 명시하지 않으면 플랫폼 기본값을 따라가고, 그 기본값은 예고 없이 바뀝니다.**
+Netlify 빌드가 로컬과 다른 Node로 돌고 있었습니다. **Node 버전은 명시하지 않으면 플랫폼 기본값을 따라가고 그 기본값은 예고 없이 바뀝니다.**
 
-한 줄짜리 파일이지만, 이게 없으면 "어제까지 되던 빌드가 오늘 안 됨"이 언젠가 옵니다. 그리고 그때 커밋 히스토리에는 아무 변화가 없어요.
+한 줄짜리 파일이지만 이게 없으면 "어제까지 되던 빌드가 오늘 안 됨"이 언젠가 옵니다. 그리고 그때 커밋 히스토리에는 아무 변화가 없어요.
 
 ---
 
@@ -281,7 +281,7 @@ Netlify 빌드가 로컬과 다른 Node로 돌고 있었습니다. **Node 버전
 
 ## 정리
 
-- **lockfile은 하나만.** 두 개면 하나는 반드시 거짓말을 하고, 경보가 두 배로 잡힙니다.
+- **lockfile은 하나만.** 두 개면 하나는 반드시 거짓말을 하고 경보가 두 배로 잡힙니다.
 - **`resolutions`는 경로를 좁게 써서 부채를 명시합니다.** 전역으로 박으면 나중에 못 지웁니다.
 - **`moduleNameMapper`는 순서가 동작을 바꿉니다.** 좁은 규칙(확장자)을 넓은 규칙(경로 앨리어스)보다 먼저.
 - **빌드 tsconfig를 테스트에 그대로 물리면 안 됩니다.** 빌드에는 뒷단이 있고 테스트에는 없어요(`jsx: preserve`).

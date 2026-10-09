@@ -78,6 +78,15 @@ module.exports = () => {
         },
       ]
     },
+    async redirects() {
+      return [
+        {
+          source: encodeURI('/blog/2025년도~현재의-sdms'),
+          destination: encodeURI('/blog/2025년도~현재의-교통-데이터-플랫폼'),
+          permanent: true,
+        },
+      ]
+    },
     webpack: (config, options) => {
       config.module.rules.push({
         test: /\.svg$/,

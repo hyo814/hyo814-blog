@@ -37,7 +37,7 @@ summary: '마이페이지 회원 정보가 화면에 안 찍혀서 새벽에 커
 
 ## 두 번째 커밋 — 되돌리고 훅으로
 
-1시 12분 `6f751b6`. API 함수는 원래대로 `response.data.data`와 `fetchUserInfoUrl`로 돌아갑니다. 대신 화면이 `useQuery`를 직접 부르던 걸 걷어내고, `hooks/react-query`에 있던 `useQuery_UserInfo`를 씁니다.
+1시 12분 `6f751b6`. API 함수는 원래대로 `response.data.data`와 `fetchUserInfoUrl`로 돌아갑니다. 대신 화면이 `useQuery`를 직접 부르던 걸 걷어내고 `hooks/react-query`에 있던 `useQuery_UserInfo`를 씁니다.
 
 ```ts
 -    const {data, isLoading, error} = useQuery({
@@ -90,16 +90,16 @@ export const useQuery_UserInfo: () => UseQueryResult<{
 +            alert(errData.message || '찜한 병원 정보를 가져오는 중 에러가 발생했습니다. 다시 시도 해주세요.');
 ```
 
-삭제 쪽은 400·401·403·404 넷이었어요. 전부 지우고 서버가 주는 `errData.message`를 먼저 쓰고, 없을 때만 기본 문구를 씁니다. 마이페이지 API 함수들도 같은 모양으로 줄였고, `errCode`를 읽던 곳은 `errorCode`로 바꿨습니다. 서버 응답의 키 이름이 그쪽이었던 거예요.
+삭제 쪽은 400·401·403·404 넷이었어요. 전부 지우고 서버가 주는 `errData.message`를 먼저 쓰고, 없을 때만 기본 문구를 씁니다. 마이페이지 API 함수들도 같은 모양으로 줄였고 `errCode`를 읽던 곳은 `errorCode`로 바꿨습니다. 서버 응답의 키 이름이 그쪽이었던 거예요.
 
-프런트가 상태 코드를 보고 문구를 고르면 서버가 새 코드를 돌려줄 때마다 프런트를 고쳐야 합니다. 문구는 서버가 정하고 프런트는 보여 주기만 하기로 한 건데, 백엔드와 말로 정했는지는 커밋에 남아 있지 않고, 코드만 그렇게 바뀌어 있습니다.
+프런트가 상태 코드를 보고 문구를 고르면 서버가 새 코드를 돌려줄 때마다 프런트를 고쳐야 합니다. 문구는 서버가 정하고 프런트는 보여 주기만 하기로 한 건데, 백엔드와 말로 정했는지는 커밋에 남아 있지 않고 코드만 그렇게 바뀌어 있습니다.
 
 ## 검증
 
 - 그날 확인한 것: 마이페이지에 닉네임·이메일이 찍히는 것. 브라우저에서 눈으로 봤고 기록은 없습니다.
 - 이 글을 쓰며 확인한 것: `git show 6a3ea4a`의 `data.data`→`data.data.data` 일곱 곳과 `queryKey` 변경, `git show 6f751b6`에서 `fetchUserInfo`가 `response.data.data`로 돌아온 것. `git log -S'useQuery_UserInfo'`로 훅의 첫 등장이 3월 7일 팀원 커밋인 것.
 - `6ae8916`에서 지워진 `switch` 두 개의 상태 코드 목록은 diff에서 그대로 옮겼습니다.
-- 서버 응답이 실제로 어떤 모양이었는지는 프런트 저장소만으로는 알 수 없고, 훅의 타입 선언을 그 대신 인용했습니다.
+- 서버 응답이 실제로 어떤 모양이었는지는 프런트 저장소만으로는 알 수 없고 훅의 타입 선언을 그 대신 인용했습니다.
 
 ## 남은 것 · 한계
 

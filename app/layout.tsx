@@ -87,7 +87,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF8F4" />
       <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141413" />
       <link rel="alternate" type="application/rss+xml" href="/feed.xml" />
-      <body className="bg-paper pl-[calc(100vw-100%)] text-ink antialiased">
+      <body
+        className="bg-paper pl-[calc(100vw-100%)] text-ink antialiased"
+        // 확장 프로그램(ColorZilla 등)이 body에 붙이는 속성 때문에 뜨는 hydration 경고를 끈다
+        suppressHydrationWarning
+      >
         <ThemeProviders>
           <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
           <SectionContainer>

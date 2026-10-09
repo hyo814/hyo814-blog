@@ -39,7 +39,7 @@ const HomePagePopularTravel = () => {
   const [travelList, setTravelList] = useState<TravelItem[]>(images);
 ```
 
-에펠탑 대신 실제 API 응답을 복사해 온 모양의 데이터입니다. 초기 상태로 쓰고, API가 실패하면 `setTravelList(images)`로 되돌아가요. 그러니까 이 시점의 "목업"은 라이브러리가 아니라 **컴포넌트 안의 상수**였습니다. 응답 모양은 `data.content` 배열로 잡아 두었고, 경로는 `/api/travels/popular/${city}`였습니다.
+에펠탑 대신 실제 API 응답을 복사해 온 모양의 데이터입니다. 초기 상태로 쓰고 API가 실패하면 `setTravelList(images)`로 되돌아가요. 그러니까 이 시점의 "목업"은 라이브러리가 아니라 **컴포넌트 안의 상수**였습니다. 응답 모양은 `data.content` 배열로 잡아 두었고 경로는 `/api/travels/popular/${city}`였습니다.
 
 "for BFF"는 커밋 제목에만 있습니다. 코드에 프런트 전용 서버 계층은 없고, 요청은 공통 `get`을 거쳐 리라이트로 백엔드에 바로 갑니다. 그때 왜 그 단어를 썼는지 커밋에는 설명이 없어요. "화면에 맞춘 API 모양을 먼저 정한다"는 뜻으로 썼던 것 같은데, BFF는 그런 뜻이 아닙니다.
 
@@ -96,7 +96,7 @@ const HomePagePopularTravel = () => {
 -}
 ```
 
-`global.css`에 있던 이 규칙을 지우고, 홈 화면의 `Swiper` 두 개에만 `style={{ overflow: 'visible' }}`를 줬습니다. 커밋 제목은 "버튼 바 이슈 수정 : swiper 충돌"이에요. 전역으로 `.swiper`를 잡아 두니 다른 화면의 슬라이더까지 넘쳐서 버튼 줄과 겹쳤던 것으로 읽힙니다. 어느 화면이었는지는 커밋에 없습니다.
+`global.css`에 있던 이 규칙을 지우고 홈 화면의 `Swiper` 두 개에만 `style={{ overflow: 'visible' }}`를 줬습니다. 커밋 제목은 "버튼 바 이슈 수정 : swiper 충돌"이에요. 전역으로 `.swiper`를 잡아 두니 다른 화면의 슬라이더까지 넘쳐서 버튼 줄과 겹쳤던 것으로 읽힙니다. 어느 화면이었는지는 커밋에 없습니다.
 
 ## 검증
 

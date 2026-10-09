@@ -11,19 +11,19 @@ interface Project {
 
 const projectsData: Project[] = [
   {
-    title: '표준데이터 관리 시스템(SDMS)',
+    title: '교통 데이터 플랫폼',
     kind: '실무',
     period: '2025.04 — 현재',
     stack: 'Django · PostgreSQL · D3.js · jsTree · Playwright',
-    description: `ISO 14817-2 기반 표준데이터 모델링부터 분류체계·메타클래스 트리, D3 시각화, Open API 포털, Playwright QA 자동화까지. 프런트엔드 주력으로 합류해, 목업 데이터로 화면을 먼저 검증하고 Django API·쿼리까지 범위를 넓히는 중입니다.`,
-    href: '/blog/2025년도~현재의-sdms',
+    description: `등록 신청, 트리 구조, 설문조사, 시각화, Playwright QA 자동화를 맡고 있습니다. 프런트엔드로 합류해 지금은 모델과 쿼리까지 직접 다룹니다.`,
+    href: '/blog/2025년도~현재의-교통-데이터-플랫폼',
   },
   {
     title: '숙박 큐레이션 플랫폼 프런트엔드',
     kind: '실무',
     period: '2022.08 — 2024.03',
     stack: 'TypeScript · Next.js · SWR · Emotion',
-    description: `일본어 다국어 지원, 무한 스크롤 성능 개선, 웹→앱 전환 UX 개편과 이벤트 태깅을 맡았습니다.`,
+    description: `일본어 다국어 적용, 프로모션·프리오더, 가격 표시, 웹→앱 전환과 이벤트 태깅을 맡았습니다.`,
     href: '/blog/2022년도~2024년도의-숙박-큐레이션-플랫폼',
   },
   {
@@ -31,8 +31,17 @@ const projectsData: Project[] = [
     kind: '실무',
     period: '2021.04 — 2022.08',
     stack: 'JavaScript · React · WebSocket',
-    description: `관세청 불법 복제품 판독 시스템과 공항 보안 검색 판독 시스템의 화면을 맡아, 바닐라 JS 기반 화면을 React SPA로 전환하고 웹소켓 실시간 판독 화면을 구현했습니다.`,
+    description: `관세청 불법 복제품 판독 시스템과 공항 보안 검색 판독 시스템의 화면을 맡아, 웹소켓 실시간 판독 화면을 만들고 바닐라 JS 화면을 React SPA로 옮겼습니다.`,
     href: '/blog/2021년도~2022년도의-산업-ai-솔루션',
+  },
+  {
+    title: '냉장고 재고 관리 서비스, 갈무리부엌',
+    kind: '사이드 프로젝트',
+    period: '2026.09',
+    stack: 'React · TypeScript · Vite · Flask · PostgreSQL · Claude API',
+    description: `원티드 AI Championship 2026 출품작. 냉장고 재고·레시피·장보기를 잇는 모바일 웹으로, 일주일 동안 커밋 894개를 Claude Code 에이전트에게 맡기고 무엇을 만들지와 만들지 않을지를 정했습니다.`,
+    href: '/blog/갈무리부엌-일주일-커밋-894개를-에이전트에게-맡기고-내가-한-일',
+    githubHref: 'https://github.com/hyo814/galmuri-kitchen',
   },
   {
     title: '여행을 함께, TripTune',
@@ -43,15 +52,6 @@ const projectsData: Project[] = [
     imgSrc: '/static/images/triptune/image12.png',
     href: '/blog/웹 기술로 만드는 협업형 여행 계획 플랫폼 TripTune 개발',
     githubHref: 'https://github.com/TripTune-Project/TripTune-Frontend',
-  },
-  {
-    title: 'PyNews — Django 뉴스레터 서비스',
-    kind: '사이드 프로젝트',
-    period: '2026',
-    stack: 'Django · feedparser · BeautifulSoup4 · Render',
-    description: `RSS 9개 소스에서 백엔드 관련 글을 수집·정제·태깅하는 파이프라인과, UUID 토큰 기반 구독/해지 뉴스레터를 Django로 만들었습니다.`,
-    href: '/blog/feedparser-bs4로-rss-파이프라인-만들기',
-    githubHref: 'https://github.com/hyo814/python-news',
   },
   {
     title: '직장인 건강 플랫폼, 직짱건강',
@@ -87,10 +87,10 @@ const projectsData: Project[] = [
     title: '코멘토 직무부트캠프 — escape-plus 리팩터',
     kind: '학부·교육',
     period: '2020 제작 · 2026 리팩터',
-    stack: 'JavaScript · Vite',
-    description: `현업 웹 개발자 멘토링으로 만든 방탈출 포트폴리오를 6년 뒤 escape-plus로 다시 손본 기록입니다.`,
+    stack: 'Django · SQLite · Bootstrap 5 · Kakao Maps',
+    description: `2020년 부트캠프에서 만든 방탈출 리뷰 사이트를 2026년에 Django 6으로 다시 짰습니다. 로그인이 오타로 항상 실패하고 글쓰기 URL이 없던 원본을 카테고리 모델 하나로 정리한 기록입니다. 2020년 부트캠프 기록은 글 첫 문단에서 이어집니다.`,
     imgSrc: '/static/images/escape/image2.png',
-    href: '/blog/실제-현업-web-개발자와-함께-sw-포트폴리오-제작까지',
+    href: '/blog/6년-전-방탈출-사이트를-다시-열었더니-글을-쓸-수-없는-게시판이었다',
     githubHref: 'https://github.com/hyo814/escape-plus',
   },
 ]

@@ -22,10 +22,10 @@ summary: 'Django REST API는 Render에, React 19 + Vite SPA는 Vercel에 나눠 
 한 Django 프로젝트 안에서 React 빌드 결과물을 `collectstatic`으로 올리는 전통적인 방식이 가장 단순합니다. 그런데 PyNews는 처음부터 분리를 택했는데, 이유는 세 가지.
 
 - **프론트의 배포 속도**: Vercel은 `git push` 후 수십 초 내에 프리뷰/프로덕션이 뜹니다. Render의 Python 빌드는 의존성 설치 시간이 길어 프론트 작업 리듬을 떨어뜨립니다.
-- **역할 분리가 깔끔함**: 백엔드는 API만 제공하고, 프론트는 정적 자산. 각자 가장 잘 맞는 인프라를 씁니다.
+- **역할 분리가 깔끔함**: 백엔드는 API만 제공하고 프론트는 정적 자산. 각자 가장 잘 맞는 인프라를 씁니다.
 - **PR 프리뷰**: Vercel은 PR마다 프리뷰 URL을 자동 생성합니다. 디자인/카피 검토가 쉬워집니다.
 
-단점은 CORS 설정이 필요하고, 환경변수를 양쪽에서 관리해야 한다는 것. 이 글의 대부분이 그 얘기입니다.
+단점은 CORS 설정이 필요하고 환경변수를 양쪽에서 관리해야 한다는 것. 이 글의 대부분이 그 얘기입니다.
 
 ---
 
@@ -44,7 +44,7 @@ summary: 'Django REST API는 Render에, React 19 + Vite SPA는 Vercel에 나눠 
                                     └──────────────────────────┘
 ```
 
-프론트는 Vercel CDN에서 즉시 서빙되고, API 호출은 같은 origin이 아닌 Render로 나갑니다. 그래서 **CORS 설정이 필수**입니다.
+프론트는 Vercel CDN에서 즉시 서빙되고 API 호출은 같은 origin이 아닌 Render로 나갑니다. 그래서 **CORS 설정이 필수**입니다.
 
 ---
 
@@ -58,7 +58,7 @@ envVars:
     value: "https://python-news.vercel.app,https://python-news-hyo814s-projects.vercel.app"
 ```
 
-Django `settings.py`에서는 콤마 분리 문자열을 리스트로 파싱하고, **Vercel 프리뷰 URL**까지 받기 위해 정규식 설정을 함께 둡니다.
+Django `settings.py`에서는 콤마 분리 문자열을 리스트로 파싱하고 **Vercel 프리뷰 URL**까지 받기 위해 정규식 설정을 함께 둡니다.
 
 ```python
 # settings.py
@@ -248,7 +248,7 @@ Vercel 쪽이 훨씬 빠른 이유는 **Python 의존성 설치가 없고**, 최
 
 ### (2) 프론트 env 변수 오탈자
 
-`VITE_API_BASE` 대신 `API_BASE`만 써서 빌드 타임에 주입이 안 됐음. `import.meta.env`는 `undefined`를 반환하고, 기본값으로 `localhost:8000`이 들어가서 **프로덕션에서 localhost API를 호출하는 사태**가 벌어졌습니다. 배포 직후 네트워크 탭으로 API URL을 반드시 확인.
+`VITE_API_BASE` 대신 `API_BASE`만 써서 빌드 타임에 주입이 안 됐음. `import.meta.env`는 `undefined`를 반환하고 기본값으로 `localhost:8000`이 들어가서 **프로덕션에서 localhost API를 호출하는 사태**가 벌어졌습니다. 배포 직후 네트워크 탭으로 API URL을 반드시 확인.
 
 ### (3) Render free 플랜의 첫 요청 지연
 
@@ -260,7 +260,7 @@ API 서버가 슬립에 들어간 상태에서 첫 요청이 오면 **수십 초
 
 ### (5) 다시 보니 — 이 글에 실은 코드 자체의 문제들
 
-개고하면서 위 코드들을 다시 읽었고, 그대로 두면 안 될 것들이 보입니다.
+개고하면서 위 코드들을 다시 읽었고 그대로 두면 안 될 것들이 보입니다.
 
 - **CORS 정규식이 남의 앱도 허용합니다.** `^https://python-news.*\.vercel\.app$`은 내 프로젝트만 매칭하는 게 아닙니다 — Vercel은 누구나 프로젝트를 만들 수 있으니, **다른 사용자가 `python-news-x` 같은 이름으로 만든 앱도** 이 정규식을 통과합니다. 지금은 자격증명 없는 공개 읽기 API라 실익이 없지만, 인증 붙은 API에서 이 패턴을 복사하면 CORS가 보호 수단 역할을 못 합니다. 팀 스코프까지 고정한 정규식(`python-news-git-.*-hyo814s-projects\.vercel\.app$`)이 맞습니다.
 - **(2)번 사고의 원인이 코드에 그대로 남아 있습니다.** "폴백 때문에 프로덕션이 localhost를 호출했다"고 써놓고, 위 `api.js`는 여전히 `?? 'http://localhost:8000'` 폴백을 갖고 있어요. 같은 실수가 나면 또 조용히 넘어갑니다. 프로덕션 빌드에서는 폴백 대신 크게 실패하는 게 맞습니다: `if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE) throw new Error('VITE_API_BASE 미설정')`.
