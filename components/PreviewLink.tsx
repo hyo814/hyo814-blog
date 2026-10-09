@@ -27,9 +27,7 @@ export default function PreviewLink({ href, preview, children }: Props) {
           {preview.title}
         </span>
         {preview.summary && (
-          <span className="mt-2 line-clamp-3 text-sm leading-6 text-muted">
-            {preview.summary}
-          </span>
+          <span className="mt-2 line-clamp-3 text-sm leading-6 text-muted">{preview.summary}</span>
         )}
       </span>
     </span>
