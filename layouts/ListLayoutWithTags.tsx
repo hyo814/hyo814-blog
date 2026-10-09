@@ -2,6 +2,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import { slug } from 'github-slugger'
 import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
@@ -73,7 +74,16 @@ export default function ListLayoutWithTags({
   const tagKeys = Object.keys(tagCounts)
   const sortedTags = tagKeys.sort((a, b) => tagCounts[b] - tagCounts[a])
 
-  const displayPosts = initialDisplayPosts.length > 0 ? initialDisplayPosts : posts
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  // 검색어가 있으면 페이지와 상관없이 전체 글에서 바로 거른다
+  const displayPosts = q
+    ? posts.filter((p) =>
+        [p.title, p.summary ?? '', ...(p.tags ?? [])].some((s) => s.toLowerCase().includes(q))
+      )
+    : initialDisplayPosts.length > 0
+      ? initialDisplayPosts
+      : posts
 
   return (
     <div className="pt-6">
@@ -120,6 +130,21 @@ export default function ListLayoutWithTags({
           <h1 className="hidden font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:block sm:text-4xl">
             {title}
           </h1>
+          <div className="mt-6 flex items-center gap-3">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`${posts.length}편 안에서 제목·요약·태그 검색`}
+              aria-label="글 검색"
+              className="w-full rounded border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-clay focus:outline-none focus:ring-0"
+            />
+            {q && (
+              <span className="measure shrink-0 text-sm text-muted" aria-live="polite">
+                {displayPosts.length}편
+              </span>
+            )}
+          </div>
           <ul className="mt-6 divide-y divide-line border-t border-line">
             {displayPosts.map((post) => {
               const { path, date, title, summary, tags } = post
@@ -150,7 +175,10 @@ export default function ListLayoutWithTags({
               )
             })}
           </ul>
-          {pagination && pagination.totalPages > 1 && (
+          {q && displayPosts.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted">맞는 글이 없습니다.</p>
+          )}
+          {!q && pagination && pagination.totalPages > 1 && (
             <Pagination currentPage={pagination.currentPage} totalPages={pagination.totalPages} />
           )}
         </div>

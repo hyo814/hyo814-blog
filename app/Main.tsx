@@ -3,6 +3,7 @@ import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import { formatDate } from 'pliny/utils/formatDate'
 import NewsletterForm from 'pliny/ui/NewsletterForm'
+import ActivityGrid from '@/components/ActivityGrid'
 
 const MAX_DISPLAY = 5
 
@@ -28,6 +29,8 @@ export default function Home({ posts }) {
           </Link>
         </div>
       </section>
+
+      <ActivityGrid posts={posts} />
 
       <section className="border-t border-line pt-12">
         <div className="flex items-baseline justify-between">
