@@ -3,6 +3,8 @@ import 'katex/dist/katex.css'
 
 import PageTitle from '@/components/PageTitle'
 import { components } from '@/components/MDXComponents'
+import PreviewLink, { type Preview } from '@/components/PreviewLink'
+import CustomLink from '@/components/Link'
 import { MDXLayoutRenderer } from 'pliny/mdx-components'
 import { sortPosts, coreContent, allCoreContent } from 'pliny/utils/contentlayer'
 import { allBlogs, allAuthors } from 'contentlayer/generated'
@@ -108,6 +110,30 @@ export default async function Page({ params }: { params: Promise<{ slug: string[
 
   const Layout = layouts[post.layout || defaultLayout]
 
+  // 본문이 가리키는 다른 글의 요약만 골라 링크 미리보기 카드에 넘긴다
+  const previews: Record<string, Preview> = {}
+  for (const [, href] of post.body.raw.matchAll(/\]\((\/blog\/[^)\s#]+)\)/g)) {
+    const target = allBlogs.find((p) => `/${p.path}` === decodeURI(href))
+    if (target)
+      previews[decodeURI(href)] = {
+        title: target.title,
+        summary: target.summary,
+        date: target.date,
+      }
+  }
+  const postComponents = {
+    ...components,
+    a: (props: React.ComponentProps<typeof CustomLink>) => {
+      const preview = typeof props.href === 'string' ? previews[decodeURI(props.href)] : undefined
+      if (!preview) return <CustomLink {...props} />
+      return (
+        <PreviewLink href={props.href as string} preview={preview}>
+          {props.children}
+        </PreviewLink>
+      )
+    },
+  }
+
   return (
     <>
       <script
@@ -115,7 +141,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string[
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Layout content={mainContent} authorDetails={authorDetails} next={next} prev={prev}>
-        <MDXLayoutRenderer code={post.body.code} components={components} toc={post.toc} />
+        <MDXLayoutRenderer code={post.body.code} components={postComponents} toc={post.toc} />
       </Layout>
     </>
   )

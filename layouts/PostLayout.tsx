@@ -8,6 +8,7 @@ import SectionContainer from '@/components/SectionContainer'
 import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
+import PostToc, { ReadingProgress, type TocItem } from '@/components/PostToc'
 
 const postDateTemplate: Intl.DateTimeFormatOptions = {
   year: 'numeric',
@@ -26,10 +27,14 @@ interface LayoutProps {
 export default function PostLayout({ content, authorDetails, next, prev, children }: LayoutProps) {
   const { path, slug, date, title, tags } = content
   const basePath = path.split('/')[0]
+  // contentlayer 타입은 string이지만 실제 값은 제목 배열이다
+  const toc = ((content as { toc?: unknown }).toc as TocItem[] | undefined) ?? []
+  const showToc = toc.length >= 3
 
   return (
     <SectionContainer>
       <ScrollTopAndComment />
+      <ReadingProgress />
       <article className="pt-6">
         <header className="border-b border-line pb-8">
           <dl>
@@ -52,7 +57,10 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
           )}
         </header>
 
-        <div className="prose max-w-none py-10 dark:prose-invert">{children}</div>
+        <div className={showToc ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_13rem] xl:gap-12' : ''}>
+          <div className="prose max-w-none py-10 dark:prose-invert">{children}</div>
+          {showToc && <PostToc toc={toc} />}
+        </div>
 
         {/* 검색으로 이 글에 바로 들어온 독자를 위한 안내. 헤더를 거치지 않아도 완결된다. */}
         <aside className="flex flex-col gap-4 border-t border-line py-8 sm:flex-row sm:items-center">
