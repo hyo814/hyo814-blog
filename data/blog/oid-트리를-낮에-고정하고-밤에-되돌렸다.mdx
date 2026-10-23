@@ -66,16 +66,16 @@ function isFixedShapeTree() {
 
 배포 서버에 올릴 판이 정해졌습니다. **전날 낮의 잎 카드 목록 판까지.**(설계 문서에는 9월 2일로 적혀 있는데, 커밋은 3일입니다.) 메시지·데이터 프레임·데이터 엘리먼트만 카드 목록이고, Standard 쪽은 옛날처럼 하위로 계속 내려가는 판이에요.
 
-문제는 운영 데이터였습니다. 운영 트리에는 `Standard › ITS › ITSK-00114 › VehicleSpeed` 같은 가지가 있어요. dev에는 없던 가지입니다(운영 미러가 DataDictionary 잎만 심었거든요). 고정된 트리에서는 이 가지 아래로 내려갈 길이 없었습니다. 낮에 문서에 적어 둔 그 함정이 운영에서는 "지금" 걸리는 것이었어요.
+문제는 운영 데이터였습니다. 운영 트리에는 `Standard › ITS › STD-00114 › VehicleSpeed` 같은 가지가 있어요. dev에는 없던 가지입니다(운영 미러가 DataDictionary 잎만 심었거든요). 고정된 트리에서는 이 가지 아래로 내려갈 길이 없었습니다. 낮에 문서에 적어 둔 그 함정이 운영에서는 "지금" 걸리는 것이었어요.
 
-그리고 되돌리자마자 두 번째 문제가 드러났습니다. `isLeafBucket()`은 "자식이 전부 잎"이면 버킷으로 봅니다. `ITSK-00114`는 잎 하나(`VehicleSpeed`)를 달고 있어요. 그래서 **운영에서는 표준 노드 하나가 버킷으로 잡혀 유형 칩에 올랐습니다.** 접힌 `ITS`도 버킷 색 큰 상자로 섰고요.
+그리고 되돌리자마자 두 번째 문제가 드러났습니다. `isLeafBucket()`은 "자식이 전부 잎"이면 버킷으로 봅니다. `STD-00114`는 잎 하나(`VehicleSpeed`)를 달고 있어요. 그래서 **운영에서는 표준 노드 하나가 버킷으로 잡혀 유형 칩에 올랐습니다.** 접힌 `ITS`도 버킷 색 큰 상자로 섰고요.
 
 모양으로 추론하던 판정을 서버 플래그로 바꿨습니다(`64478206`).
 
 ```python
 # OID 검색·관리 트리에서 잎을 **트리 밖 카드 목록**으로 내보내는 버킷 — 위 세 발행 단위뿐이다
 # (기획 결정 2026-09-04). 그 밖의 가지(Standard 아래 ITS 등)는 예전대로 드릴다운으로 내려간다.
-# '자식이 전부 잎인 노드' 로 추론하면 운영의 `ITSK-00114` 처럼 잎 하나를 단 표준 노드까지
+# '자식이 전부 잎인 노드' 로 추론하면 운영의 `STD-00114` 처럼 잎 하나를 단 표준 노드까지
 # 카드 버킷이 되고 유형 칩에 오른다. 트리 payload 가 `card_bucket` 으로 표시해 준다.
 OID_CARD_BUCKET_DOTS = tuple(
     f"{AUTO_OID_PARENT_DOT}.{arc}" for arc in AUTO_OID_BUCKET_ARCS.values()
@@ -119,11 +119,11 @@ for (let depth = maxDataDepth(rootList); depth >= floorDepth; depth--) {
 
 ## 검증
 
-- 단위 테스트 `CardBucketFlagTests` — iso부터 `ITSK-00114 › VehicleSpeed`까지 심고, 플래그가 참인 노드가 정확히 `{Message, DataFrame, DataElement}`인지, `ITS`·`ITSK-00114`·`DataDictionary`가 거짓인지 확인합니다. 낮의 추론 판정으로는 이 테스트가 깨집니다.
+- 단위 테스트 `CardBucketFlagTests` — iso부터 `STD-00114 › VehicleSpeed`까지 심고, 플래그가 참인 노드가 정확히 `{Message, DataFrame, DataElement}`인지, `ITS`·`STD-00114`·`DataDictionary`가 거짓인지 확인합니다. 낮의 추론 판정으로는 이 테스트가 깨집니다.
 - e2e `oid-search-tree-drilldown.spec.js` 10건 — 낮에 모양 불변으로 고쳐 쓴 것을 드릴다운 계약으로 되돌리고, "Standard 아래 표준 노드는 카드 목록이 아니라 드릴다운으로 내려간다"(유형 칩이 4개인지)를 더했습니다.
 - 관리 화면 `admin/oid-state-label.spec.js` 8건 — 잎 판정을 이름이 아니라 `data-oid-bucket` 속성으로 집도록 바꿨습니다.
-- 신청 화면은 스펙이 없어 스크립트로 실측했습니다. `Standard › ITS › ITSK-00114`로 내려가며 상위 OID가 `1.2.410.200053.1.2.114`로 확정되는 것, DataDictionary에서 Message를 누르면 뿌리는 그대로인 채 상위만 바뀌는 것. 이후 회귀 잠금 스펙 `oid-request-parent-tree.spec.js`를 추가했습니다.
-- 운영 가지 다섯 개(`Regulation`·`ITS`·`ITSK-00001`·`ITSK-00114`·`VehicleSpeed`)를 dev에 손으로 심어 확인했습니다.
+- 신청 화면은 스펙이 없어 스크립트로 실측했습니다. `Standard › ITS › STD-00114`로 내려가며 상위 OID가 `1.2.410.xxxxxx.1.2.114`로 확정되는 것, DataDictionary에서 Message를 누르면 뿌리는 그대로인 채 상위만 바뀌는 것. 이후 회귀 잠금 스펙 `oid-request-parent-tree.spec.js`를 추가했습니다.
+- 운영 가지 다섯 개(`Regulation`·`ITS`·`STD-00001`·`STD-00114`·`VehicleSpeed`)를 dev에 손으로 심어 확인했습니다.
 
 ## 남은 것 · 한계
 

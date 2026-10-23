@@ -29,7 +29,7 @@ DATE_PROPERTIES = {
     'dct:created',
     'dct:issued',
     'dct:modified',
-    'kadif:retracted',
+    'ex:retracted',
 }
 
 NUMERIC_PROPERTIES = {
@@ -103,16 +103,16 @@ input.placeholder = input.title = "숫자만 입력할 수 있습니다.";
 
 | 클래스 | 인스턴스 | 채워진 날짜값 | 어긋남 |
 |---|---|---|---|
-| kadif:DataFrame | 693 | 683 | 0 |
-| kadif:DataElement | 684 | 572 | 0 |
-| kadif:Message | 101 | 91 | 0 |
-| kadif:Standard | 44 | 93 | 0 |
-| kadif:Service | 32 | 0 | 0 |
+| ex:DataFrame | 693 | 683 | 0 |
+| ex:DataElement | 684 | 572 | 0 |
+| ex:Message | 101 | 91 | 0 |
+| ex:Standard | 44 | 93 | 0 |
+| ex:Service | 32 | 0 | 0 |
 | dcat:Catalog | 9 | 2 | 0 |
 | dcat:CatalogRecord·DataService·Dataset·Distribution | 0 | 0 | 0 |
 | **합계** | **1,563** | **1,441** | **0** |
 
-날짜 슬롯을 가진 클래스는 운영에 10개뿐이고, 전체 7,028건 중 그 클래스에 속한 1,563건을 훑어 채워진 날짜값 1,441건이 모두 한 가지 꼴이었습니다. (`kadif:Standard`는 인스턴스보다 날짜값이 많은데, 한 인스턴스가 날짜 슬롯을 여러 개 가져서예요.)
+날짜 슬롯을 가진 클래스는 운영에 10개뿐이고, 전체 7,028건 중 그 클래스에 속한 1,563건을 훑어 채워진 날짜값 1,441건이 모두 한 가지 꼴이었습니다. (`ex:Standard`는 인스턴스보다 날짜값이 많은데, 한 인스턴스가 날짜 슬롯을 여러 개 가져서예요.)
 
 회귀는 `std_data/tests/test_instance_typed_slots.py`로 잠갔습니다. 클래스 5개짜리인데, 챙긴 것들:
 

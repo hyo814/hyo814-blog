@@ -78,7 +78,7 @@ def _descend(node, instance, ancestors, next_frontier):
 
 ## ASN.1 원문에서 필드를 뽑고, 없으면 물러난다
 
-필드 이름·M/O/C·반복 범위는 `kadif:asn1Code`에 든 ASN.1 원문에서 뽑습니다.
+필드 이름·M/O/C·반복 범위는 `ex:asn1Code`에 든 ASN.1 원문에서 뽑습니다.
 
 ```python
 def parse_asn1_members(asn1_code: str) -> list:
@@ -118,7 +118,7 @@ def match_asn1_children(members, children, values):
 - 파서·구획 테스트 **34건**. 중첩 `SEQUENCE`의 최상위 콤마 분리, 확장 표식, 반복 범위 파싱이 각각 잠겨 있습니다.
 - e2e 시나리오 2건 — 뷰어가 열리고 트리가 그려지는 것, 검색이 노드를 찾아 가운데로 옮기는 것.
 - 순환 데이터(`f1 → f2 → f1`)를 넣어 트리가 멈추고 **"(순환 — 위에서 이미 나온 자원)"이 붙는 것** 확인.
-- `kadif:asn1Code`가 없는 자원으로 열어 폴백이 도는 것 확인.
+- `ex:asn1Code`가 없는 자원으로 열어 폴백이 도는 것 확인.
 - 깊이별 쿼리 수 확인 — 노드를 늘려도 같은 깊이면 쿼리가 안 느는 것.
 - 변경 범위 22개 파일 4430줄 추가. 렌더러 `messageStructureTree.js`가 544줄입니다.
 
