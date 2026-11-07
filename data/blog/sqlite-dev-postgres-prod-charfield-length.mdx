@@ -1,7 +1,7 @@
 ---
 title: SQLite에선 통과하고 PostgreSQL에서 터진 CharField(512)
 date: '2026-07-09'
-tags: [기술노트, Django]
+tags: [기술노트, Django, 교통데이터플랫폼]
 draft: false
 summary: '로컬(SQLite)에선 멀쩡히 적재되던 메타데이터 로더가 운영(PostgreSQL)에서만 value too long으로 죽었습니다. 프런트 쪽을 주로 맡다가 모델·마이그레이션을 조금씩 만지기 시작한 입장에서, 원인을 어떻게 좁혀갔고 네 가지 선택지 중 왜 TextField를 골랐는지 정리합니다.'
 ---

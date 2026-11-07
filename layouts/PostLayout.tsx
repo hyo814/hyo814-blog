@@ -16,6 +16,15 @@ const postDateTemplate: Intl.DateTimeFormatOptions = {
   day: 'numeric',
 }
 
+// ponytail: 시리즈가 하나뿐이라 태그로 묶는다. 둘째 시리즈가 생기면 frontmatter에 series 필드를 둔다.
+const SERIES = {
+  tag: '교통데이터플랫폼',
+  name: '교통 데이터 플랫폼 작업기',
+  intro:
+    '2025년 4월부터 일하고 있는 교통 분야 데이터 플랫폼에서 겪은 일을 적은 시리즈입니다. 교통 분야 국제 표준의 데이터 사전과 차량 통신 메시지 규격을 등록 신청·심사·공개하는 Django 서비스입니다.',
+  overview: '/blog/2025년도~현재의-교통-데이터-플랫폼',
+}
+
 interface LayoutProps {
   content: CoreContent<Blog>
   authorDetails: CoreContent<Authors>[]
@@ -56,6 +65,26 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
             </div>
           )}
         </header>
+
+        {tags?.includes(SERIES.tag) && (
+          <aside className="measure mt-8 rounded border border-line bg-surface p-4 text-sm text-muted">
+            <p>
+              <span className="font-semibold text-ink">{SERIES.name}</span> — {SERIES.intro}
+            </p>
+            <p className="mt-2">
+              <Link
+                href={`/tags/${SERIES.tag}`}
+                className="text-clay underline-offset-4 hover:underline"
+              >
+                시리즈 글 전체
+              </Link>
+              {' · '}
+              <Link href={SERIES.overview} className="text-clay underline-offset-4 hover:underline">
+                프로젝트 한눈에 보기
+              </Link>
+            </p>
+          </aside>
+        )}
 
         <div className={showToc ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_13rem] xl:gap-12' : ''}>
           <div className="prose max-w-none py-10 dark:prose-invert">{children}</div>
