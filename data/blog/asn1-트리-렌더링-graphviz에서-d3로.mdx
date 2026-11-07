@@ -1,12 +1,12 @@
 ---
-title: ASN.1 트리 렌더링을 graphviz PNG에서 D3.js로 갈아탄 이유
+title: 'ASN.1 트리, 서버 PNG 대신 D3로 그린 이유'
 date: '2026-04-19'
 tags: [기술노트, 시각화, 교통데이터플랫폼]
 draft: false
 summary: '서버에서 graphviz로 PNG를 그려 내려주던 ASN.1 트리를 D3.js 기반 Collapsible Tree로 전환한 과정과 그 이유를 정리합니다. 서버 의존성 제거, 인터랙션, JSON 스키마 설계까지.'
 ---
 
-# ASN.1 트리 렌더링을 graphviz PNG에서 D3.js로 갈아탄 이유
+# ASN.1 트리, 서버 PNG 대신 D3로 그린 이유
 
 표준데이터의 **ASN.1 구조를 트리로 시각화**하는 화면이 있습니다. 원래는 서버에서 `graphviz`로 PNG를 그려 `<img>`로 내려주는 방식이었는데, 이걸 **D3.js 기반 Collapsible Tree**로 전면 전환했습니다. "왜 바꿨고, 어떻게 바꿨는지" 정리합니다.
 

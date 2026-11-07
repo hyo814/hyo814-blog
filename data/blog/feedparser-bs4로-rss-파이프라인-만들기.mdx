@@ -1,12 +1,12 @@
 ---
-title: feedparser + BeautifulSoup4로 RSS 크롤링 파이프라인 만들기
+title: 'RSS 수집 파이프라인, 다시 읽으니 결함 세 개'
 date: '2026-04-15'
 tags: [기술노트, Django]
 draft: false
 summary: '한국어 5개 + 영어 4개 RSS 소스에서 Python/Django 관련 글만 골라 수집하고, HTML 정제와 자동 태깅까지 거치는 파이프라인을 Django management command로 정리한 기록입니다. 나중에 다시 읽으면서 키워드 부분 문자열 매칭과 한글 slugify에서 결함 세 개를 찾았고, 재현 스크립트까지 같이 적었습니다.'
 ---
 
-# feedparser + BeautifulSoup4로 RSS 크롤링 파이프라인 만들기
+# RSS 수집 파이프라인, 다시 읽으니 결함 세 개
 
 [PyNews](https://github.com/hyo814/python-news) 프로젝트의 핵심은 **여러 RSS 소스에서 백엔드 관련 글만 골라 모으는 것**이었습니다. 수집 자체는 `feedparser` 몇 줄이면 되지만 실제로 쓸 만한 뉴스레터를 만들려면 **필터링, HTML 정제, 중복 제거, 자동 태깅**까지 필요했습니다.
 

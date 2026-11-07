@@ -1,12 +1,12 @@
 ---
-title: 옵션이 많아질수록 필요한 검색형 select — searchableSelect.js 복구 회고
+title: '옵션이 수백 개인 select에 검색 되살리기'
 date: '2026-06-18'
 tags: [기술노트, UI, 교통데이터플랫폼]
 draft: false
 summary: '클래스 참조 필드처럼 옵션이 수백 개인 select를 스크롤로만 찾던 걸 입력 검색으로 좁히는 검색형 select로 되살린 작업입니다. 라이브러리를 다시 들일지 직접 얹을지부터 정하고, placeholder 잘림·× 해제 안 되는 버그, 그리고 Font Awesome svg 모드가 참조를 유령으로 만드는 함정까지 하나씩 잡았어요.'
 ---
 
-# 옵션이 많아질수록 필요한 검색형 select — searchableSelect.js 복구 회고
+# 옵션이 수백 개인 select에 검색 되살리기
 
 용어 폼의 *값영역·해당 인스턴스·도메인* 필드는 클래스를 참조합니다. 클래스가 수백 개로 늘면서, 네이티브 `<select>`를 스크롤로 훑어 고르는 게 고역이 됐어요. 입력으로 좁혀 고르는 검색형 select(`searchableSelect.js`)를 다시 도입하고, 거기서 줄줄이 나온 후속 결함을 잡은 기록입니다.
 
