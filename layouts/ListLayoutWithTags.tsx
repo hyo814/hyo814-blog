@@ -2,7 +2,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { slug } from 'github-slugger'
 import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
@@ -74,8 +74,33 @@ export default function ListLayoutWithTags({
   const tagKeys = Object.keys(tagCounts)
   const sortedTags = tagKeys.sort((a, b) => tagCounts[b] - tagCounts[a])
 
-  const [query, setQuery] = useState('')
-  const q = query.trim().toLowerCase()
+  const [query, setQuery] = useState('') // 입력창 값
+  const [term, setTerm] = useState('') // 실제로 거르는 값
+
+  // 주소의 ?q=로 검색어를 되살린다. 글을 열었다가 뒤로 와도 검색이 남는다.
+  useEffect(() => {
+    const saved = new URLSearchParams(window.location.search).get('q') ?? ''
+    setQuery(saved)
+    setTerm(saved)
+  }, [])
+
+  // 한글은 ㅌ→트→틀→트리처럼 조합 중간값마다 바뀌어서, 입력이 멈춘 뒤에 거르고 주소에 남긴다
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTerm(query)
+      const url = new URL(window.location.href)
+      if (query.trim()) url.searchParams.set('q', query.trim())
+      else url.searchParams.delete('q')
+      if (url.href !== window.location.href) window.history.replaceState(null, '', url)
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [query])
+
+  // 끝에 남은 낱자모(ㅌ 같은 조합 중인 글자)는 빼고 거른다
+  const q = term
+    .trim()
+    .toLowerCase()
+    .replace(/[ㄱ-ㆎ]+$/, '')
   // 검색어가 있으면 페이지와 상관없이 전체 글에서 바로 거른다
   const displayPosts = q
     ? posts.filter((p) =>
@@ -131,19 +156,40 @@ export default function ListLayoutWithTags({
             {title}
           </h1>
           <div className="mt-6 flex items-center gap-3">
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={`${posts.length}편 안에서 제목·요약·태그 검색`}
-              aria-label="글 검색"
-              className="w-full rounded border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-clay focus:outline-none focus:ring-0"
-            />
-            {q && (
-              <span className="measure shrink-0 text-sm text-muted" aria-live="polite">
-                {displayPosts.length}편
-              </span>
-            )}
+            <div className="relative w-full">
+              {/* 헤더 검색 버튼과 같은 돋보기 */}
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                />
+              </svg>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="제목·요약·태그 검색"
+                aria-label="글 검색"
+                // 모바일 16px: 그보다 작으면 iOS Safari가 입력창을 누를 때 화면을 확대한다
+                className="w-full rounded border border-muted/75 bg-paper py-2 pl-9 pr-3 text-base text-ink placeholder:text-muted focus:border-clay focus:outline-none focus:ring-0 sm:text-sm"
+              />
+            </div>
+            {/* 늘 같은 폭으로 둬서 검색을 시작해도 입력창이 줄지 않는다. 비었을 땐 전체 편수 */}
+            <span
+              className="measure w-14 shrink-0 text-right text-sm text-muted"
+              aria-live="polite"
+            >
+              {q ? displayPosts.length : posts.length}편
+            </span>
           </div>
           <ul className="mt-6 divide-y divide-line border-t border-line">
             {displayPosts.map((post) => {
